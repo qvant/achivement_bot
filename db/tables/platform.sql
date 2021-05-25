@@ -1,0 +1,8 @@
+create table achievements_hunt.platforms
+(
+	id      serial primary key,
+	name    text not null
+);
+alter table  achievements_hunt.platforms owner to achievements_hunt_bot;
+
+insert into achievements_hunt.platforms(id, name) values(1, 'Steam');
