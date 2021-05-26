@@ -130,7 +130,9 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
             game_id, game_name)
     if game_name is None or len(game_name) == 0 or game_name.startswith("ValveTestApp") \
             or game_name.startswith("Untitled") or game_name.startswith("UNUSED_APP") \
-            or game_name.startswith("Upcoming"):
+            or game_name.startswith("Upcoming") or game_name.startswith("[MAIN]")\
+            or game_name.startswith("[STAGING]") or game_name.endswith("Unstable")\
+            or game_name.startswith("sein") or "&amp;" in game_name:
         game_name = name
         api_log.info(
             "For game {0} name not found in response ({2}), used supplied name {1}".format(
