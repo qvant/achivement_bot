@@ -2,7 +2,7 @@ import logging
 import sys
 from logging import INFO, Logger, StreamHandler
 from logging.handlers import RotatingFileHandler
-from typing import List, Union
+from typing import Union
 
 FORMATTER = logging.Formatter("[%(levelname)s] [%(name)s] - [%(asctime)s]: %(message)s")
 LOG_DIR = "logs//"

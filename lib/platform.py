@@ -6,6 +6,8 @@ import psycopg2
 
 
 class Platform:
+    config = None
+
     def __init__(self, name: str, get_games, get_game, get_achivements, games: [Game], id: int,
                  validate_player, get_player_id):
         self.id = id
@@ -120,8 +122,8 @@ class Platform:
                                       and a.game_id = %s order by id
                                                     """, (self.id, game_id))
             for id, platform_id, name, ext_id, game_ext_id, description, game_id in cursor:
-                self.load_log.info("Loaded achievement {0} with id {1}, ext_id {2}, for game {3} on platform {4}".
-                              format(name, id, ext_id, game_ext_id, self.id))
+                self.load_log.info("Loaded achievement {0} with id {1}, ext_id {2}, for game {3} on platform {4}".format
+                                   (name, id, ext_id, game_ext_id, self.id))
                 games[str(game_ext_id)].add_achievement(achievement=Achievement(id=id, game_id=game_id, name=name,
                                                                                 platform_id=platform_id, ext_id=ext_id,
                                                                                 description=description))

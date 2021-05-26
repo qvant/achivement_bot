@@ -25,8 +25,6 @@ def on_create(player: Player, platform: Platform):
         resp = {"chat_id": player.telegram_id, "cmd": "msg_to_user",
                                                "text": _('Validation for account {} platform {} ok').format(player.ext_id, platform.name)}
         cmd = {"player_id": player.id, "cmd": "renew_achievements", "platform_id": player.platform.id}
-        # player.renew()
-        # player.save()
         enqueue_command(cmd, MODE_WORKER)
     else:
         player.delete()
@@ -38,5 +36,5 @@ def on_create(player: Player, platform: Platform):
 def on_delete(player: Player, platform: Platform):
     player.delete()
     resp = {"chat_id": player.telegram_id, "cmd": "msg_to_user",
-            "text": _('Account {} for platform {} deleted').format(player.ext_id, platform.name)}
+            "text": _('Account {} for platform {} deleted').format(player.name, platform.name)}
     enqueue_command(resp, MODE_BOT)

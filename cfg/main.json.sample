@@ -1,0 +1,18 @@
+{
+  "CONFIG_PATH": "cfg//main.json",
+  "CONFIG_RELOAD_TIME": 1,
+  "DB_HOST": "localhost",
+  "DB_NAME": "achievements_hunt",
+  "DB_PASSWORD": "",
+  "DB_PORT": 5432,
+  "DB_USER": "",
+  "LOG_LEVEL": "DEBUG",
+  "SERVER_NAME": "",
+  "UPDATE_INTERVAL": 86400,
+  "BOT_SECRET": "",
+  "QUEUE_PASSWORD": "",
+  "QUEUE_USER": "",
+  "QUEUE_HOST": "localhost",
+  "QUEUE_PORT": 5672,
+  "ADMIN_ACCOUNTS": []
+}

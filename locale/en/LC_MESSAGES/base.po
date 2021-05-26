@@ -1,0 +1,89 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR ORGANIZATION
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2021-05-09 22:35+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=cp1251\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: pygettext.py 1.5\n"
+
+
+#: ..\lib\telegram.py:95
+msgid "Введите код аккаунта"
+msgstr "Enter account name"
+
+#: ..\lib\telegram.py:120 ..\lib\telegram.py:132
+msgid "В начало"
+msgstr "First page"
+
+#: ..\lib\telegram.py:121 ..\lib\telegram.py:133
+msgid "Предыдущая страница"
+msgstr "Previous page"
+
+#: ..\lib\telegram.py:124 ..\lib\telegram.py:134
+msgid "Следующая страница"
+msgstr "Next page"
+
+#: ..\lib\telegram.py:125 ..\lib\telegram.py:135
+msgid "В конец"
+msgstr "TO the end"
+
+#: ..\lib\telegram.py:141
+msgid "Выберите платформу"
+msgstr ""
+
+#: ..\lib\telegram.py:155
+msgid "Игра выбрана"
+msgstr ""
+
+#: ..\lib\telegram.py:250
+msgid "Выберите аккаунт для просмотра"
+msgstr ""
+
+#: ..\lib\telegram.py:312
+msgid "Выберите игру"
+msgstr "Please, choose the game"
+
+#: ..\lib\telegram.py:314
+msgid "На аккаунте нет игр"
+msgstr "No games on account"
+
+#: ..\lib\telegram.py:358
+msgid "Выполненные:"
+msgstr "Unlocked"
+
+#: ..\lib\telegram.py:362
+msgid "Невыполненные:"
+msgstr "Locked"
+
+#: ..\lib\telegram.py:370
+msgid "Нет достижений."
+msgstr "No achievements"
+
+#: ..\lib\telegram.py:378
+msgid "Я achievement_hunt_bot, анализирую редкость достижений, получаемых в видеоиграх. Для работы пользуйтесь клавиатурой под сообщениями. Для возврата в основное меня отправьте текст /start."
+msgstr "I'm achievement_hunt_bot, my main propose is analyze rarity of your games achievements. For interraction use inline keyboard in messages. To return into main menu send command /start."
+
+#: ..\lib\telegram.py:414
+msgid "Аккаунт привязан"
+msgstr "Account was binded"
+
+#: ..\lib\telegram.py:416
+msgid "Аккаунт {0} уже привязан"
+msgstr "Account {0} already binded"
+
+#: ..\lib\telegram.py:419
+msgid "Платформа {0} не найдена"
+msgstr "Platform {0} not found"
+
+#: ..\lib\telegram.py:422
+msgid "Платформа не выбрана"
+msgstr "Platform not chosen"
+

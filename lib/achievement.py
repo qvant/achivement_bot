@@ -2,7 +2,8 @@ from typing import Union
 
 
 class Achievement:
-    def __init__(self, id: Union[int, None], game_id: Union[int, None], name: Union[str, None], platform_id: int, ext_id: Union[str, None], description: str):
+    def __init__(self, id: Union[int, None], game_id: Union[int, None], name: Union[str, None],
+                 platform_id: int, ext_id: Union[str, None], description: str):
         self.id = id
         self.game_id = game_id
         self.platform_id = platform_id
@@ -26,17 +27,17 @@ class Achievement:
         if self.id is None:
             if active_locale == 'en':
                 cursor.execute(
-                    """insert into achievements_hunt.achievements as l (name, ext_id, platform_id, game_id, description )
+                    """insert into achievements_hunt.achievements as l (name, ext_id, platform_id, game_id, description)
                             values(%s, %s, %s, %s, %s)
                             on conflict ON CONSTRAINT u_achievements_ext_key do update
                             set dt_update=current_timestamp, name=EXCLUDED.name, description=EXCLUDED.description
                             where l.name != EXCLUDED.name
                             returning id
-                    """, (self.name, self.ext_id, self.platform_id, self.game_id,self.description)
+                    """, (self.name, self.ext_id, self.platform_id, self.game_id, self.description)
                 )
             else:
                 cursor.execute(
-                    """insert into achievements_hunt.achievements as l (name, ext_id, platform_id, game_id, description )
+                    """insert into achievements_hunt.achievements as l (name, ext_id, platform_id, game_id, description)
                             values(%s, %s, %s, %s, %s)
                             on conflict ON CONSTRAINT u_achievements_ext_key do update
                             set dt_update=current_timestamp, name=EXCLUDED.name, description=EXCLUDED.description
@@ -55,7 +56,8 @@ class Achievement:
                 ret = cursor.fetchone()
                 if ret is not None:
                     self.id = ret[0]
-        cursor.execute("""insert into achievements_hunt.achievement_translations as l (platform_id, game_id, achievement_id, locale, name, description )
+        cursor.execute("""insert into achievements_hunt.achievement_translations as l 
+                        (platform_id, game_id, achievement_id, locale, name, description )
                         values(%s, %s, %s, %s, %s, %s)
                         on conflict ON CONSTRAINT u_achievement_translations_key do update
                         set dt_update=current_timestamp, name=EXCLUDED.name, description=EXCLUDED.description

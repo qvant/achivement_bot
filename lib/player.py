@@ -1,7 +1,6 @@
 import datetime
 from typing import Union
 from .platform import Platform
-from .queue import enqueue_command
 
 STATUS_NEW = 1
 STATUS_VALID = 2
@@ -12,7 +11,8 @@ GAMES_PERFECT = 3
 
 
 class Player:
-    def __init__(self, name: str, ext_id: str, platform: Platform, id: Union[int, None], telegram_id: Union[int, None], dt_updated = None):
+    def __init__(self, name: str, ext_id: str, platform: Platform, id: Union[int, None], telegram_id: Union[int, None],
+                 dt_updated=None):
         self.id = id
         self.telegram_id = telegram_id
         self.ext_id = ext_id
@@ -117,8 +117,7 @@ class Player:
 
     def get_achievement_stats(self, game_id, locale: str):
         if game_id not in self.achievement_stats:
-            self.achievement_stats = {}
-            self.achievement_stats[game_id] = []
+            self.achievement_stats = {game_id: []}
             conn = self.platform.get_connect()
             cur = conn.cursor()
             cur.execute("""select coalesce (tr.name, a.name) as name, pa.id, a.percent_owners, a.id from 
@@ -134,7 +133,8 @@ class Player:
                         (self.id, locale, self.platform.id, game_id))
             ret = cur.fetchall()
             for j in ret:
-                self.achievement_stats[game_id].append({"name": j[0], "owned": j[1] is not None, "percent": j[2], "id": j[3] })
+                self.achievement_stats[game_id].append({"name": j[0], "owned": j[1] is not None,
+                                                        "percent": j[2], "id": j[3]})
 
     def save(self):
         conn = self.platform.get_connect()
@@ -190,7 +190,8 @@ class Player:
                 if len(self.achievements[self.games[i]]) == 0:
                     continue
 
-                self.platform.logger.info("Get saved achievements for player {0} and game {1}".format(self.ext_id, game.ext_id))
+                self.platform.logger.info("Get saved achievements for player {0} and game {1}".
+                                          format(self.ext_id, game.ext_id))
                 cur.execute("""
                     select achievement_id
                         from achievements_hunt.player_achievements t 
@@ -204,14 +205,16 @@ class Player:
                 for j in ret:
                     saved_achievements.append(j[0])
                 self.platform.logger.info(
-                    "Saved achievements for player {0} and game {1}: ".format(self.ext_id, game.ext_id, len(saved_achievements)))
+                    "Saved achievements for player {0} and game {1}: ".format(
+                        self.ext_id, game.ext_id, len(saved_achievements)))
                 for j in range(len(self.achievements[self.games[i]])):
                     achievement = game.get_achievement_by_ext_id(self.achievements[self.games[i]][j])
                     achievement_date = self.achievement_dates[self.games[i]][j]
                     if achievement.id in saved_achievements:
                         continue
                     cur.execute("""
-                                    insert into achievements_hunt.player_achievements(platform_id, game_id, achievement_id, player_id, dt_unlock)
+                                    insert into achievements_hunt.player_achievements
+                                    (platform_id, game_id, achievement_id, player_id, dt_unlock)
                                     values (%s, %s, %s, %s, %s) returning id
                                 """, (self.platform.id, game.id, achievement.id, self.id, achievement_date))
                     saved_cnt += 1
@@ -229,14 +232,18 @@ class Player:
         self.games, names, = self.platform.get_games(self.ext_id)
         games_num = len(self.games)
         for i in range(games_num):
-            self.platform.logger.info("Update game with id {1} and name {2} for player {0} {3}. Progress {4}/{5}".format(self.ext_id, self.games[i], names[i], self.name, i, games_num))
+            self.platform.logger.info("Update game with id {1} and name {2} for player {0} {3}. Progress {4}/{5}".
+                                      format(self.ext_id, self.games[i], names[i], self.name, i, games_num))
             self.platform.update_games(str(self.games[i]), names[i])
             self.platform.logger.info(
-                "Get achievements for game with id {1} and name {2} for player {0} {3}. Progress {4}/{5}".format(self.ext_id, self.games[i], names[i], self.name, i+1, games_num))
+                "Get achievements for game with id {1} and name {2} for player {0} {3}. Progress {4}/{5}".format(
+                    self.ext_id, self.games[i], names[i], self.name, i+1, games_num))
             if self.platform.get_game_by_ext_id(str(self.games[i])).has_achievements:
-                self.achievements[self.games[i]], self.achievement_dates[self.games[i]] = self.platform.get_achivements(self.ext_id, self.games[i])
+                self.achievements[self.games[i]], self.achievement_dates[self.games[i]] = \
+                    self.platform.get_achivements(self.ext_id, self.games[i])
             else:
                 self.platform.logger.info(
-                    "Skip checking achievements for game with id {1} and name {2} for player {0} {3}, because not avaliable. Progress {4}/{5}".format(
+                    "Skip checking achievements for game with id {1} and name {2} for player {0} {3}, "
+                    "because not avaliable. Progress {4}/{5}".format(
                         self.ext_id, self.games[i], names[i], self.name, i + 1, games_num))
         self.dt_updated = datetime.datetime.now()

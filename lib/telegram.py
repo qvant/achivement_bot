@@ -1,10 +1,4 @@
 import gettext
-_ = gettext.gettext
-
-en = gettext.translation('base', localedir='locale', languages=['en'])
-en.install()
-ru = gettext.translation('base', localedir='locale', languages=['ru'])
-ru.install()
 
 from .config import Config, MODE_CORE, MODE_WORKER, MODE_UPDATER, MODE_BOT
 from .platform import Platform
@@ -14,9 +8,15 @@ from .queue import enqueue_command
 from .stats import get_stats
 from typing import Union, List
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, CallbackQueryHandler
 from telegram.ext.callbackcontext import CallbackContext
 from telegram.update import Update
+
+_ = gettext.gettext
+
+en = gettext.translation('base', localedir='locale', languages=['en'])
+en.install()
+ru = gettext.translation('base', localedir='locale', languages=['ru'])
+ru.install()
 
 global telegram_logger
 global platforms
@@ -117,6 +117,7 @@ def set_connect(conn):
     global db
     db = conn
 
+
 def set_config(cfg: Config):
     global config
     config = cfg
@@ -133,7 +134,7 @@ def platform_menu():
 
 def platform_choice(update: Update, context: CallbackContext):
     global register_progress
-    telegram_logger.info("Received command {0} from user {1} in platform_choice, callaback".
+    telegram_logger.info("Received command {0} from user {1} in platform_choice, callback".
                          format(Update, update.effective_chat.id, context))
     set_locale(update)
     register_progress[update.effective_chat.id] = update["callback_query"]["data"][9:]
@@ -146,7 +147,10 @@ def main_keyboard(chat_id: int):
     global config
     cursor = db.cursor()
     cursor.execute("""
-                select id, platform_id, name, ext_id, dt_update from achievements_hunt.players where telegram_id = %s order by id
+                select id, platform_id, name, ext_id, dt_update
+                from achievements_hunt.players
+                where telegram_id = %s
+                order by id
                 """, (chat_id,))
     players_by_tlg_id[chat_id] = []
 
@@ -164,7 +168,8 @@ def main_keyboard(chat_id: int):
         InlineKeyboardButton(_("Выбор языка"), callback_data="main_SET_LOCALE"),
     ]
     for i in players_by_tlg_id[chat_id]:
-        keyboard.append(InlineKeyboardButton("{}({})".format(i.name, i.platform.name), callback_data="accounts_" + str(i.id)),)
+        keyboard.append(InlineKeyboardButton("{}({})".format(i.name, i.platform.name),
+                                             callback_data="accounts_" + str(i.id)),)
     if chat_id in config.admin_list:
         keyboard.append(InlineKeyboardButton(_("Администрирование"), callback_data="main_ADMIN"),)
 
@@ -175,7 +180,8 @@ def account_keyboard(chat_id: int):
     global players_by_tlg_id
     keyboard = []
     for i in players_by_tlg_id[chat_id]:
-        keyboard.append(InlineKeyboardButton("{}({})".format(i.name, i.platform.name), callback_data="accounts_" + str(i.id)),)
+        keyboard.append(InlineKeyboardButton("{}({})".format(i.name, i.platform.name),
+                                             callback_data="accounts_" + str(i.id)),)
 
     return pretty_menu(keyboard)
 
@@ -209,9 +215,8 @@ def stats_keyboard():
 
 
 def games_keyboard(games, cur_games=GAMES_ALL):
-    keyboard = []
-    keyboard.append(InlineKeyboardButton(_("В начало"), callback_data=GAMES_LIST_FIRST))
-    keyboard.append(InlineKeyboardButton(_("Предыдущая страница"), callback_data=GAMES_LIST_PREV))
+    keyboard = [InlineKeyboardButton(_("В начало"), callback_data=GAMES_LIST_FIRST),
+                InlineKeyboardButton(_("Предыдущая страница"), callback_data=GAMES_LIST_PREV)]
     for i in games:
         keyboard.append(InlineKeyboardButton("{}".format(i.name), callback_data="games_of_" + str(i.id)),)
     keyboard.append(InlineKeyboardButton(_("Следующая страница"), callback_data=GAMES_LIST_NEXT))
@@ -230,18 +235,18 @@ def games_keyboard(games, cur_games=GAMES_ALL):
 def games_index_keyboard():
     keyboard = []
     for i in range(26):
-        keyboard.append(InlineKeyboardButton("{}".format(chr(97+i).upper()), callback_data="list_of_games_begin_" + chr(97+i)), )
+        keyboard.append(InlineKeyboardButton("{}".format(chr(97+i).upper()),
+                                             callback_data="list_of_games_begin_" + chr(97+i)), )
     return pretty_menu(keyboard)
 
 
 def achievements_keyboard():
     global players_by_tlg_id
-    keyboard = []
-    keyboard.append(InlineKeyboardButton(_("В начало"), callback_data=ACHIEVEMENTS_LIST_FIRST))
-    keyboard.append(InlineKeyboardButton(_("Предыдущая страница"), callback_data=ACHIEVEMENTS_LIST_PREV))
-    keyboard.append(InlineKeyboardButton(_("Следующая страница"), callback_data=ACHIEVEMENTS_LIST_NEXT))
-    keyboard.append(InlineKeyboardButton(_("В конец"), callback_data=ACHIEVEMENTS_LIST_LAST))
-    keyboard.append(InlineKeyboardButton(_("К списку игр"), callback_data=ACHIEVEMENTS_LIST_BACK))
+    keyboard = [InlineKeyboardButton(_("В начало"), callback_data=ACHIEVEMENTS_LIST_FIRST),
+                InlineKeyboardButton(_("Предыдущая страница"), callback_data=ACHIEVEMENTS_LIST_PREV),
+                InlineKeyboardButton(_("Следующая страница"), callback_data=ACHIEVEMENTS_LIST_NEXT),
+                InlineKeyboardButton(_("В конец"), callback_data=ACHIEVEMENTS_LIST_LAST),
+                InlineKeyboardButton(_("К списку игр"), callback_data=ACHIEVEMENTS_LIST_BACK)]
     return pretty_menu(keyboard)
 
 
@@ -288,7 +293,8 @@ def locale_choice(update: Update, context: CallbackContext):
                          format(cur_item, update.effective_chat.id))
     user_locales[chat_id] = cur_item
     cursor = db.cursor()
-    cursor.execute("""update achievements_hunt.users set locale = %s, dt_last_update = current_timestamp where telegram_id = %s""",
+    cursor.execute("""
+    update achievements_hunt.users set locale = %s, dt_last_update = current_timestamp where telegram_id = %s""",
                    (cur_item, chat_id))
     db.commit()
     reply_markup = InlineKeyboardMarkup(main_keyboard(chat_id))
@@ -311,8 +317,7 @@ def admin_choice(update: Update, context: CallbackContext):
         context.bot.send_message(chat_id=chat_id, text=_("Select action"),
                                  reply_markup=reply_markup)
     else:
-        telegram_logger.critical("Received illegal cmd {1} from user {0} in admin_choice menu".
-                             format(chat_id, update))
+        telegram_logger.critical("Received illegal cmd {1} from user {0} in admin_choice menu".format(chat_id, update))
 
 
 def shutdown_choice(update: Update, context: CallbackContext):
@@ -335,8 +340,8 @@ def shutdown_choice(update: Update, context: CallbackContext):
             enqueue_command(cmd, MODE_UPDATER)
         context.bot.send_message(chat_id=chat_id, text=_("Command sent: {0}".format(cmd)))
     else:
-        telegram_logger.critical("Received illegal cmd {1} from user {0} in shutdown_choice menu".
-                             format(chat_id, update))
+        telegram_logger.critical("Received illegal cmd {1} from user {0} in shutdown_choice menu".format(
+            chat_id, update))
 
 
 def stats_choice(update: Update, context: CallbackContext):
@@ -364,8 +369,7 @@ def stats_choice(update: Update, context: CallbackContext):
             context.bot.send_message(chat_id=chat_id, text=str("Command sent"),
                                      reply_markup=reply_markup)
     else:
-        telegram_logger.critical("Received illegal cmd {1} from user {0} in stats_choice menu".
-                             format(chat_id, update))
+        telegram_logger.critical("Received illegal cmd {1} from user {0} in stats_choice menu".format(chat_id, update))
 
 
 def game_navigation(update: Update, context: CallbackContext):
@@ -475,10 +479,9 @@ def achievement_navigation(update: Update, context: CallbackContext):
 
 
 def locale_keyboard():
-    keyboard = []
-    keyboard.append(InlineKeyboardButton(_("ru"), callback_data=LOCALE_RU))
-    keyboard.append(InlineKeyboardButton(_("en"), callback_data=LOCALE_EN))
-    keyboard.append(InlineKeyboardButton(_("dynamic"), callback_data=LOCALE_DYNAMIC))
+    keyboard = [InlineKeyboardButton(_("ru"), callback_data=LOCALE_RU),
+                InlineKeyboardButton(_("en"), callback_data=LOCALE_EN),
+                InlineKeyboardButton(_("dynamic"), callback_data=LOCALE_DYNAMIC)]
     return pretty_menu(keyboard)
 
 
@@ -545,8 +548,7 @@ def admin_options(update: Update, context: CallbackContext):
         context.bot.send_message(chat_id=chat_id, text=_("Выберите аккаунт для просмотра"),
                                  reply_markup=reply_markup)
     else:
-        telegram_logger.critical("Received illegal admin_options cmd from user {0} in global".
-                             format(chat_id))
+        telegram_logger.critical("Received illegal admin_options cmd from user {0} in global".format(chat_id))
 
 
 def account_choice(update: Update, context: CallbackContext):
@@ -583,10 +585,19 @@ def show_account_stats(update: Update, context: CallbackContext):
     player = get_player_by_chat_id(chat_id)
     if player is not None:
         cursor = db.cursor()
-        cursor.execute("""select round(avg(case when g.has_achievements then pg.percent_complete else null end)::numeric, 2), count(case when pg.is_perfect then 1 end), 
-        count(1), count(case when g.has_achievements then 1 end)
-            from achievements_hunt.player_games pg
-             join achievements_hunt.games g on pg.game_id = g.id and pg.platform_id = g.platform_id where pg.player_id = %s
+        cursor.execute("""
+        select 
+            round(avg(case when g.has_achievements 
+                then pg.percent_complete else null 
+                end)::numeric, 2),
+            count(case when pg.is_perfect then 1 end), 
+            count(1), 
+            count(case when g.has_achievements then 1 end)
+        from achievements_hunt.player_games pg
+        join achievements_hunt.games g 
+            on pg.game_id = g.id 
+            and pg.platform_id = g.platform_id 
+        where pg.player_id = %s
              """,
                        (player.id,))
         res = cursor.fetchone()
@@ -604,7 +615,11 @@ def show_account_stats(update: Update, context: CallbackContext):
         if player.dt_updated is not None:
             player.dt_updated = player.dt_updated.replace(microsecond=0)
         cursor.execute("""
-        select coalesce(tr.name, a.name), a.percent_owners, g.name percent_owners from achievements_hunt.player_achievements aa 
+        select 
+                coalesce(tr.name, a.name), 
+                a.percent_owners, 
+                g.name percent_owners 
+            from achievements_hunt.player_achievements aa 
             join achievements_hunt.achievements a
             on aa.achievement_id  = a.id
               and aa.game_id  = a.game_id
@@ -630,9 +645,9 @@ def show_account_stats(update: Update, context: CallbackContext):
             achievement_list = ""
         context.bot.send_message(chat_id=chat_id, text=_("Игр всего {0}, с достижениями {1}, "
                                                          "средний процент достижений {2}"
-                                                         ", идеальных игр {3}, последнее обновление {4} {5}".format(total_games, achievement_games,
-                                                                                      avg_percent, perfect_games, player.dt_updated,
-                                                                                                                    achievement_list)))
+                                                         ", идеальных игр {3}, последнее обновление {4} {5}".
+                                                         format(total_games, achievement_games, avg_percent,
+                                                                perfect_games, player.dt_updated, achievement_list)))
     else:
         start(update, context)
 
@@ -730,7 +745,7 @@ def show_account_achievements(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     telegram_logger.info("Show achievements for user {0} in menu".
                          format(chat_id))
-    loc = set_locale(update)
+    set_locale(update)
 
     achievements = []
     player = get_player_by_chat_id(chat_id)
@@ -833,11 +848,6 @@ def start(update: Update, context: CallbackContext):
 
 
 def echo(update: Update, context: CallbackContext):
-    global creation_process
-    global deletion_process
-    global feedback_process
-    global feedback_reading
-    global feedback_replying
     global telegram_logger
     global register_progress
     global platforms
@@ -890,6 +900,6 @@ def echo(update: Update, context: CallbackContext):
         context.bot.send_message(chat_id=update.effective_chat.id, text=_("Платформа не выбрана"))
 
 
-def set_logger(config: Config):
+def set_logger(cfg: Config):
     global telegram_logger
-    telegram_logger = get_logger("Telegram", config.log_level)
+    telegram_logger = get_logger("Telegram", cfg.log_level)

@@ -1,2 +1,4 @@
-/cfg/main.json
-/cfg/steam.json
+cfg/*.json
+.idea/*
+logs/
+*.pyc
