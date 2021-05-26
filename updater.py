@@ -1,6 +1,7 @@
 import json
 
 import psycopg2
+import psycopg2.extras
 
 from lib.config import Config, MODE_BOT
 from lib.log import get_logger
