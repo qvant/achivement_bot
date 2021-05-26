@@ -858,6 +858,7 @@ def echo(update: Update, context: CallbackContext):
     player_created = False
     if chat_id in register_progress:
         cur_platform = register_progress[chat_id]
+        del register_progress[chat_id]
         for i in platforms:
             context.bot.send_message(chat_id=chat_id,
                                      text=i.name)
@@ -868,7 +869,6 @@ def echo(update: Update, context: CallbackContext):
                 buf = player.is_unique()
                 if buf[0]:
                     player.save()
-                    del register_progress[chat_id]
                     cmd = {"cmd": "create_player", "player_id": player.id, "platform_id": player.platform.id}
                     enqueue_command(cmd, MODE_CORE)
                 if player.id is not None:
