@@ -55,9 +55,9 @@ def main_core(config: Config):
                                 if len(players) > 0:
                                     player = players[0]
                                     on_create(platform=i, player=player)
-                                    load_log.error("Player {0} validated".format(player_id))
+                                    queue_log.error("Player {0} validated".format(player_id))
                                 else:
-                                    load_log.error("Player {0} not found".format(player_id))
+                                    queue_log.error("Player {0} not found".format(player_id))
                     elif cmd_type == 'delete_user':
                         for i in platforms:
                             if i.id == platform_id:
@@ -65,9 +65,9 @@ def main_core(config: Config):
                                 if len(players) > 0:
                                     player = players[0]
                                     on_delete(platform=i, player=player)
-                                    load_log.error("Player {0} deleted".format(player_id))
+                                    queue_log.error("Player {0} deleted".format(player_id))
                                 else:
-                                    load_log.error("Player {0} not found".format(player_id))
+                                    queue_log.error("Player {0} not found".format(player_id))
                     elif cmd_type == 'stop_server':
                         is_running = False
                         cmd = {"cmd": "process_response", "text": "Core shutdown started"}

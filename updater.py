@@ -41,7 +41,11 @@ def main_updater(config: Config):
             cursor = connect.cursor()
             # Process new games queue - recalc owner numbers and percent of achievers
             cursor.execute("""
-            select id, game_id, operation from achievements_hunt.queue_games_update order by game_id for update skip locked fetch first 1000 rows only
+            select id, game_id, operation 
+            from achievements_hunt.queue_games_update 
+            order by game_id 
+            for update skip locked 
+            fetch first 1000 rows only
             """)
             games = {}
             recs = []
@@ -55,7 +59,8 @@ def main_updater(config: Config):
                 recs.append((id_rec, ))
             if len(games) > 0:
                 cursor.execute("""
-                        PREPARE upd_games as update achievements_hunt.games set num_owners = num_owners + $1 where id = $2 
+                        PREPARE upd_games as 
+                        update achievements_hunt.games set num_owners = num_owners + $1 where id = $2 
                         """)
                 game_res = []
                 game_4_ach = []
@@ -68,12 +73,16 @@ def main_updater(config: Config):
                 PREPARE del_q as delete from achievements_hunt.queue_games_update where id = $1
                 """)
                 cursor.execute("""PREPARE upd_achievement as 
-                                update achievements_hunt.achievements as a set percent_owners = case when num_owners > 0 then 
-                                round(a.num_owners * 100 / 
-                                greatest(1, (select g.num_owners from achievements_hunt.games as g where g.id = a.game_id
-                                and g.platform_id = a.platform_id)), 2)
-                                else 0
-                                end
+                                update achievements_hunt.achievements as a 
+                                    set percent_owners = 
+                                    case when num_owners > 0 then 
+                                        round(a.num_owners * 100 / 
+                                        greatest(1, (select g.num_owners 
+                                                        from achievements_hunt.games as g 
+                                                        where g.id = a.game_id
+                                                            and g.platform_id = a.platform_id)), 2)
+                                    else 0
+                                    end
                                 where a.game_id = $1
                                 """)
                 psycopg2.extras.execute_batch(cursor, """EXECUTE upd_achievement (%s)""", game_4_ach)
@@ -85,7 +94,11 @@ def main_updater(config: Config):
 
             # Process new achievements queue - reset perfect games and recalc % complete for all players
             cursor.execute("""
-                                select id, game_id, platform_id from achievements_hunt.queue_achievements_update order by achievement_id for update skip locked fetch first 1000 rows only
+                                select id, game_id, platform_id 
+                                from achievements_hunt.queue_achievements_update 
+                                order by achievement_id 
+                                for update skip locked 
+                                fetch first 1000 rows only
                                 """)
             recs = []
             games = []
@@ -121,8 +134,8 @@ def main_updater(config: Config):
                 psycopg2.extras.execute_batch(cursor, """EXECUTE update_player_games_perf  (%s, %s)""", games)
 
                 cursor.execute("""
-                                            PREPARE del_q as delete from achievements_hunt.queue_achievements_update where id = $1
-                                            """)
+                                PREPARE del_q as delete from achievements_hunt.queue_achievements_update where id = $1
+                                """)
                 psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
 
                 cursor.execute("""DEALLOCATE  update_player_games""")
@@ -132,7 +145,11 @@ def main_updater(config: Config):
 
             # Process player achievements queue, renew percent of achievers and update player perfect games status
             cursor.execute("""
-                    select id, achievement_id, player_id, game_id, platform_id, operation from achievements_hunt.queue_player_achievements_update order by achievement_id for update skip locked fetch first 1000 rows only
+                    select id, achievement_id, player_id, game_id, platform_id, operation 
+                    from achievements_hunt.queue_player_achievements_update 
+                    order by achievement_id 
+                    for update skip locked 
+                    fetch first 1000 rows only
                     """)
             achievements = {}
             recs = []
@@ -148,7 +165,8 @@ def main_updater(config: Config):
                 player_games.append((player_id, game_id, platform_id))
             if len(player_games) > 0:
                 cursor.execute("""
-                                PREPARE upd_achievements as update achievements_hunt.achievements set num_owners = num_owners + $1 where id = $2 
+                                PREPARE upd_achievements as update achievements_hunt.achievements 
+                                set num_owners = num_owners + $1 where id = $2 
                                 """)
                 game_res = []
                 game_4_ach = []
@@ -159,12 +177,14 @@ def main_updater(config: Config):
                 psycopg2.extras.execute_batch(cursor, """EXECUTE upd_achievements (%s, %s)""", game_res)
 
                 cursor.execute("""PREPARE upd_achievement_percent as 
-                                        update achievements_hunt.achievements as a set percent_owners = case when num_owners > 0 then 
-                                        round(a.num_owners * 100 / 
-                                        greatest((select g.num_owners from achievements_hunt.games as g where g.id = a.game_id
-                                        and g.platform_id = a.platform_id), 1), 2)
-                                        else 0
-                                        end
+                                        update achievements_hunt.achievements as a set percent_owners = 
+                                            case when num_owners > 0 then 
+                                                round(a.num_owners * 100 / 
+                                                greatest((select g.num_owners from achievements_hunt.games as g 
+                                                            where g.id = a.game_id
+                                                            and g.platform_id = a.platform_id), 1), 2)
+                                            else 0
+                                            end
                                         where a.id = $1
                                         """)
                 psycopg2.extras.execute_batch(cursor, """EXECUTE upd_achievement_percent (%s)""", game_4_ach)
@@ -192,7 +212,9 @@ def main_updater(config: Config):
                 psycopg2.extras.execute_batch(cursor, """EXECUTE update_player_games_perf (%s, %s, %s)""", player_games)
 
                 cursor.execute("""
-                                PREPARE del_q as delete from achievements_hunt.queue_player_achievements_update where id = $1
+                                PREPARE del_q as 
+                                delete from achievements_hunt.queue_player_achievements_update 
+                                where id = $1
                                 """)
                 psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
                 cursor.execute("""DEALLOCATE  update_player_games""")

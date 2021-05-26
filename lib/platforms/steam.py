@@ -44,7 +44,7 @@ def init_platform(config: Config) -> Platform:
     global api_log
     api_log = get_logger("LOG_API_" + str(config.mode), config.log_level, True)
     steam = Platform(name='Steam', get_games=get_player_games, get_achivements=get_player_achievements,
-                     get_game=get_game,games=None, id=1, validate_player=get_player_stats, get_player_id=get_name)
+                     get_game=get_game, games=None, id=1, validate_player=get_player_stats, get_player_id=get_name)
     f = config.file_path[:config.file_path.rfind('/')] + "steam.json"
     fp = codecs.open(f, 'r', "utf-8")
     steam_config = json.load(fp)
@@ -75,8 +75,8 @@ def get_player_games(player_id):
             "&include_played_free_games=true&include_appinfo=true".format(get_key(), player_id))
         api_log.info("Response from http://api.steampowered.com/IPlayerService/GetOwnedGames/: {1} for player {0}".
                      format(player_id, r))
-        api_log.debug("Full response from http://api.steampowered.com/IPlayerService/GetOwnedGames/: {1} for player {0}".
-                      format(player_id, r.text))
+        api_log.debug("Full response from http://api.steampowered.com/IPlayerService/GetOwnedGames/: "
+                      "{1} for player {0}".format(player_id, r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
         cnt += 1
@@ -97,7 +97,8 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
         r = requests.get(
             "http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key={0}&appid={1}&l={2}".
             format(get_key(), game_id, language))
-        api_log.info("Response from http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/ {0} from Steam".format(r))
+        api_log.info("Response from http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/ "
+                     "{0} from Steam".format(r))
         api_log.debug("Full response from http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/: {0}".
                       format(r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
@@ -144,8 +145,8 @@ def get_player_achievements(player_id, game_id):
         api_log.info("Request http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements "
                      "for game {0} and player {1}".format(game_id, player_id))
         r = requests.get(
-            "http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?key={0}&steamid={1}&appid={2}".
-                format(get_key(), player_id, game_id))
+            "http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/"
+            "v0001/?key={0}&steamid={1}&appid={2}".format(get_key(), player_id, game_id))
         api_log.info("Response from http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/:{0}".format(r))
         api_log.debug("Full response from http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/: {0}".
                       format(r.text))
@@ -203,7 +204,8 @@ def get_player_stats(player_id):
             "http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={0}&steamids={1}".format(get_key(),
                                                                                                            player_id))
         api_log.info("Response from http://api.steampowered.com/ISteamUser/GetPlayerSummaries/: {0}".format(r))
-        api_log.debug("Full response from http://api.steampowered.com/ISteamUser/GetPlayerSummaries/: {0}".format(r.text))
+        api_log.debug("Full response from http://api.steampowered.com/"
+                      "ISteamUser/GetPlayerSummaries/: {0}".format(r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
         cnt += 1

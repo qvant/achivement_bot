@@ -65,7 +65,8 @@ def main_worker(config: Config):
         try:
 
             for i in range(len(platforms)):
-                if datetime.datetime.now().replace(tzinfo=timezone.utc) > dt_next_update[i].replace(tzinfo=timezone.utc):
+                if datetime.datetime.now().replace(tzinfo=timezone.utc) > \
+                        dt_next_update[i].replace(tzinfo=timezone.utc):
                     renew_log.info("Update platform {0}, next update {1}".format(platforms[i].name, dt_next_update[i]))
                     platforms[i].set_next_language()
                     cursor.execute("""
@@ -113,7 +114,7 @@ def main_worker(config: Config):
                                     dt_next_update = %s
                                     where id_platform = %s
                                     and dt_ended is null
-                                """, (dt_next_update[i], platforms[i].id ))
+                                """, (dt_next_update[i], platforms[i].id))
                         conn.commit()
                     else:
                         renew_log.info(
@@ -144,7 +145,7 @@ def main_worker(config: Config):
                         player_id = cmd.get("player_id")
                         dt_sent = cmd.get("dt_sent")
                         dt_sent = datetime.datetime.fromtimestamp(dt_sent)
-                        queue_log.info("Start renew achievements for player {2} and platform {3} becauese msg {0} "
+                        queue_log.info("Start renew achievements for player {2} and platform {3} because msg {0} "
                                        "with delivery_tag {1}".format(body, method_frame.delivery_tag,
                                                                       player_id, platform_id))
                         player = None
@@ -154,9 +155,11 @@ def main_worker(config: Config):
                                 players = load_players(platform=i, config=config, player_id=player_id)
                                 if len(players) > 0:
                                     player = players[0]
-                                    if player.dt_updated is None or player.dt_updated.replace(tzinfo=timezone.utc) < dt_sent.replace(tzinfo=timezone.utc):
+                                    if player.dt_updated is None or player.dt_updated.replace(tzinfo=timezone.utc) < \
+                                            dt_sent.replace(tzinfo=timezone.utc):
                                         queue_log.info(
-                                            "Start actially renew achievements for player {2}  and platform {3} becauese msg {0} with delivery_tag {1}".format(
+                                            "Start actially renew achievements for player {2}  and platform {3} "
+                                            "becauese msg {0} with delivery_tag {1}".format(
                                                 body,
                                                 method_frame.delivery_tag,
                                                 player_id, i.name))
@@ -164,12 +167,15 @@ def main_worker(config: Config):
                                         player.renew()
                                         player.platform.save()
                                         player.save()
-                                        cmd = {"chat_id": player.telegram_id, "cmd": "msg_to_user",
-                                                           "text": 'Achievements for account {} platform {} renewed'.format(player.ext_id, i.name)}
+                                        cmd = {"chat_id": player.telegram_id,
+                                               "cmd": "msg_to_user",
+                                               "text": 'Achievements for account {} platform {} renewed'.format(
+                                                   player.ext_id, i.name)}
                                         enqueue_command(cmd, MODE_BOT)
                                     else:
                                         queue_log.info(
-                                            "Skipped  renew achievements for player {2} and platform {3} becauese msg {0} with delivery_tag {1} was sent at {4} and last renew was {5}".format(
+                                            "Skipped  renew achievements for player {2} and platform {3} because msg "
+                                            "{0} with delivery_tag {1} was sent at {4} and last renew was {5}".format(
                                                 body,
                                                 method_frame.delivery_tag,
                                                 player_id, i.name, dt_sent, player.dt_updated))
