@@ -634,7 +634,7 @@ def show_account_stats(update: Update, context: CallbackContext):
             on aa.game_id = g.id
               and aa.platform_id = g.platform_id
              where aa.player_id = %s 
-             order by a.percent_owners, a.name limit 10
+             order by a.percent_owners, coalesce(tr.name, a.name) limit 10
         """, (locale, player.id))
         buf = cursor.fetchall()
         if len(buf) > 0:
