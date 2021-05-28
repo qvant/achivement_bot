@@ -214,21 +214,21 @@ def stats_keyboard():
     return pretty_menu(keyboard)
 
 
-def games_keyboard(games, cur_games=GAMES_ALL):
-    keyboard = [InlineKeyboardButton(_("В начало"), callback_data=GAMES_LIST_FIRST),
-                InlineKeyboardButton(_("Предыдущая страница"), callback_data=GAMES_LIST_PREV)]
+def games_keyboard(games, cur_games=GAMES_WITH_ACHIEVEMENTS, has_perfect_games: bool = True):
+    keyboard = [InlineKeyboardButton(_("Begin"), callback_data=GAMES_LIST_FIRST),
+                InlineKeyboardButton(_("Previous"), callback_data=GAMES_LIST_PREV)]
     for i in games:
         keyboard.append(InlineKeyboardButton("{}".format(i.name), callback_data="games_of_" + str(i.id)),)
-    keyboard.append(InlineKeyboardButton(_("Следующая страница"), callback_data=GAMES_LIST_NEXT))
-    keyboard.append(InlineKeyboardButton(_("В конец"), callback_data=GAMES_LIST_LAST))
-    keyboard.append(InlineKeyboardButton(_("Индекс"), callback_data=GAMES_LIST_INDEX))
+    keyboard.append(InlineKeyboardButton(_("Next"), callback_data=GAMES_LIST_NEXT))
+    keyboard.append(InlineKeyboardButton(_("End"), callback_data=GAMES_LIST_LAST))
+    keyboard.append(InlineKeyboardButton(_("Index"), callback_data=GAMES_LIST_INDEX))
     if cur_games == GAMES_ALL:
-        keyboard.append(InlineKeyboardButton(_("С достижениями"), callback_data=GAMES_LIST_ONLY_ACHIEVEMENTS))
-    elif cur_games == GAMES_WITH_ACHIEVEMENTS:
-        keyboard.append(InlineKeyboardButton(_("Идеальные"), callback_data=GAMES_LIST_ONLY_PERFECT))
+        keyboard.append(InlineKeyboardButton(_("With achievements"), callback_data=GAMES_LIST_ONLY_ACHIEVEMENTS))
+    elif cur_games == GAMES_WITH_ACHIEVEMENTS and has_perfect_games:
+        keyboard.append(InlineKeyboardButton(_("Perfect"), callback_data=GAMES_LIST_ONLY_PERFECT))
     else:
-        keyboard.append(InlineKeyboardButton(_("Все игры"), callback_data=GAMES_LIST_ALL))
-    keyboard.append(InlineKeyboardButton(_("Назад"), callback_data=GAMES_LIST_BACK))
+        keyboard.append(InlineKeyboardButton(_("All games"), callback_data=GAMES_LIST_ALL))
+    keyboard.append(InlineKeyboardButton(_("Exit"), callback_data=GAMES_LIST_BACK))
     return pretty_menu(keyboard)
 
 
@@ -570,6 +570,7 @@ def account_choice(update: Update, context: CallbackContext):
         for i in players_by_tlg_id[chat_id]:
             if str(i.id) == str(cur_item):
                 user_active_accounts[chat_id] = i.id
+                user_games_modes.pop(chat_id, None)
                 i.get_owned_games()
                 games_by_player_id[i.id] = i.games
                 user_games_offsets[chat_id] = 0
@@ -665,6 +666,7 @@ def show_account_games(update: Update, context: CallbackContext):
 
     set_locale(update)
 
+    has_perfect_games = False
     games = []
     if chat_id in user_active_accounts:
         if user_active_accounts[chat_id] in games_by_player_id:
@@ -673,14 +675,18 @@ def show_account_games(update: Update, context: CallbackContext):
                     games.append(games_by_player_id[user_active_accounts[chat_id]][j])
                     if len(games) >= GAME_MENU_LENGTH:
                         break
+        player = get_player_by_chat_id(chat_id)
+        if player is not None:
+            has_perfect_games = player.has_perfect_games
     if chat_id not in user_games_modes:
-        user_games_modes[chat_id] = GAMES_ALL
+        user_games_modes[chat_id] = GAMES_WITH_ACHIEVEMENTS
         telegram_logger.debug("Reset game mode for user {0}".format(chat_id))
     else:
         telegram_logger.debug("Used existing game mode {1} for user {0}".format(chat_id, user_games_modes[chat_id]))
 
     if len(games) > 0:
-        reply_markup = InlineKeyboardMarkup(games_keyboard(games, cur_games=user_games_modes[chat_id]))
+        reply_markup = InlineKeyboardMarkup(games_keyboard(games, cur_games=user_games_modes[chat_id],
+                                                           has_perfect_games=has_perfect_games))
         context.bot.send_message(chat_id=chat_id, text=_("Выберите игру (показаны {0})").
                                  format(get_mode_name(user_games_modes[chat_id])),
                                  reply_markup=reply_markup)
@@ -690,13 +696,15 @@ def show_account_games(update: Update, context: CallbackContext):
 
 
 def get_mode_name(mode):
+    global telegram_logger
     if mode == GAMES_ALL:
-        mode_name = _("все игры")
+        mode_name = _("all games")
     elif mode == GAMES_WITH_ACHIEVEMENTS:
-        mode_name = _("игры с достижениями")
+        mode_name = _("games with achievements")
     elif mode == GAMES_PERFECT:
-        mode_name = _("идеальные игры")
+        mode_name = _("perfect games")
     else:
+        telegram_logger.critical("Incorrect mode {0}".format(mode))
         mode_name = ""
     return mode_name
 

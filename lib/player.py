@@ -23,6 +23,7 @@ class Player:
         self.achievements = {}
         self.achievement_dates = {}
         self.achievement_stats = {}
+        self.has_perfect_games = True
 
     def set_ext_id(self, ext_id):
         self.ext_id = ext_id
@@ -80,20 +81,20 @@ class Player:
             conn = self.platform.get_connect()
             cur = conn.cursor()
             if mode == GAMES_ALL:
-                cur.execute("""select g.game_id from achievements_hunt.player_games g
+                cur.execute("""select g.game_id, g.is_perfect from achievements_hunt.player_games g
                 join achievements_hunt.games gg on gg.id = g.game_id
                  where g.platform_id = %s and g.player_id = %s
                  order by gg.name""",
                             (self.platform.id, self.id))
             elif mode == GAMES_WITH_ACHIEVEMENTS:
-                cur.execute("""select g.game_id from achievements_hunt.player_games g
+                cur.execute("""select g.game_id, g.is_perfect from achievements_hunt.player_games g
                                 join achievements_hunt.games gg on gg.id = g.game_id
                                  where g.platform_id = %s and g.player_id = %s
                                  and gg.has_achievements
                                  order by gg.name""",
                             (self.platform.id, self.id))
             elif mode == GAMES_PERFECT:
-                cur.execute("""select g.game_id from achievements_hunt.player_games g
+                cur.execute("""select g.game_id, g.is_perfect from achievements_hunt.player_games g
                                 join achievements_hunt.games gg on gg.id = g.game_id
                                  where g.platform_id = %s and g.player_id = %s
                                  and g.is_perfect
@@ -101,14 +102,17 @@ class Player:
                             (self.platform.id, self.id))
             else:
                 self.platform.logger.critical("incorrect get games mode {0}".format(mode))
-                cur.execute("""select g.game_id from achievements_hunt.player_games g
+                cur.execute("""select g.game_id, g.is_perfect from achievements_hunt.player_games g
                                 join achievements_hunt.games gg on gg.id = g.game_id
                                  where g.platform_id = %s and g.player_id = %s
                                  order by gg.name""",
                             (self.platform.id, self.id))
             ret = cur.fetchall()
+            self.has_perfect_games = False
             for j in ret:
                 self.games.append(self.platform.get_game_by__id(j[0], load_if_not_found=True))
+                if j[1]:
+                    self.has_perfect_games = True
 
     @property
     def cur_achievement_stats(self):
