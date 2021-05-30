@@ -242,18 +242,18 @@ def games_index_keyboard():
 
 def achievements_keyboard():
     global players_by_tlg_id
-    keyboard = [InlineKeyboardButton(_("В начало"), callback_data=ACHIEVEMENTS_LIST_FIRST),
-                InlineKeyboardButton(_("Предыдущая страница"), callback_data=ACHIEVEMENTS_LIST_PREV),
-                InlineKeyboardButton(_("Следующая страница"), callback_data=ACHIEVEMENTS_LIST_NEXT),
-                InlineKeyboardButton(_("В конец"), callback_data=ACHIEVEMENTS_LIST_LAST),
-                InlineKeyboardButton(_("К списку игр"), callback_data=ACHIEVEMENTS_LIST_BACK)]
+    keyboard = [InlineKeyboardButton(_("Begin"), callback_data=ACHIEVEMENTS_LIST_FIRST),
+                InlineKeyboardButton(_("Previous"), callback_data=ACHIEVEMENTS_LIST_PREV),
+                InlineKeyboardButton(_("Next"), callback_data=ACHIEVEMENTS_LIST_NEXT),
+                InlineKeyboardButton(_("End"), callback_data=ACHIEVEMENTS_LIST_LAST),
+                InlineKeyboardButton(_("To the games..."), callback_data=ACHIEVEMENTS_LIST_BACK)]
     return pretty_menu(keyboard)
 
 
 def new_account(update: Update, context: CallbackContext):
     set_locale(update)
     reply_markup = InlineKeyboardMarkup(platform_menu())
-    context.bot.send_message(chat_id=update.effective_chat.id, text=_("Выберите платформу"), reply_markup=reply_markup)
+    context.bot.send_message(chat_id=update.effective_chat.id, text=_("Choose the platform"), reply_markup=reply_markup)
 
 
 def delete_account(update: Update, context: CallbackContext):
@@ -278,7 +278,6 @@ def game_choice(update: Update, context: CallbackContext):
     if player is not None:
         player.get_achievement_stats(cur_item, locale)
         user_achievement_offsets[chat_id] = 0
-        context.bot.send_message(chat_id=update.effective_chat.id, text=_("Игра выбрана"))
         show_account_achievements(update, context)
     else:
         account_choice(update, context)
@@ -513,7 +512,7 @@ def list_of_games(update: Update, context: CallbackContext):
                 players_by_tlg_id[chat_id].append(player)
                 user_games_offsets[chat_id] = 0
     reply_markup = InlineKeyboardMarkup(account_keyboard(chat_id))
-    context.bot.send_message(chat_id=chat_id, text=_("Выберите аккаунт для просмотра"),
+    context.bot.send_message(chat_id=chat_id, text=_("Choose account"),
                              reply_markup=reply_markup)
 
 
@@ -638,7 +637,7 @@ def show_account_stats(update: Update, context: CallbackContext):
         """, (locale, player.id))
         buf = cursor.fetchall()
         if len(buf) > 0:
-            achievement_list = _("Самые редкие достижения:") + chr(10)
+            achievement_list = _("Rarest achievements:") + chr(10)
             for i in buf:
                 achievement_list += _(r"{} (game {}) percent owners {}".format(i[0], i[2], i[1]))
                 achievement_list += chr(10)
@@ -687,11 +686,11 @@ def show_account_games(update: Update, context: CallbackContext):
     if len(games) > 0:
         reply_markup = InlineKeyboardMarkup(games_keyboard(games, cur_games=user_games_modes[chat_id],
                                                            has_perfect_games=has_perfect_games))
-        context.bot.send_message(chat_id=chat_id, text=_("Выберите игру (показаны {0})").
+        context.bot.send_message(chat_id=chat_id, text=_("Choose games (shown {0})").
                                  format(get_mode_name(user_games_modes[chat_id])),
                                  reply_markup=reply_markup)
     else:
-        context.bot.send_message(chat_id=chat_id, text=_("На аккаунте нет игр"))
+        context.bot.send_message(chat_id=chat_id, text=_("There is no games on account."))
         start(update, context)
 
 
@@ -724,7 +723,7 @@ def show_games_index(update: Update, context: CallbackContext):
 
     if chat_id in user_active_accounts and chat_id in user_games_modes:
         reply_markup = InlineKeyboardMarkup(games_index_keyboard())
-        context.bot.send_message(chat_id=chat_id, text=_("Выберите игру (показаны {0})".
+        context.bot.send_message(chat_id=chat_id, text=_("Choose games (shown {0})".
                                                          format(get_mode_name(user_games_modes[chat_id]))),
                                  reply_markup=reply_markup)
     else:
@@ -796,12 +795,13 @@ def show_account_achievements(update: Update, context: CallbackContext):
         context.bot.send_message(chat_id=update.effective_chat.id, text=msg, reply_markup=reply_markup)
 
 
-def set_locale(update: Update):
+def set_locale(update: Union[Update, None], chat_id: Union[int, None] = None):
     global user_locales
     global db
-    chat_id = update.effective_chat.id
+    if update is not None:
+        chat_id = update.effective_chat.id
     user_id = None
-    if update.effective_chat.id not in user_locales:
+    if chat_id not in user_locales:
         cursor = db.cursor()
         cursor.execute("""select locale, id from achievements_hunt.users where telegram_id = %s""",
                        (chat_id,))
@@ -811,15 +811,17 @@ def set_locale(update: Update):
             locale = res[0]
             user_id = res[1]
         if locale is None or len(locale) == 0:
-            msg = update.message
-            if msg is not None:
-                fr = msg.from_user
-                if fr is not None:
-                    locale = fr.language_code
+            if update is not None:
+                msg = update.message
+                if msg is not None:
+                    fr = msg.from_user
+                    if fr is not None:
+                        locale = fr.language_code
         if locale is None or len(locale) == 0:
-            cb = update.callback_query
-            if cb is not None:
-                locale = cb.data[7:]
+            if update is not None:
+                cb = update.callback_query
+                if cb is not None:
+                    locale = cb.data[7:]
         if user_id is None:
             cursor.execute("""
                                             insert into achievements_hunt.users(telegram_id, locale)
@@ -847,10 +849,10 @@ def start(update: Update, context: CallbackContext):
     reply_markup = InlineKeyboardMarkup(main_keyboard(update.effective_chat.id))
     set_locale(update)
 
-    context.bot.send_message(chat_id=update.effective_chat.id, text=_("Я achievement_hunt_bot, анализирую редкость "
-                                                                      "достижений, получаемых в видеоиграх. Для работы "
-                                                                      "пользуйтесь клавиатурой под сообщениями. Для "
-                                                                      "возврата в основное меня отправьте текст /start."
+    context.bot.send_message(chat_id=update.effective_chat.id, text=_("Achievement_hunt_bot was designed for track and "
+                                                                      "analyze rarity of game achievements and "
+                                                                      "controlled through keyboard under messages. "
+                                                                      "To return to the main menu send text  start."
                                                                       ),
                              reply_markup=reply_markup)
 
@@ -880,12 +882,12 @@ def echo(update: Update, context: CallbackContext):
                     cmd = {"cmd": "create_player", "player_id": player.id, "platform_id": player.platform.id}
                     enqueue_command(cmd, MODE_CORE)
                 if player.id is not None:
-                    context.bot.send_message(chat_id=chat_id, text=_("Аккаунт привязан"))
+                    context.bot.send_message(chat_id=chat_id, text=_("Account {0} bound to you"))
                 else:
-                    context.bot.send_message(chat_id=chat_id, text=_("Аккаунт {0} уже привязан").
-                                             format(update["message"]["text"]))
+                    context.bot.send_message(chat_id=chat_id,
+                                             text=_("You already have account for this platform"))
         if not player_created:
-            context.bot.send_message(chat_id=update.effective_chat.id, text=_("Платформа {0} не найдена").
+            context.bot.send_message(chat_id=update.effective_chat.id, text=_("Platform {0} not found").
                                      format(cur_platform))
     elif chat_id in users_in_delete_process:
         if update["message"]["text"] == "CONFIRM":
@@ -904,8 +906,6 @@ def echo(update: Update, context: CallbackContext):
             telegram_logger.info("Delete command not confirmed for telegram user {0}".format(chat_id))
             del users_in_delete_process[chat_id]
             context.bot.send_message(chat_id=update.effective_chat.id, text=_("Deletion cancelled"))
-    else:
-        context.bot.send_message(chat_id=update.effective_chat.id, text=_("Платформа не выбрана"))
 
 
 def set_logger(cfg: Config):

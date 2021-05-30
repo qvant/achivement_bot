@@ -82,9 +82,11 @@ def get_player_games(player_id):
         cnt += 1
         time.sleep(WAIT_BETWEEN_TRIES)
     res = [[], []]
-    for i in r.json().get("response").get("games"):
-        res[0].append(i.get("appid"))
-        res[1].append(i.get("name"))
+    obj =r.json().get("response")
+    if obj is not None and "games" in obj:
+        for i in obj.get("games"):
+            res[0].append(i.get("appid"))
+            res[1].append(i.get("name"))
     return res
 
 

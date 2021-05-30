@@ -1,6 +1,8 @@
 import datetime
 import json
+import gettext
 
+from telegram import InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
 
 from lib.config import Config
@@ -10,8 +12,16 @@ from lib.queue import set_logger as set_queue_log, set_config as set_queue_confi
 from lib.queue_handlers import set_telegram
 from lib.telegram import set_logger, telegram_init, set_connect, set_config as set_telegram_config, set_platforms, \
     start, echo, main_menu, account_choice, platform_choice, game_choice, game_navigation, achievement_navigation, \
-    locale_choice, admin_choice, shutdown_choice, stats_choice
+    locale_choice, admin_choice, shutdown_choice, stats_choice, set_locale, main_keyboard
 from lib.db import load, set_load_logger
+from lib.message_types import MT_VALIDATION_OK, MT_VALIDATION_FAILED, MT_ACCOUNT_DELETED
+
+_ = gettext.gettext
+
+en = gettext.translation('base', localedir='locale', languages=['en'])
+en.install()
+ru = gettext.translation('base', localedir='locale', languages=['ru'])
+ru.install()
 
 
 def main_bot(config: Config):
@@ -87,7 +97,23 @@ def main_bot(config: Config):
                     cmd_type = cmd.get("cmd")
                     chat_id = cmd.get("chat_id")
                     if cmd_type == 'msg_to_user':
-                        updater.dispatcher.bot.send_message(chat_id=chat_id, text=cmd.get("text"))
+                        set_locale(update=None, chat_id=chat_id)
+                        msg = ""
+                        msg_type = cmd.get("type")
+                        if msg_type == MT_VALIDATION_OK:
+                            msg = _('Validation for account {} platform {} ok').format(
+                                                   cmd.get("ext_id"), cmd.get("platform"))
+                        elif msg_type == MT_VALIDATION_FAILED:
+                            msg = _('Validation for account {} platform {} failed').format(
+                                cmd.get("ext_id"), cmd.get("platform"))
+                        elif msg_type == MT_ACCOUNT_DELETED:
+                            msg = _('Account {} for platform {} deleted').format(
+                                cmd.get("name"), cmd.get("platform"))
+                        else:
+                            queue_log.error("Nothing to respond in msg {0}".format(body))
+                        if len(msg) > 0:
+                            reply_markup = InlineKeyboardMarkup(main_keyboard(chat_id))
+                            updater.dispatcher.bot.send_message(chat_id=chat_id, text=msg, reply_markup=reply_markup)
                     elif cmd_type == 'stop_server':
                         is_running = False
                         queue_log.info("Stop smd received")
