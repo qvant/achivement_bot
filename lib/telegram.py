@@ -640,13 +640,13 @@ def show_account_stats(update: Update, context: CallbackContext):
         if len(buf) > 0:
             achievement_list = _("Самые редкие достижения:") + chr(10)
             for i in buf:
-                achievement_list += _(r"{} (игра {}) процент выполнивших {}".format(i[0], i[2], i[1]))
+                achievement_list += _(r"{} (game {}) percent owners {}".format(i[0], i[2], i[1]))
                 achievement_list += chr(10)
         else:
             achievement_list = ""
-        context.bot.send_message(chat_id=chat_id, text=_("Игр всего {0}, с достижениями {1}, "
-                                                         "средний процент достижений {2}"
-                                                         ", идеальных игр {3}, последнее обновление {4} {5}".
+        context.bot.send_message(chat_id=chat_id, text=_("Total games {0}, games with achivement support {1}, "
+                                                         "average completion percent {2}"
+                                                         ", perfect games {3}, was updated at {4} {5}".
                                                          format(total_games, achievement_games, avg_percent,
                                                                 perfect_games, player.dt_updated, achievement_list)))
     else:
@@ -775,18 +775,18 @@ def show_account_achievements(update: Update, context: CallbackContext):
             is_unlocked = i.get("owned")
             if len(msg) == 0:
                 if is_unlocked:
-                    msg = _("Выполненные:")
+                    msg = _("Unlocked:")
                     msg += chr(10)
                     prev_unlocked = True
                 else:
-                    msg = _("Невыполненные:")
+                    msg = _("Locked:")
                     msg += chr(10)
             elif prev_unlocked != is_unlocked:
-                msg += _("Невыполненные:")
+                msg += _("Locked:")
                 msg += chr(10)
                 prev_unlocked = False
 
-            msg += _(r"{}/{}. Достижение {} процент выполнивших {}").format(
+            msg += _(r"{}/{}. Achievement {} percent owners {}").format(
                 current_achievement, achievement_number, i.get("name"), i.get("percent"))
             msg += chr(10)
             current_achievement += 1
