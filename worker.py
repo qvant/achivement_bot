@@ -71,13 +71,13 @@ def main_worker(config: Config):
                     renew_log.info("Update platform {0}, next update {1}".format(platforms[i].name, dt_next_update[i]))
                     platforms[i].set_next_language()
                     cursor.execute("""
-                    select count(1) from achievements_hunt.update_history where id_platform = %s 
+                    select count(1) from achievements_hunt.update_history where id_platform = %s
                     and dt_ended is null
                     """, (platforms[i].id,))
                     cnt, = cursor.fetchone()
                     if cnt == 0:
                         cursor.execute("""
-                                        insert into achievements_hunt.update_history(id_platform) 
+                                        insert into achievements_hunt.update_history(id_platform)
                                         values (%s)
                                         """, (platforms[i].id,))
                         conn.commit()
@@ -110,8 +110,8 @@ def main_worker(config: Config):
                         renew_log.info("Update platform {0} finished, next_update {1}".format(platforms[i].name,
                                                                                               dt_next_update[i]))
                         cursor.execute("""
-                                update achievements_hunt.update_history 
-                                    set dt_ended = current_timestamp, 
+                                update achievements_hunt.update_history
+                                    set dt_ended = current_timestamp,
                                     dt_next_update = %s
                                     where id_platform = %s
                                     and dt_ended is null
@@ -218,8 +218,9 @@ def main_worker(config: Config):
                     try:
                         m_channel.basic_ack(method_frame.delivery_tag)
                     except BaseException as exc:
-                        queue_log.info("User message " + str(body) + " with delivery_tag " +
-                                       str(method_frame.delivery_tag) + " acknowledged with error, resending")
+                        queue_log.critical("User message " + str(body) + " with delivery_tag " +
+                                           str(method_frame.delivery_tag) +
+                                           " acknowledged with error{0}, resending".format(str(exc)))
                         # TODO: handle
                         raise
 

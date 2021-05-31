@@ -56,7 +56,7 @@ class Achievement:
                 ret = cursor.fetchone()
                 if ret is not None:
                     self.id = ret[0]
-        cursor.execute("""insert into achievements_hunt.achievement_translations as l 
+        cursor.execute("""insert into achievements_hunt.achievement_translations as l
                         (platform_id, game_id, achievement_id, locale, name, description )
                         values(%s, %s, %s, %s, %s, %s)
                         on conflict ON CONSTRAINT u_achievement_translations_key do update
