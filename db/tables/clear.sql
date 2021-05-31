@@ -11,3 +11,5 @@ drop table achievements_hunt.queue_player_achievements_update;
 drop table achievements_hunt.queue_achievements_update;
 drop table achievements_hunt.queue_games_update;
 drop table achievements_hunt.statuses;
+drop table achievements_hunt.update_history;
+drop table achievements_hunt.version;
