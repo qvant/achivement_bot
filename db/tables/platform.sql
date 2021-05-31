@@ -1,7 +1,7 @@
 create table achievements_hunt.platforms
 (
 	id      serial primary key,
-	name    text not null
+	name    varchar(255) not null
 );
 alter table  achievements_hunt.platforms owner to achievements_hunt_bot;
 

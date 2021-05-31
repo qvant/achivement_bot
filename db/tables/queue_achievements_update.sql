@@ -5,6 +5,6 @@ create table  achievements_hunt.queue_achievements_update
 	game_id 	    integer not null,
 	platform_id     integer not null,
 	dt_insert	    timestamp with time zone default current_timestamp not null,
-	operation       text
+	operation       varchar(32)
 );
 alter table  achievements_hunt.queue_achievements_update owner to achievements_hunt_bot;

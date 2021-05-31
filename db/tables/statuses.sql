@@ -1,7 +1,7 @@
 create table achievements_hunt.statuses
 (
     id 			integer primary key,
-    name        text
+    name        varchar(32)
 );
 create unique index u_statuses_name on achievements_hunt.statuses(name);
 alter table  achievements_hunt.statuses owner to achievements_hunt_bot;

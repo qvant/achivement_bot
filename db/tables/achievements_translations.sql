@@ -4,9 +4,9 @@ create table  achievements_hunt.achievement_translations
 	platform_id     integer not null,
 	game_id         integer not null,
 	achievement_id  integer not null,
-	locale          text not null,
-	name            text,
-	description     text,
+	locale          varchar(32) not null,
+	name            varchar(1024),
+	description     varchar(1024),
 	dt_create	    timestamp with time zone default current_timestamp not null,
 	dt_update	    timestamp with time zone
 );

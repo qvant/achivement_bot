@@ -2,8 +2,8 @@ create table  achievements_hunt.games
 (
 	id 			        serial primary key,
 	platform_id         integer not null,
-	name		        text not null,
-	ext_id		        text not null,
+	name		        varchar(1024) not null,
+	ext_id		        varchar(1024) not null,
 	dt_create	        timestamp with time zone default current_timestamp not null,
 	dt_update	        timestamp with time zone,
 	num_owners          integer default 0 not null,

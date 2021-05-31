@@ -2,8 +2,8 @@ create table achievements_hunt.players
 (
     id          serial primary key,
     platform_id integer not null,
-	name		text not null,
-	ext_id		text not null,
+	name		varchar(1024) not null,
+	ext_id		varchar(255) not null,
 	dt_create	timestamp with time zone default current_timestamp not null,
 	dt_update	timestamp with time zone,
 	telegram_id integer,
