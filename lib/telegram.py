@@ -138,7 +138,7 @@ def platform_choice(update: Update, context: CallbackContext):
                          format(Update, update.effective_chat.id, context))
     set_locale(update)
     register_progress[update.effective_chat.id] = update["callback_query"]["data"][9:]
-    context.bot.send_message(chat_id=update.effective_chat.id, text=_("Введите код аккаунта"))
+    context.bot.send_message(chat_id=update.effective_chat.id, text=_("Enter account name"))
 
 
 def main_keyboard(chat_id: int):
@@ -161,17 +161,17 @@ def main_keyboard(chat_id: int):
                 players_by_tlg_id[chat_id].append(player)
                 user_games_offsets[chat_id] = 0
     keyboard = [
-        InlineKeyboardButton(_("Новый аккаунт"), callback_data="main_NEW_ACCOUNT"),
+        InlineKeyboardButton(_("New account"), callback_data="main_NEW_ACCOUNT"),
         InlineKeyboardButton(_("Delete account"), callback_data="main_DELETE_ACCOUNT"),
         # TODO: remove later
-        InlineKeyboardButton(_("Список игр"), callback_data="main_LIST_OF_GAMES"),
-        InlineKeyboardButton(_("Выбор языка"), callback_data="main_SET_LOCALE"),
+        InlineKeyboardButton(_("List of games"), callback_data="main_LIST_OF_GAMES"),
+        InlineKeyboardButton(_("Language choice"), callback_data="main_SET_LOCALE"),
     ]
     for i in players_by_tlg_id[chat_id]:
         keyboard.append(InlineKeyboardButton("{}({})".format(i.name, i.platform.name),
                                              callback_data="accounts_" + str(i.id)),)
     if chat_id in config.admin_list:
-        keyboard.append(InlineKeyboardButton(_("Администрирование"), callback_data="main_ADMIN"),)
+        keyboard.append(InlineKeyboardButton(_("Admin..."), callback_data="main_ADMIN"),)
 
     return pretty_menu(keyboard)
 
@@ -337,7 +337,7 @@ def shutdown_choice(update: Update, context: CallbackContext):
             enqueue_command(cmd, MODE_WORKER)
         elif cur_item == SHUTDOWN_UPDATER:
             enqueue_command(cmd, MODE_UPDATER)
-        context.bot.send_message(chat_id=chat_id, text=_("Command sent: {0}".format(cmd)))
+        context.bot.send_message(chat_id=chat_id, text=_("Command sent: {0}").format(cmd))
     else:
         telegram_logger.critical("Received illegal cmd {1} from user {0} in shutdown_choice menu".format(
             chat_id, update))
@@ -488,7 +488,7 @@ def list_of_locales(update: Update, context: CallbackContext):
     set_locale(update)
     chat_id = update.effective_chat.id
     reply_markup = InlineKeyboardMarkup(locale_keyboard())
-    context.bot.send_message(chat_id=chat_id, text=_("Выберите язык"),
+    context.bot.send_message(chat_id=chat_id, text=_("Choose the language"),
                              reply_markup=reply_markup)
 
 
@@ -544,7 +544,7 @@ def admin_options(update: Update, context: CallbackContext):
         telegram_logger.info("Received admin_options cmd from user {0} in global".
                              format(chat_id))
         reply_markup = InlineKeyboardMarkup(admin_keyboard())
-        context.bot.send_message(chat_id=chat_id, text=_("Выберите аккаунт для просмотра"),
+        context.bot.send_message(chat_id=chat_id, text=_("Choose account"),
                                  reply_markup=reply_markup)
     else:
         telegram_logger.critical("Received illegal admin_options cmd from user {0} in global".format(chat_id))
@@ -639,15 +639,15 @@ def show_account_stats(update: Update, context: CallbackContext):
         if len(buf) > 0:
             achievement_list = _("Rarest achievements:") + chr(10)
             for i in buf:
-                achievement_list += _(r"{} (game {}) percent owners {}".format(i[0], i[2], i[1]))
+                achievement_list += _(r"{} (game {}) percent owners {}").format(i[0], i[2], i[1])
                 achievement_list += chr(10)
         else:
             achievement_list = ""
         context.bot.send_message(chat_id=chat_id, text=_("Total games {0}, games with achivement support {1}, "
                                                          "average completion percent {2}"
-                                                         ", perfect games {3}, was updated at {4} {5}".
+                                                         ", perfect games {3}, was updated at {4} {5}").
                                                          format(total_games, achievement_games, avg_percent,
-                                                                perfect_games, player.dt_updated, achievement_list)))
+                                                                perfect_games, player.dt_updated, achievement_list))
     else:
         start(update, context)
 
@@ -723,8 +723,8 @@ def show_games_index(update: Update, context: CallbackContext):
 
     if chat_id in user_active_accounts and chat_id in user_games_modes:
         reply_markup = InlineKeyboardMarkup(games_index_keyboard())
-        context.bot.send_message(chat_id=chat_id, text=_("Choose games (shown {0})".
-                                                         format(get_mode_name(user_games_modes[chat_id]))),
+        context.bot.send_message(chat_id=chat_id, text=_("Choose games (shown {0})").
+                                 format(get_mode_name(user_games_modes[chat_id])),
                                  reply_markup=reply_markup)
     else:
         start(update, context)
@@ -790,7 +790,7 @@ def show_account_achievements(update: Update, context: CallbackContext):
             msg += chr(10)
             current_achievement += 1
         if len(msg) == 0:
-            msg = _("Нет достижений.")
+            msg = _("There is no achievements.")
         reply_markup = InlineKeyboardMarkup(achievements_keyboard())
         context.bot.send_message(chat_id=update.effective_chat.id, text=msg, reply_markup=reply_markup)
 
@@ -899,8 +899,8 @@ def echo(update: Update, context: CallbackContext):
                 telegram_logger.info("Delete command sent for telegram user {0} and player {1}".format(chat_id, i.id))
                 enqueue_command(cmd, MODE_CORE)
                 context.bot.send_message(chat_id=update.effective_chat.id,
-                                         text=_("Delete command sent for account {0} and platform {1}".
-                                                format(i.name, i.platform.name)))
+                                         text=_("Delete command sent for account {0} and platform {1}").
+                                         format(i.name, i.platform.name))
             del users_in_delete_process[chat_id]
         else:
             telegram_logger.info("Delete command not confirmed for telegram user {0}".format(chat_id))
