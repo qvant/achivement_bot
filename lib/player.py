@@ -223,8 +223,8 @@ class Player:
                                 """, (self.platform.id, game.id, achievement.id, self.id, achievement_date))
                     saved_cnt += 1
                     self.platform.logger.info(
-                        "Saved into db achievement {2} for player {0} and game {1}: ".format(self.ext_id, game.ext_id,
-                                                                                             achievement.id))
+                        "Saved into db achievement {2} for player {0} and game {1}.".format(self.ext_id, game.ext_id,
+                                                                                            achievement.id))
                 self.platform.logger.info(
                     "Saved achievements for player {0} and game {1}: {2}".format(self.ext_id, game.name, saved_cnt))
         self.platform.logger.info("Saved achievements for player {0}".format(self.ext_id))

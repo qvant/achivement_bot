@@ -135,10 +135,10 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
             or game_name.startswith("Upcoming") or game_name.startswith("[MAIN]")\
             or game_name.startswith("[STAGING]") or game_name.endswith("Unstable")\
             or game_name.startswith("sein") or "&amp;" in game_name:
-        game_name = name
         api_log.info(
             "For game {0} name not found in response ({2}), used supplied name {1}".format(
                 game_id, name, game_name))
+        game_name = name
     return Game(name=game_name, platform_id=PLATFORM_STEAM, ext_id=game_id, id=None, achievements=achievements)
 
 

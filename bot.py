@@ -14,7 +14,7 @@ from lib.telegram import set_logger, telegram_init, set_connect, set_config as s
     start, echo, main_menu, account_choice, platform_choice, game_choice, game_navigation, achievement_navigation, \
     locale_choice, admin_choice, shutdown_choice, stats_choice, set_locale, main_keyboard
 from lib.db import load, set_load_logger
-from lib.message_types import MT_VALIDATION_OK, MT_VALIDATION_FAILED, MT_ACCOUNT_DELETED
+from lib.message_types import MT_VALIDATION_OK, MT_VALIDATION_FAILED, MT_ACCOUNT_DELETED, MT_ACCOUNT_UPDATED
 
 _ = gettext.gettext
 
@@ -108,6 +108,9 @@ def main_bot(config: Config):
                                 cmd.get("ext_id"), cmd.get("platform"))
                         elif msg_type == MT_ACCOUNT_DELETED:
                             msg = _('Account {} for platform {} deleted').format(
+                                cmd.get("name"), cmd.get("platform"))
+                        elif msg_type == MT_ACCOUNT_UPDATED:
+                            msg = _('Stats for account {} and platform {} renewed').format(
                                 cmd.get("name"), cmd.get("platform"))
                         else:
                             queue_log.error("Nothing to respond in msg {0}".format(body))

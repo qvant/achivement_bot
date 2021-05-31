@@ -12,6 +12,7 @@ from lib.queue import set_config as set_queue_config, set_logger as set_queue_lo
 from lib.stats import get_stats
 from lib.telegram import set_logger, set_platforms, set_connect
 from lib.db import load, load_players, set_load_logger
+from lib.message_types import MT_ACCOUNT_UPDATED
 
 
 def main_worker(config: Config):
@@ -158,8 +159,8 @@ def main_worker(config: Config):
                                     if player.dt_updated is None or player.dt_updated.replace(tzinfo=timezone.utc) < \
                                             dt_sent.replace(tzinfo=timezone.utc):
                                         queue_log.info(
-                                            "Start actially renew achievements for player {2}  and platform {3} "
-                                            "becauese msg {0} with delivery_tag {1}".format(
+                                            "Start actually renew achievements for player {2}  and platform {3} "
+                                            "because msg {0} with delivery_tag {1}".format(
                                                 body,
                                                 method_frame.delivery_tag,
                                                 player_id, i.name))
@@ -170,7 +171,11 @@ def main_worker(config: Config):
                                         cmd = {"chat_id": player.telegram_id,
                                                "cmd": "msg_to_user",
                                                "text": 'Achievements for account {} platform {} renewed'.format(
-                                                   player.ext_id, i.name)}
+                                                   player.ext_id, i.name),
+                                               "type": MT_ACCOUNT_UPDATED,
+                                               "name": player.name,
+                                               "platform": i.name
+                                               }
                                         enqueue_command(cmd, MODE_BOT)
                                     else:
                                         queue_log.info(
@@ -179,6 +184,15 @@ def main_worker(config: Config):
                                                 body,
                                                 method_frame.delivery_tag,
                                                 player_id, i.name, dt_sent, player.dt_updated))
+                                        cmd = {"chat_id": player.telegram_id,
+                                               "cmd": "msg_to_user",
+                                               "text": 'Achievements for account {} platform {} renewed'.format(
+                                                   player.ext_id, i.name),
+                                               "type": MT_ACCOUNT_UPDATED,
+                                               "name": player.name,
+                                               "platform": i.name
+                                               }
+                                        enqueue_command(cmd, MODE_BOT)
                                 else:
                                     queue_log.error(
                                         "Player {0} for platform {1} wasn't found in db".format(player_id, platform_id))
