@@ -82,7 +82,7 @@ def get_player_games(player_id):
         cnt += 1
         time.sleep(WAIT_BETWEEN_TRIES)
     res = [[], []]
-    obj =r.json().get("response")
+    obj = r.json().get("response")
     if obj is not None and "games" in obj:
         for i in obj.get("games"):
             res[0].append(i.get("appid"))

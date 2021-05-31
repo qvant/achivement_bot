@@ -135,7 +135,7 @@ def platform_menu():
 def platform_choice(update: Update, context: CallbackContext):
     global register_progress
     telegram_logger.info("Received command {0} from user {1} in platform_choice, callback".
-                         format(Update, update.effective_chat.id, context))
+                         format(Update, update.effective_chat.id))
     set_locale(update)
     register_progress[update.effective_chat.id] = update["callback_query"]["data"][9:]
     context.bot.send_message(chat_id=update.effective_chat.id, text=_("Enter account name"))
@@ -586,17 +586,17 @@ def show_account_stats(update: Update, context: CallbackContext):
     if player is not None:
         cursor = db.cursor()
         cursor.execute("""
-        select 
-            round(avg(case when g.has_achievements 
-                then pg.percent_complete else null 
+        select
+            round(avg(case when g.has_achievements
+                then pg.percent_complete else null
                 end)::numeric, 2),
-            count(case when pg.is_perfect then 1 end), 
-            count(1), 
+            count(case when pg.is_perfect then 1 end),
+            count(1),
             count(case when g.has_achievements then 1 end)
         from achievements_hunt.player_games pg
-        join achievements_hunt.games g 
-            on pg.game_id = g.id 
-            and pg.platform_id = g.platform_id 
+        join achievements_hunt.games g
+            on pg.game_id = g.id
+            and pg.platform_id = g.platform_id
         where pg.player_id = %s
              """,
                        (player.id,))
@@ -615,24 +615,24 @@ def show_account_stats(update: Update, context: CallbackContext):
         if player.dt_updated is not None:
             player.dt_updated = player.dt_updated.replace(microsecond=0)
         cursor.execute("""
-        select 
-                coalesce(tr.name, a.name), 
-                a.percent_owners, 
-                g.name percent_owners 
-            from achievements_hunt.player_achievements aa 
+        select
+                coalesce(tr.name, a.name),
+                a.percent_owners,
+                g.name percent_owners
+            from achievements_hunt.player_achievements aa
             join achievements_hunt.achievements a
             on aa.achievement_id  = a.id
               and aa.game_id  = a.game_id
-              and aa.platform_id = a.platform_id 
-            left join achievements_hunt.achievement_translations tr 
-            on tr.achievement_id  = a.id 
+              and aa.platform_id = a.platform_id
+            left join achievements_hunt.achievement_translations tr
+            on tr.achievement_id  = a.id
               and tr.game_id = aa.game_id
               and tr.platform_id = aa.platform_id
               and tr.locale = %s
             join achievements_hunt.games g
             on aa.game_id = g.id
               and aa.platform_id = g.platform_id
-             where aa.player_id = %s 
+             where aa.player_id = %s
              order by a.percent_owners, coalesce(tr.name, a.name) limit 10
         """, (locale, player.id))
         buf = cursor.fetchall()
@@ -646,8 +646,8 @@ def show_account_stats(update: Update, context: CallbackContext):
         context.bot.send_message(chat_id=chat_id, text=_("Total games {0}, games with achivement support {1}, "
                                                          "average completion percent {2}"
                                                          ", perfect games {3}, was updated at {4} {5}").
-                                                         format(total_games, achievement_games, avg_percent,
-                                                                perfect_games, player.dt_updated, achievement_list))
+                                 format(total_games, achievement_games, avg_percent, perfect_games, player.dt_updated,
+                                        achievement_list))
     else:
         start(update, context)
 
@@ -825,7 +825,7 @@ def set_locale(update: Union[Update, None], chat_id: Union[int, None] = None):
         if user_id is None:
             cursor.execute("""
                                             insert into achievements_hunt.users(telegram_id, locale)
-                                            values (%s, %s) 
+                                            values (%s, %s)
                                             on conflict (telegram_id) do nothing
                                         """, (chat_id, locale))
             db.commit()

@@ -124,14 +124,14 @@ class Player:
             self.achievement_stats = {game_id: []}
             conn = self.platform.get_connect()
             cur = conn.cursor()
-            cur.execute("""select coalesce (tr.name, a.name) as name, pa.id, a.percent_owners, a.id from 
+            cur.execute("""select coalesce (tr.name, a.name) as name, pa.id, a.percent_owners, a.id from
              achievements_hunt.achievements a
-             left join achievements_hunt.player_achievements pa 
+             left join achievements_hunt.player_achievements pa
              on pa.achievement_id = a.id and pa.player_id = %s
              left join achievements_hunt.achievement_translations tr
              on tr.achievement_id = a.id and tr.platform_id = a.platform_id
              and tr.locale = %s
-             where a.platform_id = %s 
+             where a.platform_id = %s
              and a.game_id = %s
              order by a.percent_owners desc, a.name""",
                         (self.id, locale, self.platform.id, game_id))
@@ -148,7 +148,7 @@ class Player:
                 self.platform.logger.info("Saving user {0}".format(self.telegram_id))
                 cur.execute("""
                                 insert into achievements_hunt.users(telegram_id)
-                                values (%s) 
+                                values (%s)
                                 on conflict (telegram_id) do nothing
                             """, (self.telegram_id,))
             self.platform.logger.info("Saving player {0}".format(self.ext_id))
@@ -165,7 +165,7 @@ class Player:
             """, (self.id,))
             ret = cur.fetchone()
             if ret is None:
-                self.platform.logger.info("Empty result on getting locak for player {0}, so it was deleted ".
+                self.platform.logger.info("Empty result on getting locak for player {0}, so it was deleted.".
                                           format(self.id))
                 return
             cur.execute("""
@@ -173,8 +173,8 @@ class Player:
             """, (self.dt_updated, self.id,))
         self.platform.logger.info("Get saved games for player {0} ".format(self.ext_id))
         cur.execute("""
-                            select game_id 
-                                from achievements_hunt.player_games t 
+                            select game_id
+                                from achievements_hunt.player_games t
                                 where t.player_id = %s
                                     and t.platform_id = %s
                         """, (self.id, self.platform.id))
@@ -198,7 +198,7 @@ class Player:
                                           format(self.ext_id, game.ext_id))
                 cur.execute("""
                     select achievement_id
-                        from achievements_hunt.player_achievements t 
+                        from achievements_hunt.player_achievements t
                         where t.player_id = %s
                             and t.platform_id = %s
                             and t.game_id = %s
@@ -209,7 +209,7 @@ class Player:
                 for j in ret:
                     saved_achievements.append(j[0])
                 self.platform.logger.info(
-                    "Saved achievements for player {0} and game {1}: ".format(
+                    "Saved achievements for player {0} and game {1}: {2}".format(
                         self.ext_id, game.ext_id, len(saved_achievements)))
                 for j in range(len(self.achievements[self.games[i]])):
                     achievement = game.get_achievement_by_ext_id(self.achievements[self.games[i]][j])

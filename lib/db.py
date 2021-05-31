@@ -35,18 +35,26 @@ def load_players(platform: Platform, config: Config, player_id: Union[int, None]
 
     if player_id is None:
         cursor.execute("""
-        select id, platform_id, name, ext_id, telegram_id, dt_update from achievements_hunt.players where platform_id = %s 
-        and status_id = %s order by id
+        select id, platform_id, name, ext_id, telegram_id, dt_update
+        from achievements_hunt.players
+        where platform_id = %s
+            and status_id = %s
+        order by id
         """, (platform.id, STATUS_VALID))
     else:
         cursor.execute("""
-            select id, platform_id, name, ext_id, telegram_id, dt_update from achievements_hunt.players where platform_id = %s
-             and id = %s  order by id
+            select id, platform_id, name, ext_id, telegram_id, dt_update
+            from achievements_hunt.players
+            where platform_id = %s
+                and id = %s
+            order by id
             """, (platform.id, player_id))
     players = []
     for id, platform_id, name, ext_id, telegram_id, dt_updated in cursor:
-        load_log.info("Loaded player {0} with id {1}, ext_id {2}, for platform {3} on platform".format(name, ext_id, id, platform.name))
-        test = Player(name=name, platform=platform, ext_id=ext_id, id=id, telegram_id=telegram_id, dt_updated=dt_updated)
+        load_log.info("Loaded player {0} with id {1}, ext_id {2}, for platform {3} on platform".
+                      format(name, ext_id, id, platform.name))
+        test = Player(name=name, platform=platform, ext_id=ext_id, id=id, telegram_id=telegram_id,
+                      dt_updated=dt_updated)
         players.append(test)
     conn.close()
     return players

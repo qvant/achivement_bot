@@ -98,8 +98,9 @@ class Platform:
                     """, (self.id,))
         else:
             cursor.execute("""
-                                select id, platform_id, name, ext_id from achievements_hunt.games 
-                                where platform_id = %s and id = %sorder by id
+                                select id, platform_id, name, ext_id from achievements_hunt.games
+                                where platform_id = %s and id = %s
+                                order by id
                                 """, (self.id, game_id))
         games = {}
         for id, platform_id, name, ext_id in cursor:
@@ -109,14 +110,14 @@ class Platform:
         if load_achievements:
             if game_id is None:
                 cursor.execute("""
-                                    select a.id, a.platform_id, a.name, a.ext_id, g.ext_id, a.description, a.game_id 
+                                    select a.id, a.platform_id, a.name, a.ext_id, g.ext_id, a.description, a.game_id
                                      from achievements_hunt.achievements a
-                                     join  achievements_hunt.games g on a.game_id = g.id 
+                                     join  achievements_hunt.games g on a.game_id = g.id
                                       where a.platform_id = %s order by id
                                     """, (self.id,))
             else:
                 cursor.execute("""
-                                    select a.id, a.platform_id, a.name, a.ext_id, g.ext_id, a.description, a.game_id 
+                                    select a.id, a.platform_id, a.name, a.ext_id, g.ext_id, a.description, a.game_id
                                      from achievements_hunt.achievements a
                                      join  achievements_hunt.games g on a.game_id = g.id  where a.platform_id = %s
                                       and a.game_id = %s order by id
@@ -173,7 +174,7 @@ class Platform:
         conn = self.get_connect()
         cursor = conn.cursor()
         cursor.execute("""
-            select id, name, locale_name, dt_last_update from achievements_hunt.platform_languages 
+            select id, name, locale_name, dt_last_update from achievements_hunt.platform_languages
             where platform_id = %s order by dt_last_update nulls first, locale_name""", (self.id, ))
         for id, name, locale_name, dt_last_update in cursor:
             lang = PlatformLanguage(id, self, name, locale_name, dt_last_update)
