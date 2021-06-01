@@ -894,6 +894,7 @@ def echo(update: Update, context: CallbackContext):
             if chat_id not in players_by_tlg_id:
                 start(update, context)
                 return
+            found = False
             for i in players_by_tlg_id[chat_id]:
                 cmd = {"cmd": "delete_user", "chat_id": chat_id, "player_id": i.id, "platform_id": i.platform.id}
                 telegram_logger.info("Delete command sent for telegram user {0} and player {1}".format(chat_id, i.id))
@@ -902,10 +903,16 @@ def echo(update: Update, context: CallbackContext):
                                          text=_("Delete command sent for account {0} and platform {1}").
                                          format(i.name, i.platform.name))
             del users_in_delete_process[chat_id]
+            if not found:
+                reply_markup = InlineKeyboardMarkup(main_keyboard(update.effective_chat.id))
+                context.bot.send_message(chat_id=update.effective_chat.id,
+                                         text=_("You haven't accounts"),
+                                         reply_markup=reply_markup)
         else:
             telegram_logger.info("Delete command not confirmed for telegram user {0}".format(chat_id))
-            del users_in_delete_process[chat_id]
-            context.bot.send_message(chat_id=update.effective_chat.id, text=_("Deletion cancelled"))
+            reply_markup = InlineKeyboardMarkup(main_keyboard(update.effective_chat.id))
+            context.bot.send_message(chat_id=update.effective_chat.id, text=_("Deletion cancelled"),
+                                     reply_markup=reply_markup)
 
 
 def set_logger(cfg: Config):
