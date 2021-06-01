@@ -192,6 +192,8 @@ def get_player_achievements(player_id, game_id):
                       format(r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
+        if r.status_code == 403:
+            break
         cnt += 1
         time.sleep(WAIT_BETWEEN_TRIES)
     player_stats = r.json().get("playerstats")
@@ -204,6 +206,10 @@ def get_player_achievements(player_id, game_id):
                     achievements.append(o.get("apiname"))
                     achievement_dates.append(datetime.datetime.fromtimestamp(o.get("unlocktime")))
             return achievements, achievement_dates
+    else:
+        err = player_stats.get("error")
+        if err == "Profile is not public":
+            raise ValueError("Profile is not public")
     return [], []
 
 

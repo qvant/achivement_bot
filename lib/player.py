@@ -24,6 +24,7 @@ class Player:
         self.achievement_dates = {}
         self.achievement_stats = {}
         self.has_perfect_games = True
+        self.is_public = True
 
     def set_ext_id(self, ext_id):
         self.ext_id = ext_id
@@ -235,6 +236,7 @@ class Player:
     def renew(self):
         self.games, names, = self.platform.get_games(self.ext_id)
         games_num = len(self.games)
+        self.is_public = True
         for i in range(games_num):
             self.platform.logger.info("Update game with id {1} and name {2} for player {0} {3}. Progress {4}/{5}".
                                       format(self.ext_id, self.games[i], names[i], self.name, i, games_num))
@@ -243,11 +245,21 @@ class Player:
                 "Get achievements for game with id {1} and name {2} for player {0} {3}. Progress {4}/{5}".format(
                     self.ext_id, self.games[i], names[i], self.name, i+1, games_num))
             if self.platform.get_game_by_ext_id(str(self.games[i])).has_achievements:
-                self.achievements[self.games[i]], self.achievement_dates[self.games[i]] = \
-                    self.platform.get_achivements(self.ext_id, self.games[i])
+                if self.is_public:
+                    try:
+                        self.achievements[self.games[i]], self.achievement_dates[self.games[i]] = \
+                            self.platform.get_achivements(self.ext_id, self.games[i])
+                    except ValueError as err:
+                        if str(err) == "Profile is not public":
+                            self.is_public = False
+                else:
+                    self.platform.logger.info(
+                        "Skip checking achievements for game with id {1} and name {2} for player {0} {3}, "
+                        "because profile is private. Progress {4}/{5}".format(
+                            self.ext_id, self.games[i], names[i], self.name, i + 1, games_num))
             else:
                 self.platform.logger.info(
                     "Skip checking achievements for game with id {1} and name {2} for player {0} {3}, "
-                    "because not avaliable. Progress {4}/{5}".format(
+                    "because not available. Progress {4}/{5}".format(
                         self.ext_id, self.games[i], names[i], self.name, i + 1, games_num))
         self.dt_updated = datetime.datetime.now()
