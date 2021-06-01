@@ -14,7 +14,8 @@ from lib.db import set_load_logger
 
 
 def main_updater(config: Config):
-    queue_log = get_logger("Rabbit_updater", config.log_level, True)
+    queue_log = get_logger("Rabbit" + str(config.mode), config.log_level, True)
+    db_log = get_logger("db_" + str(config.mode), config.log_level, True)
 
     set_load_logger(config)
     set_logger(config)
@@ -38,6 +39,7 @@ def main_updater(config: Config):
     while is_running:
 
         try:
+            db_log.info("""Check queue_games_update""")
             cursor = connect.cursor()
             # Process new games queue - recalc owner numbers and percent of achievers
             cursor.execute("""
@@ -57,6 +59,8 @@ def main_updater(config: Config):
                 else:
                     games[game_id] -= 1
                 recs.append((id_rec, ))
+            db_log.info("""Process queue_games_update, found {0} records for {1} games""".
+                        format(len(recs), len(games)))
             if len(games) > 0:
                 cursor.execute("""
                         PREPARE upd_games as
@@ -91,8 +95,10 @@ def main_updater(config: Config):
                 cursor.execute("""DEALLOCATE  del_q""")
                 cursor.execute("""DEALLOCATE  upd_achievement""")
             connect.commit()
+            db_log.info("""Finish queue_games_update processing""")
 
             # Process new achievements queue - reset perfect games and recalc % complete for all players
+            db_log.info("""Check queue_achievements_update""")
             cursor.execute("""
                                 select id, game_id, platform_id
                                 from achievements_hunt.queue_achievements_update
@@ -109,7 +115,8 @@ def main_updater(config: Config):
                     games.append((game_id, platform_id))
                 recs.append((id_rec,))
             if len(games) > 0:
-
+                db_log.info("""Process queue_achievements_update, found {0} records for {1} games""".
+                            format(len(recs), len(games_ids)))
                 cursor.execute("""
                                                         PREPARE update_player_games as
                                                         update achievements_hunt.player_games pg set percent_complete =
@@ -142,8 +149,10 @@ def main_updater(config: Config):
                 cursor.execute("""DEALLOCATE  update_player_games_perf""")
                 cursor.execute("""DEALLOCATE  del_q""")
             connect.commit()
+            db_log.info("""Finish queue_achievements_update processing""")
 
             # Process player achievements queue, renew percent of achievers and update player perfect games status
+            db_log.info("""Check queue_player_achievements_update""")
             cursor.execute("""
                     select id, achievement_id, player_id, game_id, platform_id, operation
                     from achievements_hunt.queue_player_achievements_update
@@ -164,6 +173,8 @@ def main_updater(config: Config):
                 recs.append((id_rec,))
                 player_games.append((player_id, game_id, platform_id))
             if len(player_games) > 0:
+                db_log.info("""Process queue_player_achievements_update, found {0} records for {1} achievements""".
+                            format(len(recs), len(achievements)))
                 cursor.execute("""
                                 PREPARE upd_achievements as update achievements_hunt.achievements
                                 set num_owners = num_owners + $1 where id = $2
@@ -223,7 +234,17 @@ def main_updater(config: Config):
                 cursor.execute("""DEALLOCATE  del_q""")
                 cursor.execute("""DEALLOCATE  upd_achievement_percent""")
             connect.commit()
+            db_log.info("""Finish queue_player_achievements_update processing""")
 
+            db_log.info("""Pause db queue processing, check rabbitMQ for new messages...""")
+        except BaseException as err:
+            db_log.critical(err)
+            if config.supress_errors:
+                pass
+            else:
+                raise
+
+        try:
             for method_frame, properties, body in m_channel.consume(UPDATER_QUEUE_NAME, inactivity_timeout=5,
                                                                     auto_ack=False,
                                                                     arguments={"routing_key": config.mode}):
