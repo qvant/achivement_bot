@@ -199,7 +199,7 @@ def shutdown_keyboard():
         InlineKeyboardButton(_("Shutdown core"), callback_data=SHUTDOWN_CORE),
         InlineKeyboardButton(_("Shutdown bot"), callback_data=SHUTDOWN_BOT),
         InlineKeyboardButton(_("Shutdown worker"), callback_data=SHUTDOWN_WORKER),
-        InlineKeyboardButton(_("Shutdown updated"), callback_data=SHUTDOWN_UPDATER),
+        InlineKeyboardButton(_("Shutdown updater"), callback_data=SHUTDOWN_UPDATER),
     ]
     return pretty_menu(keyboard)
 
@@ -209,7 +209,7 @@ def stats_keyboard():
         InlineKeyboardButton(_("Stats core"), callback_data=STATS_CORE),
         InlineKeyboardButton(_("Stats bot"), callback_data=STATS_BOT),
         InlineKeyboardButton(_("Stats worker"), callback_data=STATS_WORKER),
-        InlineKeyboardButton(_("Stats updated"), callback_data=STATS_UPDATER),
+        InlineKeyboardButton(_("Stats updater"), callback_data=STATS_UPDATER),
     ]
     return pretty_menu(keyboard)
 
