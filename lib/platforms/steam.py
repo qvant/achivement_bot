@@ -18,6 +18,7 @@ PLATFORM_STEAM = 1
 
 global api_log
 global api_key
+global call_counters
 
 
 def get_key():
@@ -40,11 +41,42 @@ def _save_api_key(password: str, path: str):
     fp.close()
 
 
+def inc_call_cnt(method: str):
+    global call_counters
+    cur_dt = str(datetime.date.today())
+    if call_counters is None:
+        call_counters = {}
+    if cur_dt not in call_counters:
+        call_counters[cur_dt] = {}
+    if method not in call_counters[cur_dt]:
+        call_counters[cur_dt][method] = 0
+    call_counters[cur_dt][method] += 1
+
+
+def get_call_cnt():
+    global call_counters
+    if call_counters is not None:
+        for i in call_counters:
+            total = 0
+            for j in call_counters[i]:
+                if j != "Total":
+                    total += call_counters[i][j]
+            call_counters[i]["Total"] = total
+            call_counters[i]["Used calls %"] = 0
+            if total > 0:
+                call_counters[i]["Used calls %"] = round(total / 100000 * 100, 2)
+
+    return call_counters
+
+
 def init_platform(config: Config) -> Platform:
     global api_log
+    global call_counters
+    call_counters = {}
     api_log = get_logger("LOG_API_" + str(config.mode), config.log_level, True)
     steam = Platform(name='Steam', get_games=get_player_games, get_achivements=get_player_achievements,
-                     get_game=get_game, games=None, id=1, validate_player=get_player_stats, get_player_id=get_name)
+                     get_game=get_game, games=None, id=1, validate_player=get_player_stats, get_player_id=get_name,
+                     get_stats=get_call_cnt)
     f = config.file_path[:config.file_path.rfind('/')] + "steam.json"
     fp = codecs.open(f, 'r', "utf-8")
     steam_config = json.load(fp)
@@ -69,6 +101,7 @@ def get_player_games(player_id):
     global api_log
     cnt = 0
     while True:
+        inc_call_cnt("GetOwnedGames")
         api_log.info("Request http://api.steampowered.com/IPlayerService/GetOwnedGames/ for user {0}".format(player_id))
         r = requests.get(
             "http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={0}&steamid={1}"
@@ -94,6 +127,7 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     global api_log
     cnt = 0
     while True:
+        inc_call_cnt("GetSchemaForGame")
         api_log.info("Request http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/ "
                      "for game {0}, name {1} language {2} supplied".format(game_id, name, language))
         r = requests.get(
@@ -147,6 +181,7 @@ def get_player_achievements(player_id, game_id):
     global api_log
     cnt = 0
     while True:
+        inc_call_cnt("GetPlayerAchievements")
         api_log.info("Request http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements "
                      "for game {0} and player {1}".format(game_id, player_id))
         r = requests.get(
@@ -177,6 +212,7 @@ def get_name(player_name: str):
     cnt = 0
     player_id = None
     while True:
+        inc_call_cnt("ResolveVanityURL")
         api_log.info("Request http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001"
                      " for player {0}".format(player_name))
         r = requests.get(
@@ -203,6 +239,7 @@ def get_player_stats(player_id):
     global api_log
     cnt = 0
     while True:
+        inc_call_cnt("GetPlayerSummaries")
         api_log.info("Request http://api.steampowered.com/ISteamUser/GetPlayerSummaries/ "
                      "for player {0}".format(player_id))
         r = requests.get(

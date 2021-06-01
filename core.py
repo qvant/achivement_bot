@@ -75,6 +75,9 @@ def main_core(config: Config):
                     elif cmd_type == "get_stats":
                         msg = get_stats()
                         msg["module"] = "Core"
+                        msg["platform_stats"] = {}
+                        for i in platforms:
+                            msg["platform_stats"][i.name] = str(i.get_stats())
                         cmd = {"cmd": "process_response", "text": str(msg)}
                         enqueue_command(cmd, MODE_BOT)
                     else:

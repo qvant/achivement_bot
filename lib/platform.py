@@ -9,7 +9,7 @@ class Platform:
     config = None
 
     def __init__(self, name: str, get_games, get_game, get_achivements, games: [Game], id: int,
-                 validate_player, get_player_id):
+                 validate_player, get_player_id, get_stats):
         self.id = id
         self.name = name
         self.get_games = get_games
@@ -19,6 +19,7 @@ class Platform:
         self.get_player_id = get_player_id
         self.games = {}
         self.games_by_id = {}
+        self.get_stats = get_stats
         if games is not None:
             for i in games:
                 self.games[str(i.ext_id)] = i

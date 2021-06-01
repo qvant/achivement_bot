@@ -213,6 +213,9 @@ def main_worker(config: Config):
                         res = cursor.fetchone()
                         msg["players"] = res[0]
                         msg["module"] = "Worker"
+                        msg["platform_stats"] = {}
+                        for i in platforms:
+                            msg["platform_stats"][i.name] = str(i.get_stats())
                         cmd = {"cmd": "process_response", "text": str(msg)}
                         enqueue_command(cmd, MODE_BOT)
                     try:
