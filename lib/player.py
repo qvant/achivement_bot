@@ -154,9 +154,12 @@ class Player:
                             """, (self.telegram_id,))
             self.platform.logger.info("Saving player {0}".format(self.ext_id))
             cur.execute("""
-                insert into achievements_hunt.players(platform_id, name, ext_id, telegram_id, status_id, dt_update)
-                values (%s, %s, %s, %s, %s, %s) on conflict ON CONSTRAINT u_players_ext_key do nothing returning id
-            """, (self.platform.id, self.name, self.ext_id, self.telegram_id, STATUS_NEW, self.dt_updated))
+                insert into achievements_hunt.players(platform_id, name, ext_id, telegram_id, status_id, dt_update, 
+                                                      is_public)
+                values (%s, %s, %s, %s, %s, %s,
+                        %s) on conflict ON CONSTRAINT u_players_ext_key do nothing returning id
+            """, (self.platform.id, self.name, self.ext_id, self.telegram_id, STATUS_NEW, self.dt_updated,
+                  self.is_public))
             ret = cur.fetchone()
             if ret is not None:
                 self.id = ret[0]
@@ -166,12 +169,12 @@ class Player:
             """, (self.id,))
             ret = cur.fetchone()
             if ret is None:
-                self.platform.logger.info("Empty result on getting locak for player {0}, so it was deleted.".
+                self.platform.logger.info("Empty result on getting lock for player {0}, so it was deleted.".
                                           format(self.id))
                 return
             cur.execute("""
-                update achievements_hunt.players set dt_update = %s where id = %s
-            """, (self.dt_updated, self.id,))
+                update achievements_hunt.players set dt_update = %s, is_public = %s where id = %s
+            """, (self.dt_updated, self.is_public, self.id,))
         self.platform.logger.info("Get saved games for player {0} ".format(self.ext_id))
         cur.execute("""
                             select game_id

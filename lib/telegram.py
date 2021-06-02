@@ -147,17 +147,18 @@ def main_keyboard(chat_id: int):
     global config
     cursor = db.cursor()
     cursor.execute("""
-                select id, platform_id, name, ext_id, dt_update
+                select id, platform_id, name, ext_id, dt_update, is_public
                 from achievements_hunt.players
                 where telegram_id = %s
                 order by id
                 """, (chat_id,))
     players_by_tlg_id[chat_id] = []
 
-    for id, platform_id, name, ext_id, dt_update in cursor:
+    for id, platform_id, name, ext_id, dt_update, is_public in cursor:
         for i in platforms:
             if i.id == platform_id:
                 player = Player(name=name, platform=i, ext_id=ext_id, id=id, telegram_id=chat_id, dt_updated=dt_update)
+                player.is_public = is_public
                 players_by_tlg_id[chat_id].append(player)
                 user_games_offsets[chat_id] = 0
     keyboard = [
@@ -643,11 +644,15 @@ def show_account_stats(update: Update, context: CallbackContext):
                 achievement_list += chr(10)
         else:
             achievement_list = ""
+        private_warning = ""
+        if not player.is_public:
+            private_warning = chr(10)
+            private_warning += _("Profile is private, available information is limited")
         context.bot.send_message(chat_id=chat_id, text=_("Total games {0}, games with achivement support {1}, "
                                                          "average completion percent {2}"
-                                                         ", perfect games {3}, was updated at {4} {5}").
+                                                         ", perfect games {3}, was updated at {4} {5}{6}").
                                  format(total_games, achievement_games, avg_percent, perfect_games, player.dt_updated,
-                                        achievement_list))
+                                        achievement_list, private_warning))
     else:
         start(update, context)
 
