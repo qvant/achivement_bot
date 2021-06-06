@@ -49,7 +49,7 @@ class Config:
         self.server_name = config.get(CONFIG_PARAM_SERVER_NAME)
         self.supress_errors = False
         self.update_interval = int(config.get(CONFIG_PARAM_UPDATE_INTERVAL))
-        if config.get(CONFIG_PARAM_HALT_ON_ERRORS):
+        if not config.get(CONFIG_PARAM_HALT_ON_ERRORS):
             self.supress_errors = True
         self.secret = config.get(CONFIG_PARAM_BOT_SECRET)
         self.db_name = config.get(CONFIG_PARAM_DB_NAME)

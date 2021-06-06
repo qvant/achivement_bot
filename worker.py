@@ -4,7 +4,7 @@ from datetime import timezone
 
 import pika
 
-from lib.config import Config, MODE_BOT, MODE_WORKER
+from lib.config import Config, MODE_BOT, MODE_WORKER, MODE_CORE
 from lib.log import get_logger
 from lib.platform import Platform
 from lib.queue import set_config as set_queue_config, set_logger as set_queue_log, get_mq_connect, WORKER_QUEUE_NAME, \
@@ -176,7 +176,10 @@ def main_worker(config: Config):
                                                "name": player.name,
                                                "platform": i.name
                                                }
-                                        enqueue_command(cmd, MODE_BOT)
+                                        if player.telegram_id is not None:
+                                            enqueue_command(cmd, MODE_BOT)
+                                        else:
+                                            enqueue_command(cmd, MODE_CORE)
                                     else:
                                         queue_log.info(
                                             "Skipped  renew achievements for player {2} and platform {3} because msg "
@@ -192,7 +195,10 @@ def main_worker(config: Config):
                                                "name": player.name,
                                                "platform": i.name
                                                }
-                                        enqueue_command(cmd, MODE_BOT)
+                                        if player.telegram_id is not None:
+                                            enqueue_command(cmd, MODE_BOT)
+                                        else:
+                                            enqueue_command(cmd, MODE_CORE)
                                 else:
                                     queue_log.error(
                                         "Player {0} for platform {1} wasn't found in db".format(player_id, platform_id))

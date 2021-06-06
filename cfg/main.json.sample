@@ -7,6 +7,7 @@
   "DB_PORT": 5432,
   "DB_USER": "",
   "LOG_LEVEL": "DEBUG",
+  "HALT_ON_ERRORS": false,
   "SERVER_NAME": "",
   "UPDATE_INTERVAL": 86400,
   "BOT_SECRET": "",
