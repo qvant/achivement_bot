@@ -12,12 +12,14 @@ GAMES_PERFECT = 3
 
 class Player:
     def __init__(self, name: str, ext_id: str, platform: Platform, id: Union[int, None], telegram_id: Union[int, None],
-                 dt_updated=None):
+                 dt_updated=None, dt_updated_full=None, dt_updated_inc=None):
         self.id = id
         self.telegram_id = telegram_id
         self.ext_id = ext_id
         self.name = name
         self.dt_updated = dt_updated
+        self.dt_updated_full = dt_updated_full
+        self.dt_updated_inc = dt_updated_inc
         self.platform = platform
         self.games = []
         self.achievements = {}
@@ -173,8 +175,12 @@ class Player:
                                           format(self.id))
                 return
             cur.execute("""
-                update achievements_hunt.players set dt_update = %s, is_public = %s where id = %s
-            """, (self.dt_updated, self.is_public, self.id,))
+                update achievements_hunt.players set dt_update = %s, 
+                                                     is_public = %s, 
+                                                     dt_update_full = coalesce(%s, dt_update_full),
+                                                     dt_update_inc = coalesce(%s, dt_update_inc) 
+                where id = %s
+            """, (self.dt_updated, self.is_public, self.dt_updated_full, self.dt_updated_inc, self.id,))
         self.platform.logger.info("Get saved games for player {0} ".format(self.ext_id))
         cur.execute("""
                             select game_id
@@ -237,7 +243,28 @@ class Player:
         self.platform.logger.info("Saved player {0}".format(self.ext_id))
 
     def renew(self):
-        self.games, names, = self.platform.get_games(self.ext_id)
+        cur_time = datetime.datetime.now().replace(tzinfo=datetime.timezone.utc)
+        if self.platform.incremental_update_enabled:
+            delta = datetime.timedelta(days=self.platform.incremental_update_interval)
+            if (self.dt_updated_inc is not None and (self.dt_updated_inc + delta) > cur_time) or \
+                    (self.dt_updated_full is not None and (self.dt_updated_full + delta) > cur_time):
+                self.games, names, = self.platform.get_last_games(self.ext_id)
+                self.platform.logger.info("Prepared incremental update for player {0}. "
+                                          "Last inc update {1}, last full update {2}".
+                                          format(self.name, self.dt_updated_inc, self.dt_updated_full))
+                self.dt_updated_inc = cur_time
+            else:
+                self.games, names, = self.platform.get_games(self.ext_id)
+                self.platform.logger.info("Prepared full update for player {0}. "
+                                          "Last inc update {1}, last full update {2}".
+                                          format(self.name, self.dt_updated_inc, self.dt_updated_full))
+                self.dt_updated_full = cur_time
+        else:
+            self.games, names, = self.platform.get_games(self.ext_id)
+            self.dt_updated_full = cur_time
+            self.platform.logger.info("Prepared full update (no choice) for player {0}. "
+                                      "Last inc update {1}, last full update {2}".
+                                      format(self.name, self.dt_updated_inc, self.dt_updated_full))
         games_num = len(self.games)
         self.is_public = True
         for i in range(games_num):
@@ -255,6 +282,7 @@ class Player:
                     except ValueError as err:
                         if str(err) == "Profile is not public":
                             self.is_public = False
+                            self.dt_updated_inc = None
                 else:
                     self.platform.logger.info(
                         "Skip checking achievements for game with id {1} and name {2} for player {0} {3}, "

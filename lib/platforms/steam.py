@@ -74,13 +74,16 @@ def init_platform(config: Config) -> Platform:
     global call_counters
     call_counters = {}
     api_log = get_logger("LOG_API_" + str(config.mode), config.log_level, True)
-    steam = Platform(name='Steam', get_games=get_player_games, get_achivements=get_player_achievements,
-                     get_game=get_game, games=None, id=1, validate_player=get_player_stats, get_player_id=get_name,
-                     get_stats=get_call_cnt)
     f = config.file_path[:config.file_path.rfind('/')] + "steam.json"
     fp = codecs.open(f, 'r', "utf-8")
     steam_config = json.load(fp)
     key_read = steam_config.get("API_KEY")
+    incremental_update_enabled = steam_config.get("INCREMENTAL_UPDATE_ENABLED")
+    incremental_update_interval = steam_config.get("INCREMENTAL_UPDATE_INTERVAL")
+    steam = Platform(name='Steam', get_games=get_player_games, get_achivements=get_player_achievements,
+                     get_game=get_game, games=None, id=1, validate_player=get_player_stats, get_player_id=get_name,
+                     get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,
+                     incremental_update_interval=incremental_update_interval, get_last_games=get_player_last_games)
     if is_password_encrypted(key_read):
         api_log.info("Steam key encrypted, do nothing")
         open_key = decrypt_password(key_read, config.server_name, config.db_port)
@@ -95,6 +98,32 @@ def init_platform(config: Config) -> Platform:
         open_key = key_read
     set_key(open_key)
     return steam
+
+
+def get_player_last_games(player_id):
+    global api_log
+    cnt = 0
+    while True:
+        inc_call_cnt("GetRecentlyPlayedGames")
+        api_log.info("Request http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/ for user {0}".format(player_id))
+        r = requests.get(
+            "http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key={0}&steamid={1}"
+            "&include_played_free_games=true&include_appinfo=true".format(get_key(), player_id))
+        api_log.info("Response from http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/: {1} for player {0}".
+                     format(player_id, r))
+        api_log.debug("Full response from http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/: "
+                      "{1} for player {0}".format(player_id, r.text))
+        if r.status_code == 200 or cnt >= MAX_TRIES:
+            break
+        cnt += 1
+        time.sleep(WAIT_BETWEEN_TRIES)
+    res = [[], []]
+    obj = r.json().get("response")
+    if obj is not None and "games" in obj:
+        for i in obj.get("games"):
+            res[0].append(i.get("appid"))
+            res[1].append(i.get("name"))
+    return res
 
 
 def get_player_games(player_id):

@@ -9,10 +9,12 @@ class Platform:
     config = None
 
     def __init__(self, name: str, get_games, get_game, get_achivements, games: [Game], id: int,
-                 validate_player, get_player_id, get_stats):
+                 validate_player, get_player_id, get_stats, incremental_update_enabled: bool,
+                 incremental_update_interval: int, get_last_games):
         self.id = id
         self.name = name
         self.get_games = get_games
+        self.get_last_games = get_last_games
         self.get_game = get_game
         self.get_achivements = get_achivements
         self.validate_player = validate_player
@@ -20,6 +22,8 @@ class Platform:
         self.games = {}
         self.games_by_id = {}
         self.get_stats = get_stats
+        self.incremental_update_enabled = incremental_update_enabled
+        self.incremental_update_interval = incremental_update_interval
         if games is not None:
             for i in games:
                 self.games[str(i.ext_id)] = i

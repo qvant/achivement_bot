@@ -112,7 +112,9 @@ create table achievements_hunt.players
 	dt_update	timestamp with time zone,
 	telegram_id integer,
 	status_id   integer not null,
-	is_public   boolean not null default true
+	is_public   boolean not null default true,
+	dt_update_full	timestamp with time zone,
+	dt_update_inc	timestamp with time zone
 );
 create unique index u_players_ext_key on achievements_hunt.players(platform_id, ext_id);
 create unique index u_players_telegram on achievements_hunt.players(platform_id, telegram_id);
