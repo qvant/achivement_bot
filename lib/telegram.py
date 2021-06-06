@@ -298,7 +298,7 @@ def locale_choice(update: Update, context: CallbackContext):
                    (cur_item, chat_id))
     db.commit()
     reply_markup = InlineKeyboardMarkup(main_keyboard(chat_id))
-    context.bot.send_message(chat_id=chat_id, text=_("Язык выбран"),
+    context.bot.send_message(chat_id=chat_id, text=_("Language chosen"),
                              reply_markup=reply_markup)
 
 
