@@ -156,7 +156,7 @@ class Player:
                             """, (self.telegram_id,))
             self.platform.logger.info("Saving player {0}".format(self.ext_id))
             cur.execute("""
-                insert into achievements_hunt.players(platform_id, name, ext_id, telegram_id, status_id, dt_update, 
+                insert into achievements_hunt.players(platform_id, name, ext_id, telegram_id, status_id, dt_update,
                                                       is_public)
                 values (%s, %s, %s, %s, %s, %s,
                         %s) on conflict ON CONSTRAINT u_players_ext_key do nothing returning id
@@ -175,10 +175,10 @@ class Player:
                                           format(self.id))
                 return
             cur.execute("""
-                update achievements_hunt.players set dt_update = %s, 
-                                                     is_public = %s, 
+                update achievements_hunt.players set dt_update = %s,
+                                                     is_public = %s,
                                                      dt_update_full = coalesce(%s, dt_update_full),
-                                                     dt_update_inc = coalesce(%s, dt_update_inc) 
+                                                     dt_update_inc = coalesce(%s, dt_update_inc)
                 where id = %s
             """, (self.dt_updated, self.is_public, self.dt_updated_full, self.dt_updated_inc, self.id,))
         self.platform.logger.info("Get saved games for player {0} ".format(self.ext_id))

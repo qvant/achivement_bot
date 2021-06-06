@@ -54,7 +54,8 @@ class Achievement:
                 en_descr = ret[2]
         if self.id is None:
             cursor.execute("""
-                                select id, name, description from achievements_hunt.achievements where platform_id = %s and ext_id = %s
+                                select id, name, description from achievements_hunt.achievements
+                                where platform_id = %s and ext_id = %s
                                 and game_id = %s
                             """, (self.platform_id, self.ext_id, self.game_id))
             ret = cursor.fetchone()

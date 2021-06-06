@@ -105,11 +105,13 @@ def get_player_last_games(player_id):
     cnt = 0
     while True:
         inc_call_cnt("GetRecentlyPlayedGames")
-        api_log.info("Request http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/ for user {0}".format(player_id))
+        api_log.info("Request http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/ for user {0}".
+                     format(player_id))
         r = requests.get(
             "http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key={0}&steamid={1}"
             "&include_played_free_games=true&include_appinfo=true".format(get_key(), player_id))
-        api_log.info("Response from http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/: {1} for player {0}".
+        api_log.info("Response from http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/:"
+                     " {1} for player {0}".
                      format(player_id, r))
         api_log.debug("Full response from http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/: "
                       "{1} for player {0}".format(player_id, r.text))
