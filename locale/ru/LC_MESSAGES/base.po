@@ -169,7 +169,7 @@ msgstr "{} (игра {}) % выполнивших {}"
 
 #: ..\lib\telegram.py:650
 msgid "Profile is private, available information is limited"
-msgstr "Профиль приватный, доступная игформация ограничени"
+msgstr "Профиль приватный, доступная информация ограничена."
 
 #: ..\lib\telegram.py:651
 msgid "Total games {0}, games with achivement support {1}, average completion percent {2}, perfect games {3}, was updated at {4} {5}{6}"
