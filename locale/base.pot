@@ -212,7 +212,7 @@ msgid "There is no achievements."
 msgstr ""
 
 #: ..\lib\telegram.py:857
-msgid "Achievement_hunt_bot was designed for track and analyze rarity of game achievements and controlled through keyboard under messages. To return to the main menu send text /start. Source code available on https://github.com/qvant/achivement_bot."
+msgid "Achievement_hunt_bot was designed for track and analyze rarity of game achievements and controlled through keyboard under messages. To return to the main menu send text  start."
 msgstr ""
 
 #: ..\lib\telegram.py:890

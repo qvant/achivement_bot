@@ -136,7 +136,7 @@ def platform_choice(update: Update, context: CallbackContext):
     global register_progress
     telegram_logger.info("Received command {0} from user {1} in platform_choice, callback".
                          format(Update, update.effective_chat.id))
-    set_locale(update)
+    _ = set_locale(update)
     register_progress[update.effective_chat.id] = update["callback_query"]["data"][9:]
     context.bot.send_message(chat_id=update.effective_chat.id, text=_("Enter account name"))
 
@@ -145,6 +145,7 @@ def main_keyboard(chat_id: int):
     global db
     global platforms
     global config
+    _ = set_locale(chat_id=chat_id)
     cursor = db.cursor()
     cursor.execute("""
                 select id, platform_id, name, ext_id, dt_update, is_public
@@ -187,7 +188,8 @@ def account_keyboard(chat_id: int):
     return pretty_menu(keyboard)
 
 
-def admin_keyboard():
+def admin_keyboard(chat_id: int):
+    _ = set_locale(chat_id=chat_id)
     keyboard = [
         InlineKeyboardButton(_("Stats..."), callback_data="admin_stats"),
         InlineKeyboardButton(_("Shutdown..."), callback_data="admin_shutdown"),
@@ -195,7 +197,8 @@ def admin_keyboard():
     return pretty_menu(keyboard)
 
 
-def shutdown_keyboard():
+def shutdown_keyboard(chat_id: int):
+    _ = set_locale(chat_id=chat_id)
     keyboard = [
         InlineKeyboardButton(_("Shutdown core"), callback_data=SHUTDOWN_CORE),
         InlineKeyboardButton(_("Shutdown bot"), callback_data=SHUTDOWN_BOT),
@@ -205,7 +208,8 @@ def shutdown_keyboard():
     return pretty_menu(keyboard)
 
 
-def stats_keyboard():
+def stats_keyboard(chat_id: int):
+    _ = set_locale(chat_id=chat_id)
     keyboard = [
         InlineKeyboardButton(_("Stats core"), callback_data=STATS_CORE),
         InlineKeyboardButton(_("Stats bot"), callback_data=STATS_BOT),
@@ -215,7 +219,8 @@ def stats_keyboard():
     return pretty_menu(keyboard)
 
 
-def games_keyboard(games, cur_games=GAMES_WITH_ACHIEVEMENTS, has_perfect_games: bool = True):
+def games_keyboard(chat_id: int, games, cur_games=GAMES_WITH_ACHIEVEMENTS, has_perfect_games: bool = True):
+    _ = set_locale(chat_id=chat_id)
     keyboard = [InlineKeyboardButton(_("Begin"), callback_data=GAMES_LIST_FIRST),
                 InlineKeyboardButton(_("Previous"), callback_data=GAMES_LIST_PREV)]
     for i in games:
@@ -241,8 +246,8 @@ def games_index_keyboard():
     return pretty_menu(keyboard)
 
 
-def achievements_keyboard():
-    global players_by_tlg_id
+def achievements_keyboard(chat_id: int):
+    _ = set_locale(chat_id=chat_id)
     keyboard = [InlineKeyboardButton(_("Begin"), callback_data=ACHIEVEMENTS_LIST_FIRST),
                 InlineKeyboardButton(_("Previous"), callback_data=ACHIEVEMENTS_LIST_PREV),
                 InlineKeyboardButton(_("Next"), callback_data=ACHIEVEMENTS_LIST_NEXT),
@@ -252,14 +257,14 @@ def achievements_keyboard():
 
 
 def new_account(update: Update, context: CallbackContext):
-    set_locale(update)
+    _ = set_locale(update)
     reply_markup = InlineKeyboardMarkup(platform_menu())
     context.bot.send_message(chat_id=update.effective_chat.id, text=_("Choose the platform"), reply_markup=reply_markup)
 
 
 def delete_account(update: Update, context: CallbackContext):
     global users_in_delete_process
-    set_locale(update)
+    _ = set_locale(update)
     users_in_delete_process[update.effective_chat.id] = update.effective_chat.id
     context.bot.send_message(chat_id=update.effective_chat.id,
                              text=_("Send message 'CONFIRM' (ALL LETTERS CAPITAL) to remove all data from system"))
@@ -272,7 +277,8 @@ def game_choice(update: Update, context: CallbackContext):
     cur_item = update["callback_query"]["data"][9:]
     telegram_logger.info("Received command {0} from user {1} in game_choice menu".
                          format(cur_item, update.effective_chat.id))
-    locale = set_locale(update)
+    _ = set_locale(update)
+    locale = get_locale_name(update)
     telegram_logger.info("Locale {0} set for user {1}".
                          format(locale, update.effective_chat.id))
     player = get_player_by_chat_id(chat_id)
@@ -288,6 +294,7 @@ def locale_choice(update: Update, context: CallbackContext):
     global telegram_logger
     global user_locales
     chat_id = update.effective_chat.id
+    _ = set_locale(chat_id=chat_id)
     cur_item = update["callback_query"]["data"][7:].lower()
     telegram_logger.info("Received command {0} from user {1} in locale_choice menu".
                          format(cur_item, update.effective_chat.id))
@@ -306,14 +313,15 @@ def admin_choice(update: Update, context: CallbackContext):
     global telegram_logger
     global config
     chat_id = update.effective_chat.id
+    _ = set_locale(chat_id=chat_id)
     if chat_id in config.admin_list:
         cur_item = update["callback_query"]["data"]
         telegram_logger.info("Received command {0} from user {1} in admin_choice menu".
                              format(cur_item, update.effective_chat.id))
         if cur_item == "admin_shutdown":
-            reply_markup = InlineKeyboardMarkup(shutdown_keyboard())
+            reply_markup = InlineKeyboardMarkup(shutdown_keyboard(chat_id))
         else:
-            reply_markup = InlineKeyboardMarkup(stats_keyboard())
+            reply_markup = InlineKeyboardMarkup(stats_keyboard(chat_id))
         context.bot.send_message(chat_id=chat_id, text=_("Select action"),
                                  reply_markup=reply_markup)
     else:
@@ -324,6 +332,7 @@ def shutdown_choice(update: Update, context: CallbackContext):
     global telegram_logger
     global config
     chat_id = update.effective_chat.id
+    _ = set_locale(chat_id=chat_id)
     if chat_id in config.admin_list:
         cur_item = update["callback_query"]["data"]
         telegram_logger.info("Received command {0} from user {1} in shutdown_choice menu".
@@ -348,11 +357,12 @@ def stats_choice(update: Update, context: CallbackContext):
     global telegram_logger
     global config
     chat_id = update.effective_chat.id
+    _ = set_locale(chat_id=chat_id)
     if chat_id in config.admin_list:
         cur_item = update["callback_query"]["data"]
         telegram_logger.info("Received command {0} from user {1} in stats_choice menu".
                              format(cur_item, update.effective_chat.id))
-        reply_markup = InlineKeyboardMarkup(stats_keyboard())
+        reply_markup = InlineKeyboardMarkup(stats_keyboard(chat_id))
         if cur_item == STATS_BOT:
             msg = get_stats()
             msg["module"] = "Bot"
@@ -383,7 +393,7 @@ def game_navigation(update: Update, context: CallbackContext):
     cur_item = update["callback_query"]["data"]
     telegram_logger.info("Received command {0} from user {1} in game_navigation menu".
                          format(cur_item, update.effective_chat.id))
-    set_locale(update)
+    _ = set_locale(update)
     if chat_id not in user_games_offsets or chat_id not in user_active_accounts:
         user_games_offsets[chat_id] = 0
     elif user_active_accounts[chat_id] not in games_by_player_id:
@@ -444,7 +454,7 @@ def achievement_navigation(update: Update, context: CallbackContext):
     telegram_logger.info("Received command {0} from user {1} in achievement_navigation menu".
                          format(cur_item, chat_id))
 
-    set_locale(update)
+    _ = set_locale(update)
 
     if chat_id not in user_achievement_offsets or chat_id not in user_active_accounts:
         user_achievement_offsets[chat_id] = 0
@@ -478,7 +488,8 @@ def achievement_navigation(update: Update, context: CallbackContext):
         show_account_achievements(update=update, context=context)
 
 
-def locale_keyboard():
+def locale_keyboard(chat_id):
+    _ = set_locale(chat_id=chat_id)
     keyboard = [InlineKeyboardButton(_("ru"), callback_data=LOCALE_RU),
                 InlineKeyboardButton(_("en"), callback_data=LOCALE_EN),
                 InlineKeyboardButton(_("dynamic"), callback_data=LOCALE_DYNAMIC)]
@@ -486,9 +497,9 @@ def locale_keyboard():
 
 
 def list_of_locales(update: Update, context: CallbackContext):
-    set_locale(update)
+    _ = set_locale(update)
     chat_id = update.effective_chat.id
-    reply_markup = InlineKeyboardMarkup(locale_keyboard())
+    reply_markup = InlineKeyboardMarkup(locale_keyboard(chat_id))
     context.bot.send_message(chat_id=chat_id, text=_("Choose the language"),
                              reply_markup=reply_markup)
 
@@ -499,12 +510,13 @@ def list_of_games(update: Update, context: CallbackContext):
     global players_by_tlg_id
     global user_games_offsets
     chat_id = update.effective_chat.id
+    _ = set_locale(chat_id=chat_id)
     cursor = db.cursor()
     cursor.execute("""
             select id, platform_id, name, ext_id from achievements_hunt.players where telegram_id = %s order by id
             """, (update.effective_chat.id,))
     players_by_tlg_id[update.effective_chat.id] = []
-    set_locale(update)
+    _ = set_locale(update)
 
     for id, platform_id, name, ext_id in cursor:
         for i in platforms:
@@ -524,7 +536,7 @@ def main_menu(update: Update, context: CallbackContext):
     telegram_logger.debug("Main menu called. Context {}".format(context))
     telegram_logger.info("Received command {0} from user {1} in main menu".
                          format(cur_item, update.effective_chat.id))
-    set_locale(update)
+    _ = set_locale(update)
     if cur_item == "NEW_ACCOUNT":
         new_account(update, context)
     elif cur_item == "LIST_OF_GAMES":
@@ -544,7 +556,7 @@ def admin_options(update: Update, context: CallbackContext):
     if chat_id in config.admin_list:
         telegram_logger.info("Received admin_options cmd from user {0} in global".
                              format(chat_id))
-        reply_markup = InlineKeyboardMarkup(admin_keyboard())
+        reply_markup = InlineKeyboardMarkup(admin_keyboard(chat_id))
         context.bot.send_message(chat_id=chat_id, text=_("Choose account"),
                                  reply_markup=reply_markup)
     else:
@@ -564,14 +576,14 @@ def account_choice(update: Update, context: CallbackContext):
     telegram_logger.info("Received command {0} from user {1} in account_choice menu".
                          format(update["callback_query"]["data"], chat_id))
 
-    set_locale(update)
+    _ = set_locale(update)
 
     if chat_id in players_by_tlg_id:
         for i in players_by_tlg_id[chat_id]:
             if str(i.id) == str(cur_item):
                 user_active_accounts[chat_id] = i.id
-                user_games_modes.pop(chat_id, None)
-                i.get_owned_games()
+                user_games_modes[chat_id] = GAMES_WITH_ACHIEVEMENTS
+                i.get_owned_games(mode=user_games_modes[chat_id])
                 games_by_player_id[i.id] = i.games
                 user_games_offsets[chat_id] = 0
         show_account_stats(update=update, context=context)
@@ -582,7 +594,8 @@ def account_choice(update: Update, context: CallbackContext):
 
 def show_account_stats(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
-    locale = set_locale(update)
+    _ = set_locale(update)
+    locale = get_locale_name(update)
     player = get_player_by_chat_id(chat_id)
     if player is not None:
         cursor = db.cursor()
@@ -668,7 +681,7 @@ def show_account_games(update: Update, context: CallbackContext):
     telegram_logger.info("Show games for  user {0} in menu show_account_games".
                          format(update.effective_chat.id))
 
-    set_locale(update)
+    _ = set_locale(update)
 
     has_perfect_games = False
     games = []
@@ -689,18 +702,19 @@ def show_account_games(update: Update, context: CallbackContext):
         telegram_logger.debug("Used existing game mode {1} for user {0}".format(chat_id, user_games_modes[chat_id]))
 
     if len(games) > 0:
-        reply_markup = InlineKeyboardMarkup(games_keyboard(games, cur_games=user_games_modes[chat_id],
+        reply_markup = InlineKeyboardMarkup(games_keyboard(chat_id, games, cur_games=user_games_modes[chat_id],
                                                            has_perfect_games=has_perfect_games))
         context.bot.send_message(chat_id=chat_id, text=_("Choose games (shown {0})").
-                                 format(get_mode_name(user_games_modes[chat_id])),
+                                 format(get_mode_name(user_games_modes[chat_id], chat_id)),
                                  reply_markup=reply_markup)
     else:
         context.bot.send_message(chat_id=chat_id, text=_("There is no games on account."))
         start(update, context)
 
 
-def get_mode_name(mode):
+def get_mode_name(mode, chat_id):
     global telegram_logger
+    _ = set_locale(chat_id=chat_id)
     if mode == GAMES_ALL:
         mode_name = _("all games")
     elif mode == GAMES_WITH_ACHIEVEMENTS:
@@ -724,12 +738,12 @@ def show_games_index(update: Update, context: CallbackContext):
     telegram_logger.info("Show games for  user {0} in menu show_games_index".
                          format(update.effective_chat.id))
 
-    set_locale(update)
+    _ = set_locale(update)
 
     if chat_id in user_active_accounts and chat_id in user_games_modes:
         reply_markup = InlineKeyboardMarkup(games_index_keyboard())
         context.bot.send_message(chat_id=chat_id, text=_("Choose games (shown {0})").
-                                 format(get_mode_name(user_games_modes[chat_id])),
+                                 format(get_mode_name(user_games_modes[chat_id], chat_id)),
                                  reply_markup=reply_markup)
     else:
         start(update, context)
@@ -755,9 +769,9 @@ def show_account_achievements(update: Update, context: CallbackContext):
     global user_achievement_offsets
 
     chat_id = update.effective_chat.id
-    telegram_logger.info("Show achievements for user {0} in menu".
+    telegram_logger.info("Show achievements for user {0} in show_account_achievements".
                          format(chat_id))
-    set_locale(update)
+    _ = set_locale(update)
 
     achievements = []
     player = get_player_by_chat_id(chat_id)
@@ -796,11 +810,11 @@ def show_account_achievements(update: Update, context: CallbackContext):
             current_achievement += 1
         if len(msg) == 0:
             msg = _("There is no achievements.")
-        reply_markup = InlineKeyboardMarkup(achievements_keyboard())
+        reply_markup = InlineKeyboardMarkup(achievements_keyboard(chat_id))
         context.bot.send_message(chat_id=update.effective_chat.id, text=msg, reply_markup=reply_markup)
 
 
-def set_locale(update: Union[Update, None], chat_id: Union[int, None] = None):
+def set_locale(update: Union[Update, None] = None, chat_id: Union[int, None] = None):
     global user_locales
     global db
     if update is not None:
@@ -844,6 +858,47 @@ def set_locale(update: Union[Update, None], chat_id: Union[int, None] = None):
         _ = en.gettext
     else:
         _ = en.gettext
+    return _
+
+
+def get_locale_name(update: Union[Update, None], chat_id: Union[int, None] = None):
+    global user_locales
+    global db
+    if update is not None:
+        chat_id = update.effective_chat.id
+    user_id = None
+    if chat_id not in user_locales:
+        cursor = db.cursor()
+        cursor.execute("""select locale, id from achievements_hunt.users where telegram_id = %s""",
+                       (chat_id,))
+        res = cursor.fetchone()
+        locale = ""
+        if res is not None:
+            locale = res[0]
+            user_id = res[1]
+        if locale is None or len(locale) == 0:
+            if update is not None:
+                msg = update.message
+                if msg is not None:
+                    fr = msg.from_user
+                    if fr is not None:
+                        locale = fr.language_code
+        if locale is None or len(locale) == 0:
+            if update is not None:
+                cb = update.callback_query
+                if cb is not None:
+                    locale = cb.data[7:]
+        if user_id is None:
+            cursor.execute("""
+                                            insert into achievements_hunt.users(telegram_id, locale)
+                                            values (%s, %s)
+                                            on conflict (telegram_id) do nothing
+                                        """, (chat_id, locale))
+            db.commit()
+        if len(locale) == 0:
+            locale = "en"
+        user_locales[chat_id] = locale
+    locale = user_locales[chat_id]
     return locale
 
 
@@ -852,7 +907,7 @@ def start(update: Update, context: CallbackContext):
 
     telegram_logger.info("Echo: update: {0}, context {1}".format(update, context))
     reply_markup = InlineKeyboardMarkup(main_keyboard(update.effective_chat.id))
-    set_locale(update)
+    _ = set_locale(update)
 
     context.bot.send_message(chat_id=update.effective_chat.id, text=_("Achievement_hunt_bot was designed for track and "
                                                                       "analyze rarity of game achievements and "
@@ -868,7 +923,7 @@ def echo(update: Update, context: CallbackContext):
     global platforms
     global users_in_delete_process
     chat_id = update.effective_chat.id
-    set_locale(update)
+    _ = set_locale(update)
     telegram_logger.info("Echo: update: {0}, context {1}".format(update, context))
     player_created = False
     if chat_id in register_progress:
