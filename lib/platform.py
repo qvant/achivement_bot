@@ -10,7 +10,7 @@ class Platform:
 
     def __init__(self, name: str, get_games, get_game, get_achivements, games: [Game], id: int,
                  validate_player, get_player_id, get_stats, incremental_update_enabled: bool,
-                 incremental_update_interval: int, get_last_games):
+                 incremental_update_interval: int, get_last_games, incremental_skip_chance: int):
         self.id = id
         self.name = name
         self.get_games = get_games
@@ -24,6 +24,7 @@ class Platform:
         self.get_stats = get_stats
         self.incremental_update_enabled = incremental_update_enabled
         self.incremental_update_interval = incremental_update_interval
+        self.incremental_skip_chance = incremental_skip_chance
         if games is not None:
             for i in games:
                 self.games[str(i.ext_id)] = i

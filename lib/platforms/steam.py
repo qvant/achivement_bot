@@ -80,10 +80,12 @@ def init_platform(config: Config) -> Platform:
     key_read = steam_config.get("API_KEY")
     incremental_update_enabled = steam_config.get("INCREMENTAL_UPDATE_ENABLED")
     incremental_update_interval = steam_config.get("INCREMENTAL_UPDATE_INTERVAL")
+    incremental_skip_chance = steam_config.get("INCREMENTAL_SKIP_CHANCE")
     steam = Platform(name='Steam', get_games=get_player_games, get_achivements=get_player_achievements,
                      get_game=get_game, games=None, id=1, validate_player=get_player_stats, get_player_id=get_name,
                      get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,
-                     incremental_update_interval=incremental_update_interval, get_last_games=get_player_last_games)
+                     incremental_update_interval=incremental_update_interval, get_last_games=get_player_last_games,
+                     incremental_skip_chance=incremental_skip_chance)
     if is_password_encrypted(key_read):
         api_log.info("Steam key encrypted, do nothing")
         open_key = decrypt_password(key_read, config.server_name, config.db_port)

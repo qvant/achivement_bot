@@ -1,4 +1,5 @@
 import datetime
+import random
 from typing import Union
 from .platform import Platform
 
@@ -253,6 +254,12 @@ class Player:
                                           "Last inc update {1}, last full update {2}".
                                           format(self.name, self.dt_updated_inc, self.dt_updated_full))
                 self.dt_updated_inc = cur_time
+            elif random.random() < self.platform.incremental_skip_chance:
+                self.games, names, = self.platform.get_games(self.ext_id)
+                self.dt_updated_full = cur_time
+                self.platform.logger.info("Prepared full update (because random) for player {0}. "
+                                          "Last inc update {1}, last full update {2}".
+                                          format(self.name, self.dt_updated_inc, self.dt_updated_full))
             else:
                 self.games, names, = self.platform.get_games(self.ext_id)
                 self.platform.logger.info("Prepared full update for player {0}. "
@@ -283,6 +290,7 @@ class Player:
                         if str(err) == "Profile is not public":
                             self.is_public = False
                             self.dt_updated_inc = None
+                            self.dt_updated_full = None
                 else:
                     self.platform.logger.info(
                         "Skip checking achievements for game with id {1} and name {2} for player {0} {3}, "
