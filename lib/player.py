@@ -2,6 +2,7 @@ import datetime
 import random
 from typing import Union
 from .platform import Platform
+from datetime import timezone
 
 STATUS_NEW = 1
 STATUS_VALID = 2
@@ -55,12 +56,26 @@ class Player:
         conn = self.platform.get_connect()
         cur = conn.cursor()
         if self.id is not None:
-            self.platform.logger.info("Deleting player {0}".format(self.ext_id))
             cur.execute("""
-                        delete from achievements_hunt.players where id = %s and platform_id = %s
-                    """, (self.id, self.platform.id))
-            conn.commit()
-            self.platform.logger.info("Deleted player {0}".format(self.ext_id))
+                select dt_last_delete from achievements_hunt.users u where u.telegram_id = %s
+            """, (self.telegram_id,))
+            ret = cur.fetchone()
+            if ret[0].replace(tzinfo=timezone.utc) + datetime.timedelta(days=3) > datetime.datetime.now()\
+                    .replace(tzinfo=timezone.utc):
+                # TODO: throw error
+                self.platform.logger.info("Skip deleting player {0}, dt_last_delete {1}".format(self.ext_id, ret))
+                pass
+            else:
+                self.platform.logger.info("Deleting player {0}".format(self.ext_id))
+                cur.execute("""
+                            delete from achievements_hunt.players where id = %s and platform_id = %s
+                        """, (self.id, self.platform.id))
+                cur.execute("""
+                                update achievements_hunt.users u set dt_last_delete = current_timestamp 
+                                where u.telegram_id = %s
+                            """, (self.telegram_id,))
+                conn.commit()
+                self.platform.logger.info("Deleted player {0}".format(self.ext_id))
 
     def is_unique(self):
         conn = self.platform.get_connect()
