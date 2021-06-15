@@ -32,6 +32,7 @@ global user_locales
 global user_games_modes
 global users_in_delete_process
 global config
+global user_command_counters
 
 MAX_MENU_LENGTH = 30
 MAX_MENU_ITEMS = 8
@@ -81,6 +82,7 @@ def telegram_init():
     global user_locales
     global user_games_modes
     global users_in_delete_process
+    global user_command_counters
     user_states = {}
     user_games_offsets = {}
     user_achievement_offsets = {}
@@ -91,6 +93,14 @@ def telegram_init():
     user_locales = {}
     user_games_modes = {}
     users_in_delete_process = {}
+    user_command_counters = {}
+
+
+def inc_command_counter(counter: str):
+    global user_command_counters
+    if counter not in user_command_counters:
+        user_command_counters[counter] = 0
+    user_command_counters[counter] += 1
 
 
 def pretty_menu(menu: List):
@@ -357,6 +367,7 @@ def shutdown_choice(update: Update, context: CallbackContext):
 def stats_choice(update: Update, context: CallbackContext):
     global telegram_logger
     global config
+    global user_command_counters
     chat_id = update.effective_chat.id
     _ = set_locale(chat_id=chat_id)
     if chat_id in config.admin_list:
@@ -367,6 +378,7 @@ def stats_choice(update: Update, context: CallbackContext):
         if cur_item == STATS_BOT:
             msg = get_stats()
             msg["module"] = "Bot"
+            msg["user_commands"] = user_command_counters
             context.bot.send_message(chat_id=chat_id, text=str(msg),
                                      reply_markup=reply_markup)
         else:
@@ -394,6 +406,7 @@ def game_navigation(update: Update, context: CallbackContext):
     cur_item = update["callback_query"]["data"]
     telegram_logger.info("Received command {0} from user {1} in game_navigation menu".
                          format(cur_item, update.effective_chat.id))
+    inc_command_counter("game_navigation")
     _ = set_locale(update)
     if chat_id not in user_games_offsets or chat_id not in user_active_accounts:
         user_games_offsets[chat_id] = 0
@@ -454,6 +467,7 @@ def achievement_navigation(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     telegram_logger.info("Received command {0} from user {1} in achievement_navigation menu".
                          format(cur_item, chat_id))
+    inc_command_counter("achievement_navigation")
 
     _ = set_locale(update)
 
@@ -537,6 +551,7 @@ def main_menu(update: Update, context: CallbackContext):
     telegram_logger.debug("Main menu called. Context {}".format(context))
     telegram_logger.info("Received command {0} from user {1} in main menu".
                          format(cur_item, update.effective_chat.id))
+    inc_command_counter("main_menu")
     _ = set_locale(update)
     if cur_item == "NEW_ACCOUNT":
         new_account(update, context)
@@ -578,6 +593,7 @@ def account_choice(update: Update, context: CallbackContext):
     telegram_logger.debug("account_choice menu called. Context {}".format(context))
     telegram_logger.info("Received command {0} from user {1} in account_choice menu".
                          format(update["callback_query"]["data"], chat_id))
+    inc_command_counter("account_choice")
 
     _ = set_locale(update)
 
@@ -683,7 +699,7 @@ def show_account_games(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     telegram_logger.info("Show games for  user {0} in menu show_account_games".
                          format(update.effective_chat.id))
-
+    inc_command_counter("show_account_games")
     _ = set_locale(update)
 
     has_perfect_games = False
@@ -740,6 +756,7 @@ def show_games_index(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     telegram_logger.info("Show games for  user {0} in menu show_games_index".
                          format(update.effective_chat.id))
+    inc_command_counter("show_games_index")
 
     _ = set_locale(update)
 
@@ -774,6 +791,7 @@ def show_account_achievements(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     telegram_logger.info("Show achievements for user {0} in show_account_achievements".
                          format(chat_id))
+    inc_command_counter("show_account_achievements")
     _ = set_locale(update)
 
     achievements = []
@@ -909,6 +927,7 @@ def start(update: Update, context: CallbackContext):
     global telegram_logger
 
     telegram_logger.info("Echo: update: {0}, context {1}".format(update, context))
+    inc_command_counter("start")
     reply_markup = InlineKeyboardMarkup(main_keyboard(update.effective_chat.id))
     _ = set_locale(update)
 
@@ -924,6 +943,7 @@ def about(update: Update, context: CallbackContext):
     global telegram_logger
 
     telegram_logger.info("About: update: {0}, context {1}".format(update, context))
+    inc_command_counter("about")
     reply_markup = InlineKeyboardMarkup(main_keyboard(update.effective_chat.id))
     _ = set_locale(update)
 
@@ -945,6 +965,7 @@ def echo(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     _ = set_locale(update)
     telegram_logger.info("Echo: update: {0}, context {1}".format(update, context))
+    inc_command_counter("text input")
     player_created = False
     if chat_id in register_progress:
         cur_platform = register_progress[chat_id]
