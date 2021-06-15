@@ -168,6 +168,7 @@ def main_keyboard(chat_id: int):
         # TODO: remove later
         InlineKeyboardButton(_("List of games"), callback_data="main_LIST_OF_GAMES"),
         InlineKeyboardButton(_("Language choice"), callback_data="main_SET_LOCALE"),
+        InlineKeyboardButton(_("About"), callback_data="main_ABOUT"),
     ]
     for i in players_by_tlg_id[chat_id]:
         keyboard.append(InlineKeyboardButton("{}({})".format(i.name, i.platform.name),
@@ -547,6 +548,8 @@ def main_menu(update: Update, context: CallbackContext):
         list_of_locales(update, context)
     elif cur_item == "ADMIN":
         admin_options(update, context)
+    elif cur_item == "ABOUT":
+        about(update, context)
 
 
 def admin_options(update: Update, context: CallbackContext):
@@ -913,6 +916,23 @@ def start(update: Update, context: CallbackContext):
                                                                       "analyze rarity of game achievements and "
                                                                       "controlled through keyboard under messages. "
                                                                       "To return to the main menu send text  start."
+                                                                      ),
+                             reply_markup=reply_markup)
+
+
+def about(update: Update, context: CallbackContext):
+    global telegram_logger
+
+    telegram_logger.info("About: update: {0}, context {1}".format(update, context))
+    reply_markup = InlineKeyboardMarkup(main_keyboard(update.effective_chat.id))
+    _ = set_locale(update)
+
+    context.bot.send_message(chat_id=update.effective_chat.id, text=_("Achievement_hunt_bot was designed for track and "
+                                                                      "analyze rarity of game achievements and "
+                                                                      "controlled through keyboard under messages. "
+                                                                      "To return to the main menu send text /start."
+                                                                      "You can see the bot sources on "
+                                                                      "https://github.com/qvant/achivement_bot"
                                                                       ),
                              reply_markup=reply_markup)
 
