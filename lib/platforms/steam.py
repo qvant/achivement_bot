@@ -197,15 +197,10 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
         game_name = obj.get("gameName")
         "For game {0}, found name {1}".format(
             game_id, game_name)
-    if game_name is None or len(game_name) == 0 or game_name.startswith("ValveTestApp") \
-            or game_name.startswith("Untitled") or game_name.startswith("UNUSED_APP") \
-            or game_name.startswith("Upcoming") or game_name.startswith("[MAIN]")\
-            or game_name.startswith("[STAGING]") or game_name.endswith("Unstable")\
-            or game_name.startswith("sein") or "&amp;" in game_name\
-            or game_name.startswith("New_Project") or game_name.startswith("tr1")\
-            or game_name.startswith(":") or game_name.startswith("0011000111"):
+    # there was logic of getting name from GetSchemaForGame responce, but it seems, that this data have lower quality
+    if 1 == 1:
         api_log.info(
-            "For game {0} name not found in response ({2}), used supplied name {1}".format(
+            "For game {0} skip name not found in response ({2}), used supplied name {1}".format(
                 game_id, name, game_name))
         game_name = name
     return Game(name=game_name, platform_id=PLATFORM_STEAM, ext_id=game_id, id=None, achievements=achievements)
