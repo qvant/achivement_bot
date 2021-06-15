@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2021-06-06 22:47+0300\n"
+"POT-Creation-Date: 2021-06-15 20:24+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,223 +19,231 @@ msgstr ""
 msgid "Enter account name"
 msgstr ""
 
-#: ..\lib\telegram.py:165
+#: ..\lib\telegram.py:166
 msgid "New account"
 msgstr ""
 
-#: ..\lib\telegram.py:166
+#: ..\lib\telegram.py:167
 msgid "Delete account"
 msgstr ""
 
-#: ..\lib\telegram.py:168
+#: ..\lib\telegram.py:169
 msgid "List of games"
 msgstr ""
 
-#: ..\lib\telegram.py:169
+#: ..\lib\telegram.py:170
 msgid "Language choice"
 msgstr ""
 
-#: ..\lib\telegram.py:175
+#: ..\lib\telegram.py:171
+msgid "About"
+msgstr ""
+
+#: ..\lib\telegram.py:177
 msgid "Admin..."
 msgstr ""
 
-#: ..\lib\telegram.py:192
+#: ..\lib\telegram.py:195
 msgid "Stats..."
 msgstr ""
 
-#: ..\lib\telegram.py:193
+#: ..\lib\telegram.py:196
 msgid "Shutdown..."
 msgstr ""
 
-#: ..\lib\telegram.py:200
+#: ..\lib\telegram.py:204
 msgid "Shutdown core"
 msgstr ""
 
-#: ..\lib\telegram.py:201
+#: ..\lib\telegram.py:205
 msgid "Shutdown bot"
 msgstr ""
 
-#: ..\lib\telegram.py:202
+#: ..\lib\telegram.py:206
 msgid "Shutdown worker"
 msgstr ""
 
-#: ..\lib\telegram.py:203
+#: ..\lib\telegram.py:207
 msgid "Shutdown updater"
 msgstr ""
 
-#: ..\lib\telegram.py:210
+#: ..\lib\telegram.py:215
 msgid "Stats core"
 msgstr ""
 
-#: ..\lib\telegram.py:211
+#: ..\lib\telegram.py:216
 msgid "Stats bot"
 msgstr ""
 
-#: ..\lib\telegram.py:212
+#: ..\lib\telegram.py:217
 msgid "Stats worker"
 msgstr ""
 
-#: ..\lib\telegram.py:213
+#: ..\lib\telegram.py:218
 msgid "Stats updater"
 msgstr ""
 
-#: ..\lib\telegram.py:219 ..\lib\telegram.py:246
+#: ..\lib\telegram.py:225 ..\lib\telegram.py:252
 msgid "Begin"
 msgstr ""
 
-#: ..\lib\telegram.py:220 ..\lib\telegram.py:247
+#: ..\lib\telegram.py:226 ..\lib\telegram.py:253
 msgid "Previous"
 msgstr ""
 
-#: ..\lib\telegram.py:223 ..\lib\telegram.py:248
+#: ..\lib\telegram.py:229 ..\lib\telegram.py:254
 msgid "Next"
 msgstr ""
 
-#: ..\lib\telegram.py:224 ..\lib\telegram.py:249
+#: ..\lib\telegram.py:230 ..\lib\telegram.py:255
 msgid "End"
 msgstr ""
 
-#: ..\lib\telegram.py:225
+#: ..\lib\telegram.py:231
 msgid "Index"
 msgstr ""
 
-#: ..\lib\telegram.py:227
+#: ..\lib\telegram.py:233
 msgid "With achievements"
 msgstr ""
 
-#: ..\lib\telegram.py:229
+#: ..\lib\telegram.py:235
 msgid "Perfect"
 msgstr ""
 
-#: ..\lib\telegram.py:231
+#: ..\lib\telegram.py:237
 msgid "All games"
 msgstr ""
 
-#: ..\lib\telegram.py:232
+#: ..\lib\telegram.py:238
 msgid "Exit"
 msgstr ""
 
-#: ..\lib\telegram.py:250
+#: ..\lib\telegram.py:256
 msgid "To the games..."
 msgstr ""
 
-#: ..\lib\telegram.py:257
+#: ..\lib\telegram.py:263
 msgid "Choose the platform"
 msgstr ""
 
-#: ..\lib\telegram.py:265
+#: ..\lib\telegram.py:271
 msgid "Send message 'CONFIRM' (ALL LETTERS CAPITAL) to remove all data from system"
 msgstr ""
 
-#: ..\lib\telegram.py:301
+#: ..\lib\telegram.py:309
 msgid "Language chosen"
 msgstr ""
 
-#: ..\lib\telegram.py:317
+#: ..\lib\telegram.py:326
 msgid "Select action"
 msgstr ""
 
-#: ..\lib\telegram.py:341
+#: ..\lib\telegram.py:351
 msgid "Command sent: {0}"
 msgstr ""
 
-#: ..\lib\telegram.py:482
+#: ..\lib\telegram.py:494
 msgid "ru"
 msgstr ""
 
-#: ..\lib\telegram.py:483
+#: ..\lib\telegram.py:495
 msgid "en"
 msgstr ""
 
-#: ..\lib\telegram.py:484
+#: ..\lib\telegram.py:496
 msgid "dynamic"
 msgstr ""
 
-#: ..\lib\telegram.py:492
+#: ..\lib\telegram.py:504
 msgid "Choose the language"
 msgstr ""
 
-#: ..\lib\telegram.py:516 ..\lib\telegram.py:548
+#: ..\lib\telegram.py:529 ..\lib\telegram.py:563
 msgid "Choose account"
 msgstr ""
 
-#: ..\lib\telegram.py:641
+#: ..\lib\telegram.py:657
 msgid "Rarest achievements:"
 msgstr ""
 
-#: ..\lib\telegram.py:643
+#: ..\lib\telegram.py:659
 msgid "{} (game {}) percent owners {}"
 msgstr ""
 
-#: ..\lib\telegram.py:650
+#: ..\lib\telegram.py:666
 msgid "Profile is private, available information is limited"
 msgstr ""
 
-#: ..\lib\telegram.py:651
+#: ..\lib\telegram.py:667
 msgid "Total games {0}, games with achivement support {1}, average completion percent {2}, perfect games {3}, was updated at {4} {5}{6}"
 msgstr ""
 
-#: ..\lib\telegram.py:694 ..\lib\telegram.py:731
+#: ..\lib\telegram.py:710 ..\lib\telegram.py:748
 msgid "Choose games (shown {0})"
 msgstr ""
 
-#: ..\lib\telegram.py:698
+#: ..\lib\telegram.py:714
 msgid "There is no games on account."
 msgstr ""
 
-#: ..\lib\telegram.py:705
+#: ..\lib\telegram.py:722
 msgid "all games"
 msgstr ""
 
-#: ..\lib\telegram.py:707
+#: ..\lib\telegram.py:724
 msgid "games with achievements"
 msgstr ""
 
-#: ..\lib\telegram.py:709
+#: ..\lib\telegram.py:726
 msgid "perfect games"
 msgstr ""
 
-#: ..\lib\telegram.py:782
+#: ..\lib\telegram.py:799
 msgid "Unlocked:"
 msgstr ""
 
-#: ..\lib\telegram.py:786 ..\lib\telegram.py:789
+#: ..\lib\telegram.py:803 ..\lib\telegram.py:806
 msgid "Locked:"
 msgstr ""
 
-#: ..\lib\telegram.py:793
+#: ..\lib\telegram.py:810
 msgid "{}/{}. Achievement {} percent owners {}"
 msgstr ""
 
-#: ..\lib\telegram.py:798
+#: ..\lib\telegram.py:815
 msgid "There is no achievements."
 msgstr ""
 
-#: ..\lib\telegram.py:857
+#: ..\lib\telegram.py:915
 msgid "Achievement_hunt_bot was designed for track and analyze rarity of game achievements and controlled through keyboard under messages. To return to the main menu send text  start."
 msgstr ""
 
-#: ..\lib\telegram.py:890
+#: ..\lib\telegram.py:930
+msgid "Achievement_hunt_bot was designed for track and analyze rarity of game achievements and controlled through keyboard under messages. To return to the main menu send text /start.You can see the bot sources on https://github.com/qvant/achivement_bot"
+msgstr ""
+
+#: ..\lib\telegram.py:965
 msgid "Account {0} bound to you"
 msgstr ""
 
-#: ..\lib\telegram.py:893
+#: ..\lib\telegram.py:968
 msgid "You already have account for this platform"
 msgstr ""
 
-#: ..\lib\telegram.py:895
+#: ..\lib\telegram.py:970
 msgid "Platform {0} not found"
 msgstr ""
 
-#: ..\lib\telegram.py:908
+#: ..\lib\telegram.py:983
 msgid "Delete command sent for account {0} and platform {1}"
 msgstr ""
 
-#: ..\lib\telegram.py:914
+#: ..\lib\telegram.py:989
 msgid "You haven't accounts"
 msgstr ""
 
-#: ..\lib\telegram.py:919
+#: ..\lib\telegram.py:994
 msgid "Deletion cancelled"
 msgstr ""
 

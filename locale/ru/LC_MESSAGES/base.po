@@ -213,7 +213,7 @@ msgstr "Нет достижений"
 
 #: ..\lib\telegram.py:857
 msgid "Achievement_hunt_bot was designed for track and analyze rarity of game achievements and controlled through keyboard under messages. To return to the main menu send text  start."
-msgstr "Achievement_hunt_bot был создан для отслеживания и анализа редкости достижений в играх и управляется через клавиатуру под сообщениями. Чтобы вернуться в главное меню, отправьте текст /start. Исходный код доступен на https://github.com/qvant/achivement_bot."
+msgstr "Achievement_hunt_bot онлайн."
 
 #: ..\lib\telegram.py:890
 msgid "Account {0} bound to you"
@@ -239,3 +239,10 @@ msgstr "У вас нет аккаунтов"
 msgid "Deletion cancelled"
 msgstr "Удаление отменено"
 
+#: ..\lib\telegram.py:930
+msgid "Achievement_hunt_bot was designed for track and analyze rarity of game achievements and controlled through keyboard under messages. To return to the main menu send text /start.You can see the bot sources on https://github.com/qvant/achivement_bot"
+msgstr "Achievement_hunt_bot был создан для отслеживания и анализа редкости достижений в играх и управляется через клавиатуру под сообщениями. Чтобы вернуться в главное меню, отправьте текст /start. Исходный код доступен на https://github.com/qvant/achivement_bot."
+
+#: ..\lib\telegram.py:171
+msgid "About"
+msgstr "Обо мне"
