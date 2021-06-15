@@ -202,7 +202,8 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
             or game_name.startswith("Upcoming") or game_name.startswith("[MAIN]")\
             or game_name.startswith("[STAGING]") or game_name.endswith("Unstable")\
             or game_name.startswith("sein") or "&amp;" in game_name\
-            or game_name.startswith("New_Project") or game_name.startswith("tr1"):
+            or game_name.startswith("New_Project") or game_name.startswith("tr1")\
+            or game_name.startswith(":") or game_name.startswith("0011000111"):
         api_log.info(
             "For game {0} name not found in response ({2}), used supplied name {1}".format(
                 game_id, name, game_name))
