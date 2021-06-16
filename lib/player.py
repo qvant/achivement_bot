@@ -71,7 +71,7 @@ class Player:
                             delete from achievements_hunt.players where id = %s and platform_id = %s
                         """, (self.id, self.platform.id))
                 cur.execute("""
-                                update achievements_hunt.users u set dt_last_delete = current_timestamp 
+                                update achievements_hunt.users u set dt_last_delete = current_timestamp
                                 where u.telegram_id = %s
                             """, (self.telegram_id,))
                 conn.commit()
