@@ -41,9 +41,7 @@ class Achievement:
                 cursor.execute(
                     """insert into achievements_hunt.achievements as l (name, ext_id, platform_id, game_id, description)
                             values(%s, %s, %s, %s, %s)
-                            on conflict ON CONSTRAINT u_achievements_ext_key do update
-                            set dt_update=current_timestamp, name=EXCLUDED.name, description=EXCLUDED.description
-                            where l.name != EXCLUDED.name
+                            on conflict ON CONSTRAINT u_achievements_ext_key do nothing
                             returning id, name, description
                     """, (self.name, self.ext_id, self.platform_id, self.game_id, self.description)
                 )
