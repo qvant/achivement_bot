@@ -1,4 +1,5 @@
 import argparse
+import time
 
 from bot import main_bot
 from core import main_core
@@ -11,7 +12,10 @@ def main():
     parser = argparse.ArgumentParser(description='Idle RPG server.')
     parser.add_argument("--config", '-cfg', help="Path to config file", action="store", default="cfg//main.json")
     parser.add_argument("--mode", '-m', help="mode", action="store", default="core")
+    parser.add_argument("--delay", help="Number seconds app will wait before start", action="store", default=None)
     args = parser.parse_args()
+    if args.delay is not None:
+        time.sleep(int(args.delay))
 
     mode = args.mode
     config = Config(args.config, mode=mode)
