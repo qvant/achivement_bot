@@ -2,3 +2,4 @@ cfg/*.json
 .idea/*
 logs/
 *.pyc
+*.mo
