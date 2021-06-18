@@ -2,11 +2,11 @@
 export APP_HOME="/usr/app/achievement_bot"
 cd $APP_HOME
 sleep 45
-nohup python3 $APP_HOME/main.py --mode=core &
+python3 $APP_HOME/main.py --mode=core & disown
 sleep 5
-nohup python3 $APP_HOME/main.py --mode=updater &
+python3 $APP_HOME/main.py --mode=updater & disown
 sleep 5
-nohup python3 $APP_HOME/main.py --mode=worker &
+python3 $APP_HOME/main.py --mode=worker & disown
 sleep 5
-nohup python3 $APP_HOME/main.py --mode=bot &
+python3 $APP_HOME/main.py --mode=bot & disown
 
