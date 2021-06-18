@@ -149,7 +149,7 @@ msgstr ""
 
 #: ..\lib\telegram.py:484
 msgid "dynamic"
-msgstr "€зык клиента"
+msgstr "язык клиента"
 
 #: ..\lib\telegram.py:492
 msgid "Choose the language"
