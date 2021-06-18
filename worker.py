@@ -209,7 +209,7 @@ def main_worker(config: Config):
                     elif cmd_type == 'stop_server':
                         is_running = False
                         cmd = {"cmd": "process_response", "text": "Worker shutdown started"}
-                        enqueue_command(cmd, MODE_WORKER)
+                        enqueue_command(cmd, MODE_BOT)
                     elif cmd_type == "get_stats":
                         msg = get_stats()
                         # TODO less expensive way
