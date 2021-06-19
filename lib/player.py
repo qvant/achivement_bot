@@ -76,6 +76,7 @@ class Player:
                             """, (self.telegram_id,))
                 conn.commit()
                 self.platform.logger.info("Deleted player {0}".format(self.ext_id))
+        conn.close()
 
     def is_unique(self):
         conn = self.platform.get_connect()
@@ -256,6 +257,7 @@ class Player:
         self.platform.logger.info("Saved achievements for player {0}".format(self.ext_id))
 
         conn.commit()
+        conn.close()
         self.platform.logger.info("Saved player {0}".format(self.ext_id))
 
     def renew(self):
