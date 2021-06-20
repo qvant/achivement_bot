@@ -4,7 +4,7 @@ from datetime import timezone
 
 import pika
 
-from lib.config import Config, MODE_BOT, MODE_WORKER, MODE_CORE
+from lib.config import Config, MODE_BOT, MODE_CORE
 from lib.log import get_logger
 from lib.platform import Platform
 from lib.queue import set_config as set_queue_config, set_logger as set_queue_log, get_mq_connect, WORKER_QUEUE_NAME, \
