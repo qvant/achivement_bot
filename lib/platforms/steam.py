@@ -11,7 +11,7 @@ from ..platform import Platform
 from ..security import is_password_encrypted, encrypt_password, decrypt_password
 from ..config import MODE_CORE
 
-MAX_TRIES = 0
+MAX_TRIES = 3
 WAIT_BETWEEN_TRIES = 5
 
 PLATFORM_STEAM = 1
