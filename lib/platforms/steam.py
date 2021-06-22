@@ -206,6 +206,9 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
             "For game {0} skip name not found in response ({2}), used supplied name {1}".format(
                 game_id, name, game_name))
         game_name = name
+    # Hack for some specific names. TODO: make a settings
+    if game_name == ":THE LONGING:":
+        game_name = "THE LONGING"
     return Game(name=game_name, platform_id=PLATFORM_STEAM, ext_id=game_id, id=None, achievements=achievements)
 
 
