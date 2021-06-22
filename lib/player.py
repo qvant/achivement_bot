@@ -60,7 +60,8 @@ class Player:
                 select dt_last_delete from achievements_hunt.users u where u.telegram_id = %s
             """, (self.telegram_id,))
             ret = cur.fetchone()
-            if ret[0].replace(tzinfo=timezone.utc) + datetime.timedelta(days=3) > datetime.datetime.now()\
+            if ret[0] is not None and \
+                    ret[0].replace(tzinfo=timezone.utc) + datetime.timedelta(days=3) > datetime.datetime.now()\
                     .replace(tzinfo=timezone.utc):
                 # TODO: throw error
                 self.platform.logger.info("Skip deleting player {0}, dt_last_delete {1}".format(self.ext_id, ret))

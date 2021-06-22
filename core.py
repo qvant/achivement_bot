@@ -1,4 +1,5 @@
 import json
+import datetime
 
 from lib.config import Config, MODE_BOT
 from lib.log import get_logger
@@ -34,6 +35,9 @@ def main_core(config: Config):
                          routing_key=config.mode)
 
     is_running = True
+
+    cmd = {"cmd": "process_response", "text": "Core started at {0}.".format(datetime.datetime.now())}
+    enqueue_command(cmd, MODE_BOT)
 
     while is_running:
 

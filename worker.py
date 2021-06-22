@@ -42,6 +42,9 @@ def main_worker(config: Config):
 
     is_running = True
 
+    cmd = {"cmd": "process_response", "text": "Worker started at {0}.".format(datetime.datetime.now())}
+    enqueue_command(cmd, MODE_BOT)
+
     dt_next_update = []
     conn = Platform.get_connect()
     cursor = conn.cursor()

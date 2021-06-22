@@ -121,8 +121,18 @@ def main_bot(config: Config):
                         is_running = False
                         queue_log.info("Stop smd received")
                     elif cmd_type == "process_response":
+                        try:
+                            resp = eval(cmd.get("text"))
+                            msg = ""
+                            for i in resp:
+                                msg += i + ": " + str(resp.get(i)) + chr(10)
+                                if i == "platform_stats":
+                                    for j in resp[i]:
+                                        msg += j + ": " + str(resp[i].get(j)) + chr(10)
+                        except SyntaxError:
+                            msg = cmd.get("text")
                         for i in config.admin_list:
-                            updater.dispatcher.bot.send_message(chat_id=i, text=cmd.get("text"))
+                            updater.dispatcher.bot.send_message(chat_id=i, text=msg)
                     m_channel.basic_ack(method_frame.delivery_tag)
                     queue_log.info("User message " + str(body) + " with delivery_tag " +
                                    str(method_frame.delivery_tag) + " acknowledged")

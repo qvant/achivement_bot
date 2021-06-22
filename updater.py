@@ -1,4 +1,5 @@
 import json
+import datetime
 
 import psycopg2
 import psycopg2.extras
@@ -35,6 +36,9 @@ def main_updater(config: Config):
                          routing_key=config.mode)
 
     is_running = True
+
+    cmd = {"cmd": "process_response", "text": "Updater started at {0}.".format(datetime.datetime.now())}
+    enqueue_command(cmd, MODE_BOT)
 
     while is_running:
 
