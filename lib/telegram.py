@@ -326,7 +326,6 @@ def achievement_detail(update: Update, context: CallbackContext):
             if i.get("id") == int(cur_item):
                 achievements = []
                 start_achievement = user_achievement_offsets[chat_id] + 1
-                current_achievement = start_achievement
                 achievement_number = len(player.cur_achievement_stats)
                 for j in range(start_achievement - 1, achievement_number):
                     achievements.append(player.cur_achievement_stats[j])
@@ -886,7 +885,7 @@ def show_account_achievements(update: Update, context: CallbackContext):
             current_achievement += 1
         if len(msg) == 0:
             msg = _("There is no achievements.")
-        if chat_id not in  user_achievement_details:
+        if chat_id not in user_achievement_details:
             user_achievement_details[chat_id] = False
         if user_achievement_details[chat_id]:
             reply_markup = InlineKeyboardMarkup(achievements_keyboard(chat_id, achievements))
