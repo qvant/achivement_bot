@@ -246,3 +246,31 @@ msgstr "Achievement_hunt_bot был создан для отслеживания и анализа редкости дост
 #: ..\lib\telegram.py:171
 msgid "About"
 msgstr "Обо мне"
+
+#: ..\lib\telegram.py:331
+msgid "Achievement {0}: {1}."
+msgstr "Достижение {0}: {1}."
+
+#: ..\lib\telegram.py:333
+msgid "Percent owners: {0}."
+msgstr "Процент выполнивших: {0}."
+
+#: ..\lib\telegram.py:336
+msgid "Unlocked"
+msgstr "Выполнено"
+
+#: ..\lib\telegram.py:336 ..\lib\telegram.py:340
+msgid "Status: {0}."
+msgstr "Статус: {0}."
+
+#: ..\lib\telegram.py:338
+msgid "Obtained at: {0}."
+msgstr "Дата выполнения: {0}"
+
+#: ..\lib\telegram.py:340
+msgid "Locked"
+msgstr "Не выполнено"
+
+#: ..\lib\telegram.py:270
+msgid "Detail on/off"
+msgstr "Подробности вкл/выкл"

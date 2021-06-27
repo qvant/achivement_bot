@@ -11,7 +11,7 @@ from ..platform import Platform
 from ..security import is_password_encrypted, encrypt_password, decrypt_password
 from ..config import MODE_CORE
 
-MAX_TRIES = 0
+MAX_TRIES = 3
 WAIT_BETWEEN_TRIES = 5
 
 PLATFORM_STEAM = 1
@@ -206,6 +206,9 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
             "For game {0} skip name not found in response ({2}), used supplied name {1}".format(
                 game_id, name, game_name))
         game_name = name
+    # Hack for some specific names. TODO: make a settings
+    if game_name == ":THE LONGING:":
+        game_name = "THE LONGING"
     return Game(name=game_name, platform_id=PLATFORM_STEAM, ext_id=game_id, id=None, achievements=achievements)
 
 

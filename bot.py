@@ -12,7 +12,7 @@ from lib.queue import set_logger as set_queue_log, set_config as set_queue_confi
 from lib.queue_handlers import set_telegram
 from lib.telegram import set_logger, telegram_init, set_connect, set_config as set_telegram_config, set_platforms, \
     start, echo, main_menu, account_choice, platform_choice, game_choice, game_navigation, achievement_navigation, \
-    locale_choice, admin_choice, shutdown_choice, stats_choice, set_locale, main_keyboard
+    locale_choice, admin_choice, shutdown_choice, stats_choice, set_locale, main_keyboard, achievement_detail
 from lib.db import load, set_load_logger
 from lib.message_types import MT_VALIDATION_OK, MT_VALIDATION_FAILED, MT_ACCOUNT_DELETED, MT_ACCOUNT_UPDATED
 
@@ -54,6 +54,7 @@ def main_bot(config: Config):
     admin_handler = CallbackQueryHandler(admin_choice, pattern="admin_")
     shutdown_handler = CallbackQueryHandler(shutdown_choice, pattern="shutdown_")
     stats_handler = CallbackQueryHandler(stats_choice, pattern="stats_")
+    achievement_detail_handler = CallbackQueryHandler(achievement_detail, pattern="ACHIEVEMENT_ID_")
     dispatcher.add_handler(start_handler)
     dispatcher.add_handler(echo_handler)
     dispatcher.add_handler(main_menu_handler)
@@ -66,6 +67,7 @@ def main_bot(config: Config):
     dispatcher.add_handler(admin_handler)
     dispatcher.add_handler(shutdown_handler)
     dispatcher.add_handler(stats_handler)
+    dispatcher.add_handler(achievement_detail_handler)
 
     updater.start_polling()
 
@@ -121,8 +123,18 @@ def main_bot(config: Config):
                         is_running = False
                         queue_log.info("Stop smd received")
                     elif cmd_type == "process_response":
+                        try:
+                            resp = eval(cmd.get("text"))
+                            msg = ""
+                            for i in resp:
+                                msg += i + ": " + str(resp.get(i)) + chr(10)
+                                if i == "platform_stats":
+                                    for j in resp[i]:
+                                        msg += j + ": " + str(resp[i].get(j)) + chr(10)
+                        except SyntaxError:
+                            msg = cmd.get("text")
                         for i in config.admin_list:
-                            updater.dispatcher.bot.send_message(chat_id=i, text=cmd.get("text"))
+                            updater.dispatcher.bot.send_message(chat_id=i, text=msg)
                     m_channel.basic_ack(method_frame.delivery_tag)
                     queue_log.info("User message " + str(body) + " with delivery_tag " +
                                    str(method_frame.delivery_tag) + " acknowledged")

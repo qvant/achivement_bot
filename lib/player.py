@@ -60,7 +60,8 @@ class Player:
                 select dt_last_delete from achievements_hunt.users u where u.telegram_id = %s
             """, (self.telegram_id,))
             ret = cur.fetchone()
-            if ret[0].replace(tzinfo=timezone.utc) + datetime.timedelta(days=3) > datetime.datetime.now()\
+            if ret[0] is not None and \
+                    ret[0].replace(tzinfo=timezone.utc) + datetime.timedelta(days=3) > datetime.datetime.now()\
                     .replace(tzinfo=timezone.utc):
                 # TODO: throw error
                 self.platform.logger.info("Skip deleting player {0}, dt_last_delete {1}".format(self.ext_id, ret))
@@ -144,8 +145,9 @@ class Player:
             self.achievement_stats = {game_id: []}
             conn = self.platform.get_connect()
             cur = conn.cursor()
-            cur.execute("""select coalesce (tr.name, a.name) as name, pa.id, a.percent_owners, a.id from
-             achievements_hunt.achievements a
+            cur.execute("""select coalesce (tr.name, a.name) as name, pa.id, a.percent_owners, a.id,
+             coalesce(tr.description, a.description) as description, pa.dt_unlock
+             from achievements_hunt.achievements a
              left join achievements_hunt.player_achievements pa
              on pa.achievement_id = a.id and pa.player_id = %s
              left join achievements_hunt.achievement_translations tr
@@ -158,7 +160,9 @@ class Player:
             ret = cur.fetchall()
             for j in ret:
                 self.achievement_stats[game_id].append({"name": j[0], "owned": j[1] is not None,
-                                                        "percent": j[2], "id": j[3]})
+                                                        "percent": j[2], "id": j[3],
+                                                        "description": j[4],
+                                                        "dt_unlock": j[5]})
 
     def save(self):
         conn = self.platform.get_connect()
