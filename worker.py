@@ -247,7 +247,7 @@ def main_worker(config: Config):
             m_queue = get_mq_connect(config)
             m_channel = m_queue.channel()
         except BaseException as err:
-            queue_log.critical(err)
+            queue_log.exception(err)
             if config.supress_errors:
                 pass
             else:
