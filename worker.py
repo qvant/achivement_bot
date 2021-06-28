@@ -243,7 +243,7 @@ def main_worker(config: Config):
                     m_channel.cancel()
                     break
         except pika.exceptions.AMQPError as exc:
-            queue_log.critical(exc)
+            queue_log.exception(exc)
             m_queue = get_mq_connect(config)
             m_channel = m_queue.channel()
         except BaseException as err:
