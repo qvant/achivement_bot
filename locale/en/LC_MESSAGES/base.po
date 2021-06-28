@@ -217,7 +217,7 @@ msgstr ""
 
 #: ..\lib\telegram.py:890
 msgid "Account {0} bound to you"
-msgstr ""
+msgstr "Account {0} bound to you. Validation started."
 
 #: ..\lib\telegram.py:893
 msgid "You already have account for this platform"
@@ -239,3 +239,10 @@ msgstr ""
 msgid "Deletion cancelled"
 msgstr ""
 
+#: ..\bot.py:108
+msgid "Validation for account {} platform {} ok"
+msgstr "Validation for account {} platform {} ok. Games list requested..."
+
+#: ..\bot.py:115
+msgid "Stats for account {} and platform {} renewed"
+msgstr "Stats for account {} and platform {} renewed.'"

@@ -217,11 +217,11 @@ msgstr "Achievement_hunt_bot онлайн."
 
 #: ..\lib\telegram.py:890
 msgid "Account {0} bound to you"
-msgstr "Аккаунт {0} привязан к Вам"
+msgstr "Аккаунт {0} привязан к Вам. Начата валидация."
 
 #: ..\lib\telegram.py:893
 msgid "You already have account for this platform"
-msgstr "У Вас уже есть аккант для этой платформы"
+msgstr "У Вас уже есть аккаунт для этой платформы"
 
 #: ..\lib\telegram.py:895
 msgid "Platform {0} not found"
@@ -274,3 +274,11 @@ msgstr "Не выполнено"
 #: ..\lib\telegram.py:270
 msgid "Detail on/off"
 msgstr "Подробности вкл/выкл"
+
+#: ..\bot.py:108
+msgid "Validation for account {} platform {} ok"
+msgstr "Проверка для аккаунта {} на платформе {} выполнена успешно. Получение списка игр..."
+
+#: ..\bot.py:115
+msgid "Stats for account {} and platform {} renewed"
+msgstr "Данные по достижениям для аккаунта {} на платформе {} обновлены.'"

@@ -16,13 +16,6 @@ from lib.telegram import set_logger, telegram_init, set_connect, set_config as s
 from lib.db import load, set_load_logger
 from lib.message_types import MT_VALIDATION_OK, MT_VALIDATION_FAILED, MT_ACCOUNT_DELETED, MT_ACCOUNT_UPDATED
 
-_ = gettext.gettext
-
-en = gettext.translation('base', localedir='locale', languages=['en'])
-en.install()
-ru = gettext.translation('base', localedir='locale', languages=['ru'])
-ru.install()
-
 
 def main_bot(config: Config):
     queue_log = get_logger("Rabbit_bot", config.log_level, True)
