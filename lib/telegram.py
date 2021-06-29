@@ -749,13 +749,15 @@ def show_account_games(update: Update, context: CallbackContext):
     global user_games_offsets
     global user_active_accounts
     global user_games_modes
+    global db
     chat_id = update.effective_chat.id
-    telegram_logger.info("Show games for  user {0} in menu show_account_games".
+    telegram_logger.info("Show games for user {0} in menu show_account_games".
                          format(update.effective_chat.id))
     inc_command_counter("show_account_games")
     _ = set_locale(update)
 
     has_perfect_games = False
+    player = None
     games = []
     if chat_id in user_active_accounts:
         if user_active_accounts[chat_id] in games_by_player_id:
@@ -780,7 +782,15 @@ def show_account_games(update: Update, context: CallbackContext):
                                  format(get_mode_name(user_games_modes[chat_id], chat_id)),
                                  reply_markup=reply_markup)
     else:
-        context.bot.send_message(chat_id=chat_id, text=_("There is no games on account."))
+        dt_update_full = None
+        if player is not None:
+            cursor = db.cursor()
+            cursor.execute("select dt_update_full from achievements_hunt.players where id = %s", (player.id,))
+            dt_update_full, = cursor.fetchone()
+        if dt_update_full is not None:
+            context.bot.send_message(chat_id=chat_id, text=_("There is no games on account."))
+        else:
+            context.bot.send_message(chat_id=chat_id, text=_("Games receiving in progress, please, wait..."))
         start(update, context)
 
 

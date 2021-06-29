@@ -207,6 +207,10 @@ msgstr "Не выполнено"
 msgid "{}/{}. Achievement {} percent owners {}"
 msgstr "{}/{}. Достижение {} % выполнивших {}"
 
+#: ..\lib\telegram.py:793
+msgid "Games receiving in progress, please, wait..."
+msgstr "Идет обновление списка игр, пожалуйста, подождите..."
+
 #: ..\lib\telegram.py:798
 msgid "There is no achievements."
 msgstr "Нет достижений"

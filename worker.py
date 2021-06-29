@@ -1,10 +1,11 @@
 import datetime
 import json
+import time
 from datetime import timezone
 
 import pika
 
-from lib.config import Config, MODE_BOT, MODE_CORE
+from lib.config import Config, MODE_BOT, MODE_CORE, MODE_UPDATER
 from lib.log import get_logger
 from lib.platform import Platform
 from lib.queue import set_config as set_queue_config, set_logger as set_queue_log, get_mq_connect, WORKER_QUEUE_NAME, \
@@ -136,12 +137,11 @@ def main_worker(config: Config):
             m_queue = get_mq_connect(config)
             m_channel = m_queue.channel()
 
-            for method_frame, properties, body in m_channel.consume(WORKER_QUEUE_NAME, inactivity_timeout=5,
+            for method_frame, properties, body in m_channel.consume(WORKER_QUEUE_NAME, inactivity_timeout=1,
                                                                     auto_ack=False):
                 if body is not None:
                     queue_log.info("Received user message {0} with delivery_tag {1}".format(body,
                                                                                             method_frame.delivery_tag))
-                    # cmd_response_callback(None, method_frame, properties, body)
                     cmd = json.loads(body)
                     cmd_type = cmd.get("cmd")
                     if cmd_type == 'renew_achievements':
@@ -176,16 +176,14 @@ def main_worker(config: Config):
                                                "text": 'Achievements for account {} platform {} renewed'.format(
                                                    player.ext_id, i.name),
                                                "type": MT_ACCOUNT_UPDATED,
+                                               "telegram_id": player.telegram_id,
                                                "name": player.name,
                                                "platform": i.name
                                                }
-                                        if player.telegram_id is not None:
-                                            enqueue_command(cmd, MODE_BOT)
-                                        else:
-                                            enqueue_command(cmd, MODE_CORE)
+                                        enqueue_command(cmd, MODE_UPDATER)
                                     else:
                                         queue_log.info(
-                                            "Skipped  renew achievements for player {2} and platform {3} because msg "
+                                            "Skipped renew achievements for player {2} and platform {3} because msg "
                                             "{0} with delivery_tag {1} was sent at {4} and last renew was {5}".format(
                                                 body,
                                                 method_frame.delivery_tag,
@@ -195,13 +193,11 @@ def main_worker(config: Config):
                                                "text": 'Achievements for account {} platform {} renewed'.format(
                                                    player.ext_id, i.name),
                                                "type": MT_ACCOUNT_UPDATED,
+                                               "telegram_id": player.telegram_id,
                                                "name": player.name,
                                                "platform": i.name
                                                }
-                                        if player.telegram_id is not None:
-                                            enqueue_command(cmd, MODE_BOT)
-                                        else:
-                                            enqueue_command(cmd, MODE_CORE)
+                                        enqueue_command(cmd, MODE_UPDATER)
                                 else:
                                     queue_log.error(
                                         "Player {0} for platform {1} wasn't found in db".format(player_id, platform_id))
@@ -242,6 +238,7 @@ def main_worker(config: Config):
                     queue_log.info("No more messages in {0}".format(WORKER_QUEUE_NAME))
                     m_channel.cancel()
                     break
+            time.sleep(4)
         except pika.exceptions.AMQPError as exc:
             queue_log.exception(exc)
             m_queue = get_mq_connect(config)

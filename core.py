@@ -1,5 +1,6 @@
 import json
 import datetime
+import time
 
 from lib.config import Config, MODE_BOT
 from lib.log import get_logger
@@ -42,7 +43,7 @@ def main_core(config: Config):
     while is_running:
 
         try:
-            for method_frame, properties, body in m_channel.consume(MAIN_QUEUE_NAME, inactivity_timeout=5,
+            for method_frame, properties, body in m_channel.consume(MAIN_QUEUE_NAME, inactivity_timeout=1,
                                                                     auto_ack=False,
                                                                     arguments={"routing_key": config.mode}):
                 if body is not None:
@@ -84,6 +85,11 @@ def main_core(config: Config):
                             msg["platform_stats"][i.name] = str(i.get_stats())
                         cmd = {"cmd": "process_response", "text": str(msg)}
                         enqueue_command(cmd, MODE_BOT)
+                    elif cmd_type == "msg_to_user":
+                        if cmd.get("telegram_id") is not None:
+                            enqueue_command(cmd, MODE_BOT)
+                        else:
+                            queue_log.info("Message resening terminated {0}")
                     else:
                         queue_log.info("Unknown command type {0}".format(cmd_type))
                     m_channel.basic_ack(method_frame.delivery_tag)
@@ -93,6 +99,7 @@ def main_core(config: Config):
                     queue_log.info("No more messages in {0}".format(MAIN_QUEUE_NAME))
                     m_channel.cancel()
                     break
+            time.sleep(4)
         except BaseException as err:
             queue_log.critical(err)
             queue_log.exception(err)

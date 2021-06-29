@@ -6,6 +6,8 @@
   "DB_PASSWORD": "",
   "DB_PORT": 5432,
   "DB_USER": "",
+  "DB_UPDATE_SIZE": "1000",
+  "DB_UPDATE_CYCLES": "100",
   "LOG_LEVEL": "DEBUG",
   "HALT_ON_ERRORS": false,
   "SERVER_NAME": "",
