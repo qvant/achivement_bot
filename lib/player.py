@@ -57,14 +57,19 @@ class Player:
         cur = conn.cursor()
         if self.id is not None:
             cur.execute("""
+                                           select status_id from achievements_hunt.players p where p.id = %s
+                                       """, (self.id,))
+            status, = cur.fetchone()
+            cur.execute("""
                 select dt_last_delete from achievements_hunt.users u where u.telegram_id = %s
             """, (self.telegram_id,))
             ret = cur.fetchone()
             if ret[0] is not None and \
                     ret[0].replace(tzinfo=timezone.utc) + datetime.timedelta(days=3) > datetime.datetime.now()\
-                    .replace(tzinfo=timezone.utc):
+                    .replace(tzinfo=timezone.utc) and status == STATUS_VALID:
                 # TODO: throw error
-                self.platform.logger.info("Skip deleting player {0}, dt_last_delete {1}".format(self.ext_id, ret))
+                self.platform.logger.info("Skip deleting player {0}, dt_last_delete + delta = {1}".
+                                          format(self.ext_id, ret))
                 pass
             else:
                 self.platform.logger.info("Deleting player {0}".format(self.ext_id))

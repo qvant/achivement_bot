@@ -1,6 +1,6 @@
 import datetime
 import json
-import gettext
+import time
 
 from telegram import InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
@@ -15,13 +15,6 @@ from lib.telegram import set_logger, telegram_init, set_connect, set_config as s
     locale_choice, admin_choice, shutdown_choice, stats_choice, set_locale, main_keyboard, achievement_detail
 from lib.db import load, set_load_logger
 from lib.message_types import MT_VALIDATION_OK, MT_VALIDATION_FAILED, MT_ACCOUNT_DELETED, MT_ACCOUNT_UPDATED
-
-_ = gettext.gettext
-
-en = gettext.translation('base', localedir='locale', languages=['en'])
-en.install()
-ru = gettext.translation('base', localedir='locale', languages=['ru'])
-ru.install()
 
 
 def main_bot(config: Config):
@@ -88,18 +81,17 @@ def main_bot(config: Config):
 
         try:
 
-            for method_frame, properties, body in m_channel.consume(BOT_QUEUE_NAME, inactivity_timeout=5,
+            for method_frame, properties, body in m_channel.consume(BOT_QUEUE_NAME, inactivity_timeout=1,
                                                                     auto_ack=False,
                                                                     arguments={"routing_key": config.mode}):
                 if body is not None:
                     queue_log.info("Received user message {0} with delivery_tag {1}".format(body,
                                                                                             method_frame.delivery_tag))
-                    # cmd_response_callback(None, method_frame, properties, body)
                     cmd = json.loads(body)
                     cmd_type = cmd.get("cmd")
                     chat_id = cmd.get("chat_id")
                     if cmd_type == 'msg_to_user':
-                        set_locale(update=None, chat_id=chat_id)
+                        _ = set_locale(update=None, chat_id=chat_id)
                         msg = ""
                         msg_type = cmd.get("type")
                         if msg_type == MT_VALIDATION_OK:
@@ -142,6 +134,7 @@ def main_bot(config: Config):
                     queue_log.info("No more messages in {0}".format(BOT_QUEUE_NAME))
                     m_channel.cancel()
                     break
+            time.sleep(4)
         except BaseException as err:
             queue_log.critical(err)
             if config.supress_errors:

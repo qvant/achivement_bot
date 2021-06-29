@@ -17,6 +17,8 @@ CONFIG_PARAM_DB_NAME = "DB_NAME"
 CONFIG_PARAM_DB_HOST = "DB_HOST"
 CONFIG_PARAM_DB_USER = "DB_USER"
 CONFIG_PARAM_DB_PASSWORD = "DB_PASSWORD"
+CONFIG_PARAM_DB_UPDATE_SIZE = "DB_UPDATE_SIZE"
+CONFIG_PARAM_DB_UPDATE_CYCLES = "DB_UPDATE_CYCLES"
 CONFIG_PARAM_NEW_PATH = "CONFIG_PATH"
 CONFIG_PARAM_CONFIG_RELOAD_TIME = "CONFIG_RELOAD_TIME"
 CONFIG_PARAM_SERVER_NAME = "SERVER_NAME"
@@ -57,6 +59,8 @@ class Config:
         self.db_host = config.get(CONFIG_PARAM_DB_HOST)
         self.db_user = config.get(CONFIG_PARAM_DB_USER)
         self.db_password_read = config.get(CONFIG_PARAM_DB_PASSWORD)
+        self.db_update_size = int(config.get(CONFIG_PARAM_DB_UPDATE_SIZE))
+        self.db_update_cycles = int(config.get(CONFIG_PARAM_DB_UPDATE_CYCLES))
         if config.get(CONFIG_PARAM_NEW_PATH) is not None:
             self.file_path = config.get(CONFIG_PARAM_NEW_PATH)
         self.reload_time = config.get(CONFIG_PARAM_CONFIG_RELOAD_TIME)
