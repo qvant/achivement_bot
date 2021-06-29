@@ -283,6 +283,10 @@ msgstr "Подробности вкл/выкл"
 msgid "Validation for account {} platform {} ok"
 msgstr "Проверка для аккаунта {} на платформе {} выполнена успешно. Получение списка игр..."
 
+#: ..\bot.py:108
+msgid "Validation for account {} platform {} failed"
+msgstr "Проверка для аккаунта {} на платформе {} не пройдена. Аккаунт удален."
+
 #: ..\bot.py:115
 msgid "Stats for account {} and platform {} renewed"
 msgstr "Данные по достижениям для аккаунта {} на платформе {} обновлены.'"

@@ -131,9 +131,11 @@ def main_updater(config: Config):
                                 format(len(recs), len(games_ids)))
                     cursor.execute("""
                                                             PREPARE update_player_games as
-                                                            update achievements_hunt.player_games pg set percent_complete =
+                                                            update achievements_hunt.player_games pg
+                                                            set percent_complete =
                                                             round(
-                                                            (select count(1) from achievements_hunt.player_achievements a
+                                                            (select count(1) from
+                                                             achievements_hunt.player_achievements a
                                                              where a.platform_id = pg.platform_id
                                                              and a.game_id = pg.game_id
                                                              and a.player_id = pg.player_id) * 100 /
@@ -153,7 +155,8 @@ def main_updater(config: Config):
                     psycopg2.extras.execute_batch(cursor, """EXECUTE update_player_games_perf  (%s, %s)""", games)
 
                     cursor.execute("""
-                                    PREPARE del_q as delete from achievements_hunt.queue_achievements_update where id = $1
+                                    PREPARE del_q as delete from achievements_hunt.queue_achievements_update
+                                    where id = $1
                                     """)
                     psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
 
@@ -237,7 +240,8 @@ def main_updater(config: Config):
                                                 where pg.player_id = $1 and pg.game_id = $2 and pg.platform_id = $3
                                                 """)
                     psycopg2.extras.execute_batch(cursor, """EXECUTE update_player_games (%s, %s, %s)""", player_games)
-                    psycopg2.extras.execute_batch(cursor, """EXECUTE update_player_games_perf (%s, %s, %s)""", player_games)
+                    psycopg2.extras.execute_batch(cursor, """EXECUTE update_player_games_perf (%s, %s, %s)""",
+                                                  player_games)
 
                     cursor.execute("""
                                     PREPARE del_q as

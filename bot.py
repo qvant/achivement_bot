@@ -91,7 +91,7 @@ def main_bot(config: Config):
                     cmd_type = cmd.get("cmd")
                     chat_id = cmd.get("chat_id")
                     if cmd_type == 'msg_to_user':
-                        set_locale(update=None, chat_id=chat_id)
+                        _ = set_locale(update=None, chat_id=chat_id)
                         msg = ""
                         msg_type = cmd.get("type")
                         if msg_type == MT_VALIDATION_OK:
