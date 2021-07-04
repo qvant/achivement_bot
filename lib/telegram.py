@@ -1040,8 +1040,6 @@ def echo(update: Update, context: CallbackContext):
         cur_platform = register_progress[chat_id]
         del register_progress[chat_id]
         for i in platforms:
-            context.bot.send_message(chat_id=chat_id,
-                                     text=i.name)
             if i.name == cur_platform:
                 player = Player(name=update["message"]["text"], ext_id=update["message"]["text"],
                                 platform=i, id=None, telegram_id=chat_id)

@@ -76,7 +76,7 @@ def init_platform(config: Config) -> Platform:
     global api_log
     global call_counters
     call_counters = {}
-    api_log = get_logger("LOG_API_" + str(config.mode), config.log_level, True)
+    api_log = get_logger("LOG_API_steam_" + str(config.mode), config.log_level, True)
     f = config.file_path[:config.file_path.rfind('/')] + "steam.json"
     fp = codecs.open(f, 'r', "utf-8")
     steam_config = json.load(fp)

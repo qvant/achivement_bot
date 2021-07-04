@@ -64,6 +64,9 @@ def main_worker(config: Config):
 
     cur_players = []
     platform_players = []
+    for i in platforms:
+        cur_players.append(0)
+        platform_players.append([])
 
     while is_running:
 
@@ -85,10 +88,12 @@ def main_worker(config: Config):
                                         values (%s)
                                         """, (platforms[i].id,))
                         conn.commit()
-                    if len(platform_players) == 0:
+                    if len(platform_players[i]) == 0:
                         renew_log.info("Update loading players for platform {0}".format(platforms[i].name))
-                        platform_players.append(load_players(platforms[i], config))
-                        cur_players.append(0)
+                        player_buf = load_players(platforms[i], config)
+                        for cur_player in player_buf:
+                            platform_players[i].append(cur_player)
+                        cur_players[i] = 0
                     else:
                         renew_log.info(
                             "Update platform {0} resumed from position {1}".format(platforms[i].name, cur_players[i]))
@@ -125,6 +130,9 @@ def main_worker(config: Config):
                         renew_log.info(
                             "Update platform {0} postponed, progress {1}/{2}".format(platforms[i].name, cur_players[i],
                                                                                      len(platform_players[i])))
+                else:
+                    renew_log.info("Skip update platform {0}, next update {1}".format(
+                        platforms[i].name, dt_next_update[i]))
         except BaseException as err:
             queue_log.critical(err)
             if config.supress_errors:

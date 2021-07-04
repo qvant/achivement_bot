@@ -6,3 +6,4 @@ create table achievements_hunt.platforms
 alter table  achievements_hunt.platforms owner to achievements_hunt_bot;
 
 insert into achievements_hunt.platforms(id, name) values(1, 'Steam');
+insert into achievements_hunt.platforms(id, name) values(2, 'Retroachievements');

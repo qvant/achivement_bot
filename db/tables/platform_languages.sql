@@ -12,3 +12,4 @@ create unique index u_platform_languages_key on achievements_hunt.platform_langu
 create unique index u_platform_languages_key2 on achievements_hunt.platform_languages(platform_id, name);
 insert into achievements_hunt.platform_languages(platform_id, name, locale_name) values(1, 'English', 'en');
 insert into achievements_hunt.platform_languages(platform_id, name, locale_name) values(1, 'Russian', 'ru');
+insert into achievements_hunt.platform_languages(platform_id, name, locale_name) values(2, 'English', 'en');

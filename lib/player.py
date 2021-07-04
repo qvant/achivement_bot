@@ -64,7 +64,7 @@ class Player:
                 select dt_last_delete from achievements_hunt.users u where u.telegram_id = %s
             """, (self.telegram_id,))
             ret = cur.fetchone()
-            if ret[0] is not None and \
+            if ret is not None and ret[0] is not None and \
                     ret[0].replace(tzinfo=timezone.utc) + datetime.timedelta(days=3) > datetime.datetime.now()\
                     .replace(tzinfo=timezone.utc) and status == STATUS_VALID:
                 # TODO: throw error
