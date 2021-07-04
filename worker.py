@@ -131,7 +131,7 @@ def main_worker(config: Config):
                             "Update platform {0} postponed, progress {1}/{2}".format(platforms[i].name, cur_players[i],
                                                                                      len(platform_players[i])))
                 else:
-                    renew_log.info("Skip update platform {0}, next update {1}".format(
+                    renew_log.debug("Skip update platform {0}, next update {1}".format(
                         platforms[i].name, dt_next_update[i]))
         except BaseException as err:
             queue_log.critical(err)
