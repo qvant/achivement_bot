@@ -723,21 +723,50 @@ def show_account_stats(update: Update, context: CallbackContext):
         """, (locale, player.id))
         buf = cursor.fetchall()
         if len(buf) > 0:
-            achievement_list = _("Rarest achievements:") + chr(10)
+            achievement_list = chr(10) + chr(10) + _("Rarest achievements:") + chr(10)
             for i in buf:
                 achievement_list += _(r"{} (game {}) percent owners {}").format(i[0], i[2], i[1])
                 achievement_list += chr(10)
         else:
             achievement_list = ""
+        cursor.execute("""
+                select
+                        coalesce(tr.name, a.name),
+                        a.percent_owners,
+                        g.name percent_owners
+                    from achievements_hunt.player_achievements aa
+                    join achievements_hunt.achievements a
+                    on aa.achievement_id  = a.id
+                      and aa.game_id  = a.game_id
+                      and aa.platform_id = a.platform_id
+                    left join achievements_hunt.achievement_translations tr
+                    on tr.achievement_id  = a.id
+                      and tr.game_id = aa.game_id
+                      and tr.platform_id = aa.platform_id
+                      and tr.locale = %s
+                    join achievements_hunt.games g
+                    on aa.game_id = g.id
+                      and aa.platform_id = g.platform_id
+                     where aa.player_id = %s
+                     order by dt_unlock desc, coalesce(tr.name, a.name) limit 5
+                """, (locale, player.id))
+        buf = cursor.fetchall()
+        if len(buf) > 0:
+            new_achievement_list = chr(10) + _("Last achievements:") + chr(10)
+            for i in buf:
+                new_achievement_list += _(r"{} (game {}) percent owners {}").format(i[0], i[2], i[1])
+                new_achievement_list += chr(10)
+        else:
+            new_achievement_list = ""
         private_warning = ""
         if not player.is_public:
             private_warning = chr(10)
             private_warning += _("Profile is private, available information is limited")
-        context.bot.send_message(chat_id=chat_id, text=_("Total games {0}, games with achivement support {1}, "
+        context.bot.send_message(chat_id=chat_id, text=_("Total games {0}, games with achievement support {1}, "
                                                          "average completion percent {2}"
-                                                         ", perfect games {3}, was updated at {4} {5}{6}").
+                                                         ", perfect games {3}, was updated at {4} {5}{7}{6}").
                                  format(total_games, achievement_games, avg_percent, perfect_games, player.dt_updated,
-                                        achievement_list, private_warning))
+                                        achievement_list, private_warning, new_achievement_list))
     else:
         start(update, context)
 
