@@ -203,7 +203,7 @@ def get_player_games(player_id):
                      "for user {0}".format(player_id))
         r = requests.get(
             "https://retroachievements.org/API/API_GetUserRecentlyPlayedGames.php?y="
-            "{}&z={}&u={}&count=99999".format(get_key(), get_user(), player_id))
+            "{}&z={}&u={}&c=99999".format(get_key(), get_user(), player_id))
         api_log.info("Response from https://retroachievements.org/API/API_GetUserRecentlyPlayedGames.php: "
                      "{1} for player {0}".
                      format(player_id, r))
