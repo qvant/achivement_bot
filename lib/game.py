@@ -44,7 +44,7 @@ class Game:
     def save(self, cursor, active_locale: str):
         if self.id is None:
             cursor.execute(
-                """insert into achievements_hunt.games as l (name, ext_id, platform_id, has_achievements, 
+                """insert into achievements_hunt.games as l (name, ext_id, platform_id, has_achievements,
                         console_id)
                         values(%s, %s, %s, %s, %s)
                         on conflict ON CONSTRAINT u_games_ext_key do update
@@ -71,7 +71,7 @@ class Game:
                     self.achievements[i].save(cursor, active_locale)
         else:
             cursor.execute(
-                """update achievements_hunt.games l set dt_update=current_timestamp, name=%s, 
+                """update achievements_hunt.games l set dt_update=current_timestamp, name=%s,
                         has_achievements=%s, console_id=%s
                         where id = %s and platform_id = %s
                         and (%s != name or %s != has_achievements

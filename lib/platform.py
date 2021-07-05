@@ -124,7 +124,7 @@ class Platform:
             self.games_by_id[self.games[str(game_id)].id] = self.games[game_id]
             self.logger.info("Added game {0} {1} with id {2}".format(game_id, game_name, self.games[str(game_id)].id))
 
-    def load_consoles(self, console_id: Union[int, None]=None):
+    def load_consoles(self, console_id: Union[int, None] = None):
         conn = self.get_connect()
         cursor = conn.cursor()
         if console_id is None:
@@ -143,7 +143,8 @@ class Platform:
         cursor = conn.cursor()
         if game_id is None:
             cursor.execute("""
-                    select id, platform_id, name, ext_id, console_id from achievements_hunt.games where platform_id = %s order by id
+                    select id, platform_id, name, ext_id, console_id from achievements_hunt.games
+                    where platform_id = %s order by id
                     """, (self.id,))
         else:
             cursor.execute("""
