@@ -77,6 +77,9 @@ def main_worker(config: Config):
                         dt_next_update[i].replace(tzinfo=timezone.utc):
                     renew_log.info("Update platform {0}, next update {1}".format(platforms[i].name, dt_next_update[i]))
                     platforms[i].set_next_language()
+                    if platforms[i].get_consoles is not None:
+                        platforms[i].set_consoles(platforms[i].get_consoles())
+                        platforms[i].save()
                     cursor.execute("""
                     select count(1) from achievements_hunt.update_history where id_platform = %s
                     and dt_ended is null

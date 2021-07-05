@@ -88,7 +88,7 @@ def init_platform(config: Config) -> Platform:
                      get_game=get_game, games=None, id=1, validate_player=get_player_stats, get_player_id=get_name,
                      get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,
                      incremental_update_interval=incremental_update_interval, get_last_games=get_player_last_games,
-                     incremental_skip_chance=incremental_skip_chance)
+                     incremental_skip_chance=incremental_skip_chance, get_consoles=None)
     if is_password_encrypted(key_read):
         api_log.info("Steam key encrypted, do nothing")
         open_key = decrypt_password(key_read, config.server_name, config.db_port)
@@ -209,7 +209,8 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     # Hack for some specific names. TODO: make a settings
     if game_name == ":THE LONGING:":
         game_name = "THE LONGING"
-    return Game(name=game_name, platform_id=PLATFORM_STEAM, ext_id=game_id, id=None, achievements=achievements)
+    return Game(name=game_name, platform_id=PLATFORM_STEAM, ext_id=game_id, id=None, achievements=achievements,
+                console_ext_id=None, console=None)
 
 
 def get_player_achievements(player_id, game_id):

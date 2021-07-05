@@ -239,7 +239,10 @@ def games_keyboard(chat_id: int, games, cur_games=GAMES_WITH_ACHIEVEMENTS, has_p
     keyboard = [InlineKeyboardButton(_("Begin"), callback_data=GAMES_LIST_FIRST),
                 InlineKeyboardButton(_("Previous"), callback_data=GAMES_LIST_PREV)]
     for i in games:
-        keyboard.append(InlineKeyboardButton("{}".format(i.name), callback_data="games_of_" + str(i.id)),)
+        game_name = i.name
+        if i.console_name is not None:
+            game_name += " (" + i.console_name + ")"
+        keyboard.append(InlineKeyboardButton("{}".format(game_name), callback_data="games_of_" + str(i.id)),)
     keyboard.append(InlineKeyboardButton(_("Next"), callback_data=GAMES_LIST_NEXT))
     keyboard.append(InlineKeyboardButton(_("End"), callback_data=GAMES_LIST_LAST))
     keyboard.append(InlineKeyboardButton(_("Index"), callback_data=GAMES_LIST_INDEX))
@@ -704,7 +707,7 @@ def show_account_stats(update: Update, context: CallbackContext):
         select
                 coalesce(tr.name, a.name),
                 a.percent_owners,
-                g.name percent_owners
+                g.name || case when c.name is not null then ' (' || c.name || ')' end
             from achievements_hunt.player_achievements aa
             join achievements_hunt.achievements a
             on aa.achievement_id  = a.id
@@ -718,8 +721,11 @@ def show_account_stats(update: Update, context: CallbackContext):
             join achievements_hunt.games g
             on aa.game_id = g.id
               and aa.platform_id = g.platform_id
-             where aa.player_id = %s
-             order by a.percent_owners, coalesce(tr.name, a.name) limit 10
+            left join achievements_hunt.consoles c
+            on c.id = g.console_id
+              and c.platform_id = g.platform_id
+            where aa.player_id = %s
+            order by a.percent_owners, coalesce(tr.name, a.name) limit 10
         """, (locale, player.id))
         buf = cursor.fetchall()
         if len(buf) > 0:
@@ -733,7 +739,7 @@ def show_account_stats(update: Update, context: CallbackContext):
                 select
                         coalesce(tr.name, a.name),
                         a.percent_owners,
-                        g.name percent_owners
+                        g.name || case when c.name is not null then ' (' || c.name || ')' end
                     from achievements_hunt.player_achievements aa
                     join achievements_hunt.achievements a
                     on aa.achievement_id  = a.id
@@ -747,8 +753,11 @@ def show_account_stats(update: Update, context: CallbackContext):
                     join achievements_hunt.games g
                     on aa.game_id = g.id
                       and aa.platform_id = g.platform_id
-                     where aa.player_id = %s
-                     order by dt_unlock desc, coalesce(tr.name, a.name) limit 5
+                    left join achievements_hunt.consoles c
+                    on c.id = g.console_id
+                      and c.platform_id = g.platform_id
+                    where aa.player_id = %s
+                    order by dt_unlock desc, coalesce(tr.name, a.name) limit 5
                 """, (locale, player.id))
         buf = cursor.fetchall()
         if len(buf) > 0:

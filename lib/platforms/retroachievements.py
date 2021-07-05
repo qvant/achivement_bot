@@ -5,6 +5,7 @@ import time
 import datetime
 from ..achievement import Achievement
 from ..config import Config
+from ..console import Console
 from ..game import Game
 from ..log import get_logger
 from ..platform import Platform
@@ -128,6 +129,7 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     game_name = None
     obj = r.json()
     if len(obj) > 0:
+        console_ext_id = obj.get("ConsoleID")
         if "Achievements" in obj:
             obj_achievements = obj.get("Achievements")
             if obj_achievements is not None:
@@ -149,12 +151,13 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                                                                           description=obj_achievements[i].get(
                                                                               "Description"))
         api_log.info(
-            "For game {0}, found {1} achievements".format(
-                game_id, len(achievements)))
+            "For game {0}, found {1} achievements and console type {1}".format(
+                game_id, len(achievements), console_ext_id))
         game_name = obj.get("Title")
         "For game {0}, found name {1}".format(
             game_id, game_name)
-    return Game(name=game_name, platform_id=PLATFORM_RETRO, ext_id=game_id, id=None, achievements=achievements)
+    return Game(name=game_name, platform_id=PLATFORM_RETRO, ext_id=game_id, id=None, achievements=achievements,
+                console_ext_id=str(obj.get("ConsoleID")), console=None)
 
 
 def get_player_achievements(player_id, game_id):
@@ -250,6 +253,32 @@ def get_last_player_games(player_id):
     return res
 
 
+def get_consoles():
+    global api_log
+    cnt = 0
+    while True:
+        inc_call_cnt("API_GetConsoleIDs")
+        api_log.info("Request https://retroachievements.org/API/API_GetConsoleIDs.php")
+        r = requests.get(
+            "https://retroachievements.org/API/API_GetConsoleIDs.php?y="
+            "{}&z={}".format(get_key(), get_user()))
+        api_log.info("Response from https://retroachievements.org/API/API_GetConsoleIDs.php: "
+                     "{0}".
+                     format(r))
+        api_log.debug("Full response from https://retroachievements.org/API/API_GetUserSummary.php: "
+                      "{0}".format(r.text))
+        if r.status_code == 200 or cnt >= MAX_TRIES:
+            break
+        cnt += 1
+        time.sleep(WAIT_BETWEEN_TRIES)
+    res = []
+    obj = r.json()
+    if obj is not None and len(obj) > 0:
+        for i in obj:
+            res.append(Console(id=None, ext_id=i["ID"], name=i["Name"], platform_id=PLATFORM_RETRO))
+    return res
+
+
 def init_platform(config: Config) -> Platform:
     global api_log
     global call_counters
@@ -267,7 +296,7 @@ def init_platform(config: Config) -> Platform:
                      get_game=get_game, games=None, id=2, validate_player=get_name, get_player_id=get_name,
                      get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,
                      incremental_update_interval=incremental_update_interval, get_last_games=get_last_player_games,
-                     incremental_skip_chance=incremental_skip_chance)
+                     incremental_skip_chance=incremental_skip_chance, get_consoles=get_consoles)
     if is_password_encrypted(key_read):
         api_log.info("Retroachievements key encrypted, do nothing")
         open_key = decrypt_password(key_read, config.server_name, config.db_port)
