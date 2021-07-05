@@ -81,8 +81,9 @@ class Game:
             )
             if len(self.achievements) > 0:
                 for i in self.achievements:
-                    self.achievements[i].set_game_id(self.id)
-                    self.achievements[i].save(cursor, active_locale)
+                    if self.achievements[i].id is None or active_locale != 'en':
+                        self.achievements[i].set_game_id(self.id)
+                        self.achievements[i].save(cursor, active_locale)
 
     def __str__(self):
         return "{0}".format(self.id)
