@@ -720,7 +720,7 @@ def show_account_stats(update: Update, context: CallbackContext):
         select
                 coalesce(tr.name, a.name),
                 a.percent_owners,
-                g.name || case when c.name is not null then ' (' || c.name || ')' end
+                g.name || case when c.name is not null then ' (' || c.name || ')' else '' end
             from achievements_hunt.player_achievements aa
             join achievements_hunt.achievements a
             on aa.achievement_id  = a.id
@@ -752,7 +752,7 @@ def show_account_stats(update: Update, context: CallbackContext):
                 select
                         coalesce(tr.name, a.name),
                         a.percent_owners,
-                        g.name || case when c.name is not null then ' (' || c.name || ')' end
+                        g.name || case when c.name is not null then ' (' || c.name || ')' else '' end
                     from achievements_hunt.player_achievements aa
                     join achievements_hunt.achievements a
                     on aa.achievement_id  = a.id
