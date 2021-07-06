@@ -104,7 +104,11 @@ class Platform:
             if self._consoles_by_ext_id[i].id is None:
                 self.logger.info("Saving console {0}".format(self._consoles_by_ext_id[i].name))
                 self._consoles_by_ext_id[i].save(conn)
-                self._consoles_by_id[self._consoles_by_ext_id[i]] = i
+                if self._consoles_by_ext_id[i].id is not None
+                    self._consoles_by_id[self._consoles_by_ext_id[i].id] = i
+                    self.logger.error("Set map id for console {0}".format(self._consoles_by_ext_id[i].name))
+                else:
+                    self.logger.error("Missed id for console {0}".format(self._consoles_by_ext_id[i].name))
         for i in self.games:
             if self.games[i].console_ext_id is not None and self.games[i].console is None:
                 self.logger.info("Set console {0} for game {1}".format(self.games[i].console_ext_id,
