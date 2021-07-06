@@ -35,9 +35,10 @@ def main_worker(config: Config):
 
     m_channel.queue_declare(queue=WORKER_QUEUE_NAME, durable=True)
 
-    m_channel.exchange_declare(exchange='main',
-                               exchange_type='direct')
-    m_channel.queue_bind(exchange='main',
+    m_channel.exchange_declare(exchange='achievement_hunt',
+                               exchange_type='direct',
+                               durable=True)
+    m_channel.queue_bind(exchange='achievement_hunt',
                          queue=WORKER_QUEUE_NAME,
                          routing_key=config.mode)
 

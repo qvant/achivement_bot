@@ -5,6 +5,7 @@ drop table achievements_hunt.users;
 drop table achievements_hunt.achievement_translations;
 drop table achievements_hunt.achievements;
 drop table achievements_hunt.games;
+drop table achievements_hunt.consoles;
 drop table achievements_hunt.platform_languages;
 drop table achievements_hunt.platforms;
 drop table achievements_hunt.queue_player_achievements_update;
