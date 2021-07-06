@@ -1,7 +1,7 @@
 create table achievements_hunt.users
 (
     id 			    serial primary key,
-    telegram_id     integer not null,
+    telegram_id     bigint not null,
     dt_created      timestamp with time zone default current_timestamp,
     dt_last_update  timestamp with time zone,
     locale          varchar(32),

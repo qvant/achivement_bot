@@ -1,4 +1,5 @@
 import gettext
+import psycopg2
 
 from .config import Config, MODE_CORE, MODE_WORKER, MODE_UPDATER, MODE_BOT
 from .platform import Platform
@@ -159,23 +160,35 @@ def main_keyboard(chat_id: int):
     global db
     global platforms
     global config
+    global telegram_logger
     _ = set_locale(chat_id=chat_id)
-    cursor = db.cursor()
-    cursor.execute("""
-                select id, platform_id, name, ext_id, dt_update, is_public
-                from achievements_hunt.players
-                where telegram_id = %s
-                order by id
-                """, (chat_id,))
     players_by_tlg_id[chat_id] = []
+    try:
+        cursor = db.cursor()
+        cursor.execute("""
+                    select id, platform_id, name, ext_id, dt_update, is_public
+                    from achievements_hunt.players
+                    where telegram_id = %s
+                    order by id
+                    """, (chat_id,))
 
-    for id, platform_id, name, ext_id, dt_update, is_public in cursor:
-        for i in platforms:
-            if i.id == platform_id:
-                player = Player(name=name, platform=i, ext_id=ext_id, id=id, telegram_id=chat_id, dt_updated=dt_update)
-                player.is_public = is_public
-                players_by_tlg_id[chat_id].append(player)
-                user_games_offsets[chat_id] = 0
+        for id, platform_id, name, ext_id, dt_update, is_public in cursor:
+            for i in platforms:
+                if i.id == platform_id:
+                    player = Player(name=name, platform=i, ext_id=ext_id, id=id, telegram_id=chat_id, dt_updated=dt_update)
+                    player.is_public = is_public
+                    players_by_tlg_id[chat_id].append(player)
+                    user_games_offsets[chat_id] = 0
+    except psycopg2.Error as err:
+        telegram_logger.exception(err)
+        if config.supress_errors:
+            try:
+                set_connect(Platform.get_connect())
+            except BaseException as err2:
+                telegram_logger.exception(err2)
+                pass
+        else:
+            raise
     keyboard = [
         InlineKeyboardButton(_("New account"), callback_data="main_NEW_ACCOUNT"),
         InlineKeyboardButton(_("Delete account"), callback_data="main_DELETE_ACCOUNT"),
@@ -945,39 +958,51 @@ def show_account_achievements(update: Update, context: CallbackContext):
 def set_locale(update: Union[Update, None] = None, chat_id: Union[int, None] = None):
     global user_locales
     global db
+    global telegram_logger
     if update is not None:
         chat_id = update.effective_chat.id
     user_id = None
     if chat_id not in user_locales:
-        cursor = db.cursor()
-        cursor.execute("""select locale, id from achievements_hunt.users where telegram_id = %s""",
-                       (chat_id,))
-        res = cursor.fetchone()
-        locale = ""
-        if res is not None:
-            locale = res[0]
-            user_id = res[1]
-        if locale is None or len(locale) == 0:
-            if update is not None:
-                msg = update.message
-                if msg is not None:
-                    fr = msg.from_user
-                    if fr is not None:
-                        locale = fr.language_code
-        if locale is None or len(locale) == 0:
-            if update is not None:
-                cb = update.callback_query
-                if cb is not None:
-                    locale = cb.data[7:]
-        if user_id is None:
-            cursor.execute("""
-                                            insert into achievements_hunt.users(telegram_id, locale)
-                                            values (%s, %s)
-                                            on conflict (telegram_id) do nothing
-                                        """, (chat_id, locale))
-            db.commit()
-        if len(locale) == 0:
-            locale = "en"
+        try:
+            cursor = db.cursor()
+            cursor.execute("""select locale, id from achievements_hunt.users where telegram_id = %s""",
+                           (chat_id,))
+            res = cursor.fetchone()
+            locale = ""
+            if res is not None:
+                locale = res[0]
+                user_id = res[1]
+            if locale is None or len(locale) == 0:
+                if update is not None:
+                    msg = update.message
+                    if msg is not None:
+                        fr = msg.from_user
+                        if fr is not None:
+                            locale = fr.language_code
+            if locale is None or len(locale) == 0:
+                if update is not None:
+                    cb = update.callback_query
+                    if cb is not None:
+                        locale = cb.data[7:]
+            if user_id is None:
+                cursor.execute("""
+                                                insert into achievements_hunt.users(telegram_id, locale)
+                                                values (%s, %s)
+                                                on conflict (telegram_id) do nothing
+                                            """, (chat_id, locale))
+                db.commit()
+            if len(locale) == 0:
+                locale = "en"
+        except psycopg2.Error as err:
+            telegram_logger.exception(err)
+            if config.supress_errors:
+                try:
+                    set_connect(Platform.get_connect())
+                except BaseException as err2:
+                    telegram_logger.exception(err2)
+                    pass
+            else:
+                raise
         user_locales[chat_id] = locale
     locale = user_locales[chat_id]
     if locale == 'ru':

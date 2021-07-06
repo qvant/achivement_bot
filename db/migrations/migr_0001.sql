@@ -15,5 +15,8 @@ alter table  achievements_hunt.consoles owner to achievements_hunt_bot;
 alter table  achievements_hunt.games ADD console_id integer;
 alter table  achievements_hunt.games ADD CONSTRAINT fk_games_to_consoles foreign key (console_id) references  achievements_hunt.consoles(id);
 
+alter table achievements_hunt.users alter column telegram_id type bigint;
+alter table achievements_hunt.players alter column telegram_id type bigint;
+
 update achievements_hunt.version set n_version=2, dt_update=current_timestamp  where v_name = 'Achievement hunt bot';
 commit;

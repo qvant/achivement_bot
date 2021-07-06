@@ -6,7 +6,7 @@ create table achievements_hunt.players
 	ext_id		varchar(255) not null,
 	dt_create	timestamp with time zone default current_timestamp not null,
 	dt_update	timestamp with time zone,
-	telegram_id integer,
+	telegram_id bigint,
 	status_id   integer not null,
 	is_public   boolean not null default true,
 	dt_update_full	timestamp with time zone,
