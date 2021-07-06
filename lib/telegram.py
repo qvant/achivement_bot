@@ -1033,7 +1033,7 @@ def get_locale_name(update: Union[Update, None], chat_id: Union[int, None] = Non
 def start(update: Update, context: CallbackContext):
     global telegram_logger
 
-    telegram_logger.info("Echo: update: {0}, context {1}".format(update, context))
+    telegram_logger.info("start: update: {0}, context {1}".format(update, context))
     inc_command_counter("start")
     reply_markup = InlineKeyboardMarkup(main_keyboard(update.effective_chat.id))
     _ = set_locale(update)
