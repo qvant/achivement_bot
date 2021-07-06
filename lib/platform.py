@@ -104,7 +104,7 @@ class Platform:
             if self._consoles_by_ext_id[i].id is None:
                 self.logger.info("Saving console {0}".format(self._consoles_by_ext_id[i].name))
                 self._consoles_by_ext_id[i].save(conn)
-                if self._consoles_by_ext_id[i].id is not None
+                if self._consoles_by_ext_id[i].id is not None:
                     self._consoles_by_id[self._consoles_by_ext_id[i].id] = i
                     self.logger.error("Set map id for console {0}".format(self._consoles_by_ext_id[i].name))
                 else:
