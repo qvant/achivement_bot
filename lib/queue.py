@@ -43,7 +43,7 @@ def enqueue_command(obj: Dict, send_to: None):
     try:
         queue = get_mq_connect(config)
         channel = queue.channel()
-        channel.basic_publish(exchange="main", routing_key=send_to,
+        channel.basic_publish(exchange="achievement_hunt", routing_key=send_to,
                               body=msg_body, properties=pika.BasicProperties(delivery_mode=2,
                                                                              content_type="application/json",
                                                                              content_encoding="UTF-8"))
