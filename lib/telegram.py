@@ -37,7 +37,7 @@ global config
 global user_command_counters
 
 MAX_MENU_LENGTH = 30
-MAX_MENU_ITEMS = 8
+MAX_MENU_ITEMS = 3
 
 GAME_MENU_LENGTH = 10
 ACHIEVEMENT_MENU_LENGTH = 10
