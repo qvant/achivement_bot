@@ -120,10 +120,17 @@ def main_bot(config: Config):
                             resp = eval(cmd.get("text"))
                             msg = ""
                             for i in resp:
-                                msg += i + ": " + str(resp.get(i)) + chr(10)
                                 if i == "platform_stats":
+                                    msg += r"  " + i + ": " + chr(10)
                                     for j in resp[i]:
-                                        msg += j + ": " + str(resp[i].get(j)) + chr(10)
+                                        msg += r"    " + j + ": " + chr(10)
+                                        cur = eval(resp[i][j])
+                                        for m in cur:
+                                            msg += r"      " + m + ": " + chr(10)
+                                            for k in cur[m]:
+                                                msg += r"        " + k + ": " + str(cur[m][k]) + chr(10)
+                                else:
+                                    msg += i + ": " + str(resp.get(i)) + chr(10)
                         except SyntaxError:
                             msg = cmd.get("text")
                         for i in config.admin_list:
@@ -137,7 +144,7 @@ def main_bot(config: Config):
                     break
             time.sleep(4)
         except BaseException as err:
-            queue_log.critical(err)
+            queue_log.exception(err)
             if config.supress_errors:
                 pass
             else:
