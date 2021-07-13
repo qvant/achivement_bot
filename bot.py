@@ -122,7 +122,7 @@ def main_bot(config: Config):
                             for i in resp:
                                 if i == "platform_stats":
                                     msg += r"  " + i + ": " + chr(10)
-                                    for j in resp[i]:
+                                    for j in sorted(resp[i]):
                                         msg += r"    " + j + ": " + chr(10)
                                         cur = eval(resp[i][j])
                                         for m in cur:

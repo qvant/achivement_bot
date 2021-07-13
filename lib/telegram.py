@@ -440,9 +440,13 @@ def stats_choice(update: Update, context: CallbackContext):
                              format(cur_item, update.effective_chat.id))
         reply_markup = InlineKeyboardMarkup(stats_keyboard(chat_id))
         if cur_item == STATS_BOT:
-            msg = get_stats()
-            msg["module"] = "Bot"
-            msg["user_commands"] = user_command_counters
+            obj = get_stats()
+            obj["module"] = "Bot"
+            msg = ""
+            for i in obj:
+                msg += i + ": " + str(obj[i]) + chr(10)
+            for i in sorted(user_command_counters):
+                msg += "  " + str(i) + ": " + str(user_command_counters[i]) + chr(10)
             context.bot.send_message(chat_id=chat_id, text=str(msg),
                                      reply_markup=reply_markup)
         else:
