@@ -225,10 +225,15 @@ def main_worker(config: Config):
                         msg = get_stats()
                         # TODO less expensive way
                         cursor.execute("""
-                                select count(1) from achievements_hunt.players
+                                select count(1), p.name
+                                from achievements_hunt.players pl
+                                join achievements_hunt.platforms p
+                                  on p.id = pl.platform_id
+                                group by p.name
                                 """)
-                        res = cursor.fetchone()
-                        msg["players"] = res[0]
+                        msg["players"] = {}
+                        for cnt, platform_name in cursor:
+                            msg["players"][platform_name] = cnt
                         msg["module"] = "Worker"
                         msg["platform_stats"] = {}
                         for i in platforms:

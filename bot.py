@@ -129,12 +129,17 @@ def main_bot(config: Config):
                                             msg += r"      " + m + ": " + chr(10)
                                             for k in cur[m]:
                                                 msg += r"        " + k + ": " + str(cur[m][k]) + chr(10)
+                                elif i == "players":
+                                    msg += r"  " + i + ": " + chr(10)
+                                    for j in sorted(resp[i]):
+                                        msg += r"    " + j + ": " + str(resp[i][j]) + chr(10)
                                 else:
                                     msg += i + ": " + str(resp.get(i)) + chr(10)
                         except SyntaxError:
                             msg = cmd.get("text")
                         for i in config.admin_list:
-                            updater.dispatcher.bot.send_message(chat_id=i, text=msg)
+                            reply_markup = InlineKeyboardMarkup(main_keyboard(i))
+                            updater.dispatcher.bot.send_message(chat_id=i, text=msg, reply_markup=reply_markup)
                     m_channel.basic_ack(method_frame.delivery_tag)
                     queue_log.info("User message " + str(body) + " with delivery_tag " +
                                    str(method_frame.delivery_tag) + " acknowledged")
