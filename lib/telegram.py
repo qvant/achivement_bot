@@ -175,7 +175,8 @@ def main_keyboard(chat_id: int):
         for id, platform_id, name, ext_id, dt_update, is_public in cursor:
             for i in platforms:
                 if i.id == platform_id:
-                    player = Player(name=name, platform=i, ext_id=ext_id, id=id, telegram_id=chat_id, dt_updated=dt_update)
+                    player = Player(name=name, platform=i, ext_id=ext_id, id=id, telegram_id=chat_id,
+                                    dt_updated=dt_update)
                     player.is_public = is_public
                     players_by_tlg_id[chat_id].append(player)
                     user_games_offsets[chat_id] = 0
