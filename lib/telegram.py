@@ -37,7 +37,7 @@ global config
 global user_command_counters
 
 MAX_MENU_LENGTH = 30
-MAX_MENU_ITEMS = 8
+MAX_MENU_ITEMS = 3
 
 GAME_MENU_LENGTH = 10
 ACHIEVEMENT_MENU_LENGTH = 10
@@ -175,7 +175,8 @@ def main_keyboard(chat_id: int):
         for id, platform_id, name, ext_id, dt_update, is_public in cursor:
             for i in platforms:
                 if i.id == platform_id:
-                    player = Player(name=name, platform=i, ext_id=ext_id, id=id, telegram_id=chat_id, dt_updated=dt_update)
+                    player = Player(name=name, platform=i, ext_id=ext_id, id=id, telegram_id=chat_id,
+                                    dt_updated=dt_update)
                     player.is_public = is_public
                     players_by_tlg_id[chat_id].append(player)
                     user_games_offsets[chat_id] = 0
@@ -440,9 +441,13 @@ def stats_choice(update: Update, context: CallbackContext):
                              format(cur_item, update.effective_chat.id))
         reply_markup = InlineKeyboardMarkup(stats_keyboard(chat_id))
         if cur_item == STATS_BOT:
-            msg = get_stats()
-            msg["module"] = "Bot"
-            msg["user_commands"] = user_command_counters
+            obj = get_stats()
+            obj["module"] = "Bot"
+            msg = ""
+            for i in obj:
+                msg += i + ": " + str(obj[i]) + chr(10)
+            for i in sorted(user_command_counters):
+                msg += "  " + str(i) + ": " + str(user_command_counters[i]) + chr(10)
             context.bot.send_message(chat_id=chat_id, text=str(msg),
                                      reply_markup=reply_markup)
         else:

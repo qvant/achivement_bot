@@ -49,7 +49,7 @@ def inc_call_cnt(method: str):
     if cur_dt not in call_counters:
         call_counters[cur_dt] = {}
     if method not in call_counters[cur_dt]:
-        call_counters[cur_dt][method] = 0
+        call_counters[cur_dt][method] = int(0)
     call_counters[cur_dt][method] += 1
     if len(call_counters) > 7:
         old_dt = str(datetime.date.today() - datetime.timedelta(days=7))
