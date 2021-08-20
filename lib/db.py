@@ -6,6 +6,7 @@ from lib.config import Config
 from lib.platform import Platform
 from lib.platforms.steam import init_platform as init_steam
 from lib.platforms.retroachievements import init_platform as init_retro
+from lib.platforms.gog import init_platform as init_gog
 from lib.player import STATUS_VALID, Player
 from .log import get_logger
 
@@ -20,7 +21,7 @@ def set_load_logger(cfg: Config):
 def load(config: Config, load_games: bool = True, load_achievements: bool = True):
     global load_log
     platforms = [
-        init_steam(config), init_retro(config)]
+        init_steam(config), init_retro(config), init_gog(config)]
     Platform.set_load_log(load_log)
     if load_games:
         for i in platforms:
