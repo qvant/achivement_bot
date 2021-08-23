@@ -15,6 +15,7 @@ class Platform:
                  incremental_update_interval: int, get_last_games, incremental_skip_chance: int,
                  get_consoles):
         self.id = id
+        self._is_persist = False
         self.name = name
         self.get_games = get_games
         self.get_last_games = get_last_games
@@ -90,16 +91,18 @@ class Platform:
         conn = self.get_connect()
         cursor = conn.cursor()
         self.logger.info("Start saving to db")
-        cursor.execute(
-            """insert into achievements_hunt.platforms as l (name, id )
-                    values(%s, %s)
-                    on conflict (id) do nothing
-                    returning id
-            """, (self.name, self.id)
-        )
-        ret = cursor.fetchone()
-        if ret is not None:
-            self.id = [0]
+        if not self._is_persist:
+            cursor.execute(
+                """insert into achievements_hunt.platforms as l (name, id )
+                        values(%s, %s)
+                        on conflict (id) do nothing
+                        returning id
+                """, (self.name, self.id)
+            )
+            ret = cursor.fetchone()
+            if ret is not None:
+                self.id = [0]
+                self._is_persist = True
         for i in self._consoles_by_ext_id:
             if self._consoles_by_ext_id[i].id is None:
                 self.logger.info("Saving console {0}".format(self._consoles_by_ext_id[i].name))
@@ -113,7 +116,7 @@ class Platform:
             if self.games[i].console_ext_id is not None and self.games[i].console is None:
                 self.logger.info("Set console {0} for game {1}".format(self.games[i].console_ext_id,
                                                                        self.games[i].name))
-                self.games[i].console = self.get_console_by_ext(self.games[i].console_ext_id)
+                self.games[i].set_console(self.get_console_by_ext(self.games[i].console_ext_id))
                 self.logger.info("New console {0} for game {1}".format(self.games[i].console_name,
                                                                        self.games[i].name))
             self.games[i].save(cursor, self.active_locale)
