@@ -193,7 +193,10 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                                                        name=i.get("displayName"),
                                                        ext_id=i.get("name"),
                                                        platform_id=PLATFORM_STEAM,
-                                                       description=i.get("description"))
+                                                       description=i.get("description"),
+                                                       icon_url=i.get("icon"),
+                                                       locked_icon_url=i.get("icongray"),
+                                                       )
         api_log.info(
             "For game {0}, found {1} achievements".format(
                 game_id, len(achievements)))
@@ -209,8 +212,31 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     # Hack for some specific names. TODO: make a settings
     if game_name == ":THE LONGING:":
         game_name = "THE LONGING"
+    while True:
+        # not need to increase call counter - our key not used
+        api_log.info("Request https://store.steampowered.com/api/appdetails// "
+                     "for game {0}, name {1}".format(game_id, name))
+        r = requests.get(
+            "https://store.steampowered.com/api/appdetails/?appids={0}".
+            format(game_id))
+        api_log.info("Response from https://store.steampowered.com/api/appdetails {0} "
+                     "from Steam".format(r))
+        if r.status_code == 200 or cnt >= MAX_TRIES:
+            break
+        cnt += 1
+        time.sleep(WAIT_BETWEEN_TRIES)
+    icon_url = None
+    release_date = None
+    obj = r.json().get(game_id)
+    if obj is not None:
+        obj = obj.get("data")
+        if obj is not None:
+            icon_url = obj.get("header_image")
+            obj = obj.get("release_date")
+            if obj is not None:
+                release_date = obj.get("date")
     return Game(name=game_name, platform_id=PLATFORM_STEAM, ext_id=game_id, id=None, achievements=achievements,
-                console_ext_id=None, console=None)
+                console_ext_id=None, console=None, icon_url=icon_url, release_date=release_date)
 
 
 def get_player_achievements(player_id, game_id):

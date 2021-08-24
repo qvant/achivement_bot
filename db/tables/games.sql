@@ -8,7 +8,9 @@ create table  achievements_hunt.games
 	dt_update	        timestamp with time zone,
 	num_owners          integer default 0 not null,
 	has_achievements    boolean default true not null,
-	console_id          integer
+	console_id          integer,
+	icon_url            varchar(1024),
+	release_date        varchar(255)
 );
 create unique index u_games_ext_key on achievements_hunt.games(platform_id, ext_id);
 alter table  achievements_hunt.games ADD CONSTRAINT u_games_ext_key unique using index u_games_ext_key;

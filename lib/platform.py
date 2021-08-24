@@ -150,48 +150,56 @@ class Platform:
         cursor = conn.cursor()
         if game_id is None:
             cursor.execute("""
-                    select id, platform_id, name, ext_id, console_id from achievements_hunt.games
+                    select id, platform_id, name, ext_id, console_id, icon_url, release_date
+                    from achievements_hunt.games
                     where platform_id = %s order by id
                     """, (self.id,))
         else:
             cursor.execute("""
-                                select id, platform_id, name, ext_id, console_id from achievements_hunt.games
+                                select id, platform_id, name, ext_id, console_id, icon_url, release_date
+                                from achievements_hunt.games
                                 where platform_id = %s and id = %s
                                 order by id
                                 """, (self.id, game_id))
         games = {}
-        for id, platform_id, name, ext_id, console_id in cursor:
+        for id, platform_id, name, ext_id, console_id, icon_url, release_date in cursor:
             self.load_log.info("Loaded game {0} with id {1}, ext_id {2}, for platform {3} and console {4}".
                                format(name, id, ext_id, self.id, console_id))
             if self.get_consoles is not None:
                 if self.get_console_by_id(console_id) is None:
                     self.load_consoles(console_id)
                 games[str(ext_id)] = Game(name=name, platform_id=platform_id, id=id, ext_id=ext_id, achievements=None,
-                                          console_ext_id=None, console=self.get_console_by_id(console_id))
+                                          console_ext_id=None, console=self.get_console_by_id(console_id),
+                                          icon_url=icon_url, release_date=release_date)
             else:
                 games[str(ext_id)] = Game(name=name, platform_id=platform_id, id=id, ext_id=ext_id, achievements=None,
-                                          console_ext_id=None, console=None)
+                                          console_ext_id=None, console=None,
+                                          icon_url=icon_url, release_date=release_date)
         if load_achievements:
             if game_id is None:
                 cursor.execute("""
-                                    select a.id, a.platform_id, a.name, a.ext_id, g.ext_id, a.description, a.game_id
+                                    select a.id, a.platform_id, a.name, a.ext_id, g.ext_id, a.description, a.game_id,
+                                        a.icon_url, a.locked_icon_url
                                      from achievements_hunt.achievements a
                                      join  achievements_hunt.games g on a.game_id = g.id
                                       where a.platform_id = %s order by id
                                     """, (self.id,))
             else:
                 cursor.execute("""
-                                    select a.id, a.platform_id, a.name, a.ext_id, g.ext_id, a.description, a.game_id
+                                    select a.id, a.platform_id, a.name, a.ext_id, g.ext_id, a.description, a.game_id,
+                                        a.icon_url, a.locked_icon_url
                                      from achievements_hunt.achievements a
                                      join  achievements_hunt.games g on a.game_id = g.id  where a.platform_id = %s
                                       and a.game_id = %s order by id
                                                     """, (self.id, game_id))
-            for id, platform_id, name, ext_id, game_ext_id, description, game_id in cursor:
+            for id, platform_id, name, ext_id, game_ext_id, description, game_id, icon_url, locked_icon_url in cursor:
                 self.load_log.debug("Loaded achievement {0} with id {1}, ext_id {2}, for game {3} "
                                     "on platform {4}".format(name, id, ext_id, game_ext_id, self.id))
                 games[str(game_ext_id)].add_achievement(achievement=Achievement(id=id, game_id=game_id, name=name,
                                                                                 platform_id=platform_id, ext_id=ext_id,
-                                                                                description=description))
+                                                                                description=description,
+                                                                                icon_url=icon_url,
+                                                                                locked_icon_url=locked_icon_url))
         if game_id is not None:
             self.games = {**self.games, **games}
         self.set_games(games=games)

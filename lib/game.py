@@ -5,7 +5,8 @@ from .console import Console
 
 class Game:
     def __init__(self, name: str, platform_id: int, id: Union[int, None], ext_id: str, achievements,
-                 console_ext_id: Union[str, None], console: Union[Console, None]):
+                 console_ext_id: Union[str, None], console: Union[Console, None],
+                 icon_url: Union[str, None], release_date: Union[str, None]):
         self.name = name
         self.platform_id = platform_id
         self.id = id
@@ -19,6 +20,8 @@ class Game:
             self.achievements = achievements
         else:
             self.achievements = {}
+        self.icon_url = icon_url
+        self.release_date = release_date
         self._is_persist = self.id is not None
         self._achievements_saved = False
 
@@ -52,15 +55,19 @@ class Game:
         if self.id is None:
             cursor.execute(
                 """insert into achievements_hunt.games as l (name, ext_id, platform_id, has_achievements,
-                        console_id)
-                        values(%s, %s, %s, %s, %s)
+                        console_id, icon_url, release_date)
+                        values(%s, %s, %s, %s, %s, %s, %s)
                         on conflict ON CONSTRAINT u_games_ext_key do update
-                        set dt_update=current_timestamp, name=%s, has_achievements=%s, console_id=%s
+                        set dt_update=current_timestamp, name=%s, has_achievements=%s, console_id=%s,
+                        icon_url=%s, release_date=%s
                         where l.name != EXCLUDED.name or l.has_achievements != EXCLUDED.has_achievements
-                        or coalesce(l.console_id, -1) != coalesce(EXCLUDED.console_id, -2)
+                        or coalesce(l.console_id, -1) != coalesce(EXCLUDED.console_id, -1)
+                        or coalesce(l.release_date, '') != coalesce(EXCLUDED.release_date, '')
+                        or coalesce(l.icon_url, '') != coalesce(EXCLUDED.icon_url, '')
                         returning id
                 """, (self.name, self.ext_id, self.platform_id, self.has_achievements, self.console_id(),
-                      self.name, self.has_achievements, self.console_id())
+                      self.icon_url, self.release_date,
+                      self.name, self.has_achievements, self.console_id(), self.icon_url, self.release_date)
             )
             ret = cursor.fetchone()
             if ret is not None:
@@ -76,23 +83,29 @@ class Game:
             if not self._is_persist:
                 cursor.execute(
                     """update achievements_hunt.games l set dt_update=current_timestamp, name=%s,
-                            has_achievements=%s, console_id=%s
+                            has_achievements=%s, console_id=%s,
+                            icon_url=%s, release_date=%s
                             where id = %s and platform_id = %s
                             and (%s != name or %s != has_achievements
-                                or coalesce(%s, -1) != coalesce(console_id, -2))
+                                or coalesce(%s, -1) != coalesce(console_id, -1)
+                                or coalesce(%s, '') != coalesce(icon_url, '')
+                                or coalesce(%s, '') != coalesce(release_date, ''))
                     """, (self.name, self.has_achievements, self.console_id(),
-                          self.id, self.platform_id, self.name, self.has_achievements, self.console_id())
+                          self.icon_url, self.release_date,
+                          self.id, self.platform_id, self.name, self.has_achievements, self.console_id(),
+                          self.icon_url, self.release_date)
                 )
         if len(self.achievements) > 0 and not self._achievements_saved:
             if active_locale == 'en':
                 cursor.execute(
-                    """select id, ext_id, name, description from achievements_hunt.achievements
+                    """select id, ext_id, name, description, icon_url, locked_icon_url from achievements_hunt.achievements
                             where platform_id = %s and game_id = %s
                     """, (self.platform_id, self.id)
                 )
             else:
                 cursor.execute(
-                    """select a.id, a.ext_id, coalesce(l.name, a.name), coalesce(a.description, l.description)
+                    """select a.id, a.ext_id, coalesce(l.name, a.name), coalesce(a.description, l.description),
+                              icon_url, locked_icon_url
                             from achievements_hunt.achievements a
                             left join achievements_hunt.achievement_translations l
                             on l.achievement_id  = a.id
@@ -104,11 +117,13 @@ class Game:
                 )
             need_save = False
             to_save = []
-            for id, ext_id, name, description in cursor:
+            for id, ext_id, name, description, icon_url, locked_icon_url in cursor:
                 if ext_id in self.achievements:
                     self.achievements[ext_id].id = id
                     if name != self.achievements[ext_id].name \
-                            or description != self.achievements[ext_id].description:
+                            or description != self.achievements[ext_id].description\
+                            or icon_url != self.achievements[ext_id].icon_url \
+                            or locked_icon_url != self.achievements[ext_id].locked_icon_url:
                         need_save = True
                         to_save.append(ext_id)
                 else:
