@@ -6,7 +6,7 @@ from .console import Console
 class Game:
     def __init__(self, name: str, platform_id: int, id: Union[int, None], ext_id: str, achievements,
                  console_ext_id: Union[str, None], console: Union[Console, None],
-                 icon_url: Union[str, None], release_date: Union[str, None]):
+                 icon_url: Union[str, None] = None, release_date: Union[str, None] = None):
         self.name = name
         self.platform_id = platform_id
         self.id = id

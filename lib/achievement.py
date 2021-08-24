@@ -3,8 +3,8 @@ from typing import Union
 
 class Achievement:
     def __init__(self, id: Union[int, None], game_id: Union[int, None], name: Union[str, None],
-                 platform_id: int, ext_id: Union[str, None], description: str, icon_url: Union[str, None],
-                 locked_icon_url: Union[str, None]):
+                 platform_id: int, ext_id: Union[str, None], description: str, icon_url: Union[str, None] = None,
+                 locked_icon_url: Union[str, None] = None):
         self.id = id
         self.game_id = game_id
         self.platform_id = platform_id
