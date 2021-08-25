@@ -8,7 +8,7 @@ from .log import get_logger
 from .queue import enqueue_command
 from .stats import get_stats
 from typing import Union, List
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext.callbackcontext import CallbackContext
 from telegram.update import Update
 
@@ -359,8 +359,11 @@ def achievement_detail(update: Update, context: CallbackContext):
                     msg += _("Obtained at: {0}.").format(i.get("dt_unlock"))
                 else:
                     msg += _("Status: {0}.").format(_("Locked"))
+                if len(i.get("image_url")) > 0:
+                    msg += "<a href=\"{0}\">&#8205;</a>".format(i.get("image_url"))
                 context.bot.send_message(chat_id=chat_id,
-                                         text=msg, reply_markup=reply_markup)
+                                         text=msg, reply_markup=reply_markup, parse_mode=ParseMode.HTML,
+                                         disable_web_page_preview=False)
 
     else:
         account_choice(update, context)
@@ -926,7 +929,10 @@ def show_account_achievements(update: Update, context: CallbackContext):
             achievements.append(player.cur_achievement_stats[i])
             if len(achievements) >= ACHIEVEMENT_MENU_LENGTH:
                 break
-        msg = ""
+        if start_achievement == 1 and len(player.cur_achievements_game.icon_url) > 0:
+            msg = "<a href=\"{0}\">&#8205;</a>".format(player.cur_achievements_game.icon_url)
+        else:
+            msg = ""
         prev_unlocked = False
         for i in achievements:
             telegram_logger.debug("Added achievement {1} for user {0} in menu".
@@ -957,7 +963,8 @@ def show_account_achievements(update: Update, context: CallbackContext):
             reply_markup = InlineKeyboardMarkup(achievements_keyboard(chat_id, achievements))
         else:
             reply_markup = InlineKeyboardMarkup(achievements_keyboard(chat_id, []))
-        context.bot.send_message(chat_id=update.effective_chat.id, text=msg, reply_markup=reply_markup)
+        context.bot.send_message(chat_id=update.effective_chat.id, text=msg, reply_markup=reply_markup,
+                                 parse_mode=ParseMode.HTML, disable_web_page_preview=False)
 
 
 def set_locale(update: Union[Update, None] = None, chat_id: Union[int, None] = None):
