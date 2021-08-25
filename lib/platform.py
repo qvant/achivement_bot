@@ -150,19 +150,45 @@ class Platform:
         cursor = conn.cursor()
         if game_id is None:
             cursor.execute("""
-                    select id, platform_id, name, ext_id, console_id, icon_url, release_date
-                    from achievements_hunt.games
-                    where platform_id = %s order by id
+                    select g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url, g.release_date,
+                           g.developer_id, d.name, g.publisher_id, p.name,
+                           ARRAY_AGG(gr.id), ARRAY_AGG(gr.name)
+                    from achievements_hunt.games g
+                    left join achievements_hunt.companies p
+                      on p.id = g.publisher_id and p.platform_id = g.platform_id
+                    left join achievements_hunt.companies d
+                      on d.id = g.developer_id and d.platform_id = g.platform_id
+                    left join achievements_hunt.map_games_to_genres m
+                      on m.platform_id = g.platform_id and m.game_id = g.id
+                    left join achievements_hunt.genres gr
+                      on m.genre_id = gr.id
+                    where g.platform_id = %s
+                    group by g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url, g.release_date,
+                             g.developer_id, d.name, g.publisher_id, p.name
+                    order by g.id
                     """, (self.id,))
         else:
             cursor.execute("""
-                                select id, platform_id, name, ext_id, console_id, icon_url, release_date
+                                select g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url, g.release_date,
+                                       g.developer_id, d.name, g.publisher_id, p.name,
+                                       ARRAY_AGG(gr.id), ARRAY_AGG(gr.name)
                                 from achievements_hunt.games
-                                where platform_id = %s and id = %s
-                                order by id
+                                left join achievements_hunt.companies p
+                                  on p.id = g.publisher_id and p.platform_id = g.platform_id
+                                left join achievements_hunt.companies d
+                                  on d.id = g.developer_id and d.platform_id = g.platform_id
+                                left join achievements_hunt.map_games_to_genres m
+                                  on m.platform_id = g.platform_id and m.game_id = g.id
+                                left join achievements_hunt.genres gr
+                                  on m.genre_id = gr.id
+                                where g.platform_id = %s and g.id = %s
+                                group by g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url, g.release_date,
+                                         g.developer_id, d.name, g.publisher_id, p.name
+                                order by g.id
                                 """, (self.id, game_id))
         games = {}
-        for id, platform_id, name, ext_id, console_id, icon_url, release_date in cursor:
+        for id, platform_id, name, ext_id, console_id, icon_url, release_date, developer_id, developer_name,\
+                publisher_id, publisher_name, genre_ids, genres in cursor:
             self.load_log.info("Loaded game {0} with id {1}, ext_id {2}, for platform {3} and console {4}".
                                format(name, id, ext_id, self.id, console_id))
             if self.get_consoles is not None:
@@ -170,11 +196,25 @@ class Platform:
                     self.load_consoles(console_id)
                 games[str(ext_id)] = Game(name=name, platform_id=platform_id, id=id, ext_id=ext_id, achievements=None,
                                           console_ext_id=None, console=self.get_console_by_id(console_id),
-                                          icon_url=icon_url, release_date=release_date)
+                                          icon_url=icon_url, release_date=release_date,
+                                          publisher_id=publisher_id,
+                                          publisher=publisher_name,
+                                          developer_id=developer_id,
+                                          developer=developer_name,
+                                          genres=genres,
+                                          genre_ids=genre_ids,
+                                          )
             else:
                 games[str(ext_id)] = Game(name=name, platform_id=platform_id, id=id, ext_id=ext_id, achievements=None,
                                           console_ext_id=None, console=None,
-                                          icon_url=icon_url, release_date=release_date)
+                                          icon_url=icon_url, release_date=release_date,
+                                          publisher_id=publisher_id,
+                                          publisher=publisher_name,
+                                          developer_id=developer_id,
+                                          developer=developer_name,
+                                          genres=genres,
+                                          genre_ids=genre_ids,
+                                          )
         if load_achievements:
             if game_id is None:
                 cursor.execute("""

@@ -183,7 +183,11 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     return Game(name=game_name, platform_id=PLATFORM_RETRO, ext_id=game_id, id=None, achievements=achievements,
                 console_ext_id=str(obj.get("ConsoleID")), console=None,
                 icon_url=get_game_icon_url(str(obj.get("ImageIcon"))),
-                release_date=str(obj.get("Released")))
+                release_date=str(obj.get("Released")),
+                publisher=obj.get("Publisher"),
+                developer=obj.get("Developer"),
+                genres=obj.get("Genre").replace("\\/", "\\").split(","),
+                )
 
 
 def get_player_achievements(player_id, game_id):

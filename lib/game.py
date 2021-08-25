@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, List
 from .achievement import Achievement
 from .console import Console
 
@@ -6,7 +6,9 @@ from .console import Console
 class Game:
     def __init__(self, name: str, platform_id: int, id: Union[int, None], ext_id: str, achievements,
                  console_ext_id: Union[str, None], console: Union[Console, None],
-                 icon_url: Union[str, None] = None, release_date: Union[str, None] = None):
+                 icon_url: Union[str, None] = None, release_date: Union[str, None] = None,
+                 genres: List[str] = None, publisher: str = None, developer: str = None, publisher_id: int = None,
+                 developer_id: int = None, genre_ids: List[int] = None,):
         self.name = name
         self.platform_id = platform_id
         self.id = id
@@ -22,6 +24,20 @@ class Game:
             self.achievements = {}
         self.icon_url = icon_url
         self.release_date = release_date
+        self.genres = genres
+        self.publisher = publisher
+        self.developer = developer
+        # this two lists better keep on platform level
+        self.companies = {}
+        self.genre_ids = {}
+        self.genres = genres
+        if publisher_id is not None and publisher is not None:
+            self.companies[publisher] = int(publisher_id)
+        if developer_id is not None and developer is not None:
+            self.companies[developer] = int(developer_id)
+        if genre_ids is not None and genres is not None and len(genre_ids) == len(genres):
+            for i in range(len(genre_ids)):
+                self.genre_ids[genres[i]] = genre_ids[i]
         self._is_persist = self.id is not None
         self._achievements_saved = False
 
@@ -51,23 +67,74 @@ class Game:
         self.console = cons
         self._is_persist = False
 
+    def _get_company_id(self, company_name: str, cursor) -> Union[None, int]:
+        if company_name is None:
+            return None
+        if company_name not in self.companies:
+            cursor.execute("""select c.id from achievements_hunt.companies c
+            where c.platform_id = %s and c.name = %s""", (self.platform_id, company_name,))
+            ret = cursor.fetchone()
+            if ret is not None:
+                self.companies[company_name] = ret[0]
+            else:
+                cursor.execute("""
+                insert into achievements_hunt.companies (platform_id, name) values (%s, %s)
+                returning id
+                """, (self.platform_id, company_name,))
+                ret = cursor.fetchone()
+                self.companies[company_name] = ret[0]
+            return int(self.companies[company_name])
+
+    def get_publisher_id(self, company_name: str, cursor) -> Union[None, int]:
+        return self._get_company_id(company_name, cursor)
+
+    def get_developer_id(self, company_name: str, cursor) -> Union[None, int]:
+        return self._get_company_id(company_name, cursor)
+
+    def get_genre_id(self, genre, cursor):
+        if genre is None:
+            return None
+        if genre not in self.genre_ids:
+            cursor.execute("""select c.id from achievements_hunt.genres c
+            where c.platform_id = %s and c.name = %s""", (self.platform_id, genre,))
+            ret = cursor.fetchone()
+            if ret is not None:
+                self.genre_ids[genre] = ret[0]
+            else:
+                cursor.execute("""
+                insert into achievements_hunt.genres (platform_id, name) values (%s, %s)
+                returning id
+                """, (self.platform_id, genre,))
+                ret = cursor.fetchone()
+                self.genre_ids[genre] = ret[0]
+            return int(self.genre_ids[genre])
+
     def save(self, cursor, active_locale: str):
+        developer_id = self.get_developer_id(self.developer, cursor)
+        publisher_id = self.get_publisher_id(self.publisher, cursor)
+        genres = []
+        if self.genres is not None:
+            for i in self.genres:
+                genres.append(self.get_genre_id(i, cursor))
         if self.id is None:
             cursor.execute(
                 """insert into achievements_hunt.games as l (name, ext_id, platform_id, has_achievements,
-                        console_id, icon_url, release_date)
-                        values(%s, %s, %s, %s, %s, %s, %s)
+                        console_id, icon_url, release_date, developer_id, publisher_id)
+                        values(%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         on conflict ON CONSTRAINT u_games_ext_key do update
                         set dt_update=current_timestamp, name=%s, has_achievements=%s, console_id=%s,
-                        icon_url=%s, release_date=%s
+                        icon_url=%s, release_date=%s, developer_id=%s, publisher_id=%s
                         where l.name != EXCLUDED.name or l.has_achievements != EXCLUDED.has_achievements
                         or coalesce(l.console_id, -1) != coalesce(EXCLUDED.console_id, -1)
                         or coalesce(l.release_date, '') != coalesce(EXCLUDED.release_date, '')
                         or coalesce(l.icon_url, '') != coalesce(EXCLUDED.icon_url, '')
+                        or coalesce(l.developer_id, -1) != coalesce(EXCLUDED.developer_id, -1)
+                        or coalesce(l.publisher_id, -1) != coalesce(EXCLUDED.publisher_id, -1)
                         returning id
                 """, (self.name, self.ext_id, self.platform_id, self.has_achievements, self.console_id(),
-                      self.icon_url, self.release_date,
-                      self.name, self.has_achievements, self.console_id(), self.icon_url, self.release_date)
+                      self.icon_url, self.release_date, developer_id, publisher_id,
+                      self.name, self.has_achievements, self.console_id(), self.icon_url, self.release_date,
+                      developer_id, publisher_id)
             )
             ret = cursor.fetchone()
             if ret is not None:
@@ -79,22 +146,52 @@ class Game:
                 ret = cursor.fetchone()
                 if ret is not None:
                     self.id = ret[0]
+            for cur_g in genres:
+                # there not that many records, so no profit from bulk
+                cursor.execute("""
+                    insert into achievements_hunt.map_games_to_genres(platform_id, game_id, genre_id)
+                    values(%s, %s, %s)
+                """, (self.platform_id, self.id, cur_g))
         else:
             if not self._is_persist:
                 cursor.execute(
                     """update achievements_hunt.games l set dt_update=current_timestamp, name=%s,
                             has_achievements=%s, console_id=%s,
-                            icon_url=%s, release_date=%s
+                            icon_url=%s, release_date=%s,
+                            developer_id=%s, publisher_id=%s
                             where id = %s and platform_id = %s
                             and (%s != name or %s != has_achievements
                                 or coalesce(%s, -1) != coalesce(console_id, -1)
                                 or coalesce(%s, '') != coalesce(icon_url, '')
-                                or coalesce(%s, '') != coalesce(release_date, ''))
+                                or coalesce(%s, '') != coalesce(release_date, '')
+                                or coalesce(%s, -1) != coalesce(developer_id, -1)
+                                or coalesce(%s, -1) != coalesce(publisher_id, -1)
+                                )
                     """, (self.name, self.has_achievements, self.console_id(),
-                          self.icon_url, self.release_date,
+                          self.icon_url, self.release_date, developer_id, publisher_id,
                           self.id, self.platform_id, self.name, self.has_achievements, self.console_id(),
-                          self.icon_url, self.release_date)
+                          self.icon_url, self.release_date, developer_id, publisher_id)
                 )
+                cursor.execute("""
+                    select genre_id from achievements_hunt.map_games_to_genres g
+                        where g.platform_id = %s
+                              and g.game_id = %s
+                """, (self.platform_id, self.id))
+                saved_genres = []
+                for i in cursor:
+                    saved_genres.append(i)
+                if set(saved_genres) != set(genres):
+                    cursor.execute("""
+                                        delete from achievements_hunt.map_games_to_genres g
+                                            where g.platform_id = %s
+                                                  and g.game_id = %s
+                                    """, (self.platform_id, self.id))
+                    for cur_g in genres:
+                        # there not that many records, so no profit from bulk
+                        cursor.execute("""
+                            insert into achievements_hunt.map_games_to_genres(platform_id, game_id, genre_id)
+                            values(%s, %s, %s)
+                        """, (self.platform_id, self.id, cur_g))
         if len(self.achievements) > 0 and not self._achievements_saved:
             if active_locale == 'en':
                 cursor.execute(

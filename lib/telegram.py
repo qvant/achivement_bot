@@ -925,14 +925,20 @@ def show_account_achievements(update: Update, context: CallbackContext):
         achievement_number = len(player.cur_achievement_stats)
         start_achievement = user_achievement_offsets[chat_id] + 1
         current_achievement = start_achievement
+        cur_game = player.cur_achievements_game
         for i in range(start_achievement - 1, achievement_number):
             achievements.append(player.cur_achievement_stats[i])
             if len(achievements) >= ACHIEVEMENT_MENU_LENGTH:
                 break
         if start_achievement == 1 and len(player.cur_achievements_game.icon_url) > 0:
-            msg = "<a href=\"{0}\">&#8205;</a>".format(player.cur_achievements_game.icon_url)
+            msg = "<a href=\"{0}\">&#8205;</a>".format(cur_game.icon_url)
         else:
             msg = ""
+        if start_achievement == 1:
+            msg += _("Developer: {0}").format(cur_game.developer) + chr(10)
+            msg += _("Publisher: {0}").format(cur_game.publisher) + chr(10)
+            msg += _("Release date: {0}").format(cur_game.release_date) + chr(10)
+            msg += _("Genre: {0}").format(", ".join(cur_game.genres)) + chr(10)
         prev_unlocked = False
         for i in achievements:
             telegram_logger.debug("Added achievement {1} for user {0} in menu".

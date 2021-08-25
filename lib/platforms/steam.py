@@ -227,16 +227,29 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
         time.sleep(WAIT_BETWEEN_TRIES)
     icon_url = None
     release_date = None
+    developer = None
+    publisher = None
+    genres = []
     obj = r.json().get(game_id)
     if obj is not None:
         obj = obj.get("data")
         if obj is not None:
             icon_url = obj.get("header_image")
+            developers = obj.get("developers")
+            if developers is not None and len(developers) > 0:
+                developer = developers[0]
+            publishers = obj.get("publishers")
+            if publishers is not None and len(publishers) > 0:
+                publisher = publishers[0]
+            if "genres" in obj:
+                for cur_gen in obj.get("genres"):
+                    genres.append(cur_gen.get("description"))
             obj = obj.get("release_date")
             if obj is not None:
                 release_date = obj.get("date")
     return Game(name=game_name, platform_id=PLATFORM_STEAM, ext_id=game_id, id=None, achievements=achievements,
-                console_ext_id=None, console=None, icon_url=icon_url, release_date=release_date)
+                console_ext_id=None, console=None, icon_url=icon_url, release_date=release_date, publisher=publisher,
+                developer=developer, genres=genres)
 
 
 def get_player_achievements(player_id, game_id):
