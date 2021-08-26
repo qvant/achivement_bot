@@ -126,10 +126,10 @@ class Game:
                         icon_url=%s, release_date=%s, developer_id=%s, publisher_id=%s
                         where l.name != EXCLUDED.name or l.has_achievements != EXCLUDED.has_achievements
                         or coalesce(l.console_id, -1) != coalesce(EXCLUDED.console_id, -1)
-                        or coalesce(l.release_date, '') != coalesce(EXCLUDED.release_date, '')
-                        or coalesce(l.icon_url, '') != coalesce(EXCLUDED.icon_url, '')
-                        or coalesce(l.developer_id, -1) != coalesce(EXCLUDED.developer_id, -1)
-                        or coalesce(l.publisher_id, -1) != coalesce(EXCLUDED.publisher_id, -1)
+                        or coalesce(l.release_date, '') != coalesce(EXCLUDED.release_date, l.release_date, '')
+                        or coalesce(l.icon_url, '') != coalesce(EXCLUDED.icon_url, l.icon_url, '')
+                        or coalesce(l.developer_id, -1) != coalesce(EXCLUDED.developer_id, l.developer_id, -1)
+                        or coalesce(l.publisher_id, -1) != coalesce(EXCLUDED.publisher_id, l.publisher_id, -1)
                         returning id
                 """, (self.name, self.ext_id, self.platform_id, self.has_achievements, self.console_id(),
                       self.icon_url, self.release_date, developer_id, publisher_id,
@@ -146,12 +146,25 @@ class Game:
                 ret = cursor.fetchone()
                 if ret is not None:
                     self.id = ret[0]
-            for cur_g in genres:
-                # there not that many records, so no profit from bulk
-                cursor.execute("""
-                    insert into achievements_hunt.map_games_to_genres(platform_id, game_id, genre_id)
-                    values(%s, %s, %s)
-                """, (self.platform_id, self.id, cur_g))
+            cursor.execute("""
+                                select genre_id from achievements_hunt.map_games_to_genres g
+                                    where g.platform_id = %s
+                                          and g.game_id = %s
+                            """, (self.platform_id, self.id))
+            saved_genres = []
+            for i in cursor:
+                saved_genres.append(i)
+            if set(saved_genres) != set(genres) and len(genres) > 0:
+                cursor.execute("""delete from achievements_hunt.map_games_to_genres g
+                                      where g.platform_id = %s
+                                            and g.game_id = %s
+                                            """, (self.platform_id, self.id))
+                for cur_g in genres:
+                    # there not that many records, so no profit from bulk
+                    cursor.execute("""
+                        insert into achievements_hunt.map_games_to_genres(platform_id, game_id, genre_id)
+                        values(%s, %s, %s)
+                    """, (self.platform_id, self.id, cur_g))
         else:
             if not self._is_persist:
                 cursor.execute(
@@ -162,10 +175,10 @@ class Game:
                             where id = %s and platform_id = %s
                             and (%s != name or %s != has_achievements
                                 or coalesce(%s, -1) != coalesce(console_id, -1)
-                                or coalesce(%s, '') != coalesce(icon_url, '')
-                                or coalesce(%s, '') != coalesce(release_date, '')
-                                or coalesce(%s, -1) != coalesce(developer_id, -1)
-                                or coalesce(%s, -1) != coalesce(publisher_id, -1)
+                                or coalesce(%s, icon_url, '') != coalesce(icon_url, '')
+                                or coalesce(%s, release_date, '') != coalesce(release_date, '')
+                                or coalesce(%s, developer_id, -1) != coalesce(developer_id, -1)
+                                or coalesce(%s, publisher_id, -1) != coalesce(publisher_id, -1)
                                 )
                     """, (self.name, self.has_achievements, self.console_id(),
                           self.icon_url, self.release_date, developer_id, publisher_id,
@@ -180,7 +193,7 @@ class Game:
                 saved_genres = []
                 for i in cursor:
                     saved_genres.append(i)
-                if set(saved_genres) != set(genres):
+                if set(saved_genres) != set(genres) and len(genres) > 0:
                     cursor.execute("""
                                         delete from achievements_hunt.map_games_to_genres g
                                             where g.platform_id = %s
