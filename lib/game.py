@@ -22,8 +22,14 @@ class Game:
             self.achievements = achievements
         else:
             self.achievements = {}
-        self.icon_url = icon_url
-        self.release_date = release_date
+        if icon_url is not None:
+            self.icon_url = icon_url
+        else:
+            self.icon_url = ""
+        if release_date is not None:
+            self.release_date = release_date
+        else:
+            self.release_date = release_date
         self.genres = genres
         if publisher is not None:
             self.publisher = publisher
