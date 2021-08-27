@@ -361,7 +361,7 @@ def achievement_detail(update: Update, context: CallbackContext):
                     msg += _("Obtained at: {0}.").format(i.get("dt_unlock"))
                 else:
                     msg += _("Status: {0}.").format(_("Locked"))
-                if len(i.get("image_url")) > 0:
+                if i.get("image_url") is not None and len(i.get("image_url")) > 0:
                     msg += """<a href="{0}">&#8205;</a>""".format(i.get("image_url"))
                 context.bot.send_message(chat_id=chat_id,
                                          text=msg, reply_markup=reply_markup, parse_mode=ParseMode.HTML,
