@@ -197,6 +197,8 @@ def main_keyboard(chat_id: int):
         InlineKeyboardButton(_("List of games"), callback_data="main_LIST_OF_GAMES"),
         InlineKeyboardButton(_("Language choice"), callback_data="main_SET_LOCALE"),
         InlineKeyboardButton(_("About"), callback_data="main_ABOUT"),
+        # there's still not enough users to make it look interesting
+        # InlineKeyboardButton(_("Activity feed"), callback_data="main_ACTIVITY"),
     ]
     for i in players_by_tlg_id[chat_id]:
         keyboard.append(InlineKeyboardButton("{}({})".format(i.name, i.platform.name),
@@ -642,6 +644,8 @@ def main_menu(update: Update, context: CallbackContext):
         admin_options(update, context)
     elif cur_item == "ABOUT":
         about(update, context)
+    elif cur_item == "ACTIVITY":
+        activity_feed(update, context)
 
 
 def admin_options(update: Update, context: CallbackContext):
@@ -1108,6 +1112,59 @@ def about(update: Update, context: CallbackContext):
                                                                       "You can see the bot sources on "
                                                                       "https://github.com/qvant/achivement_bot"
                                                                       ),
+                             reply_markup=reply_markup)
+
+
+def activity_feed(update: Update, context: CallbackContext):
+    global telegram_logger
+
+    telegram_logger.info("activity_feed: update: {0}, context {1}".format(update, context))
+    inc_command_counter("activity_feed")
+    reply_markup = InlineKeyboardMarkup(main_keyboard(update.effective_chat.id))
+    _ = set_locale(update)
+    locale = get_locale_name(update)
+
+    cursor = db.cursor()
+
+    cursor.execute("""
+                    select
+                            coalesce(tr.name, a.name),
+                            a.percent_owners,
+                            g.name || case when c.name is not null then ' (' || c.name || ')' else '' end,
+                            p.name,
+                            pr.name
+                        from achievements_hunt.players p
+                        join achievements_hunt.platforms pr
+                        on pr.id = p.platform_id
+                        join achievements_hunt.player_achievements aa
+                        on p.id = aa.player_id
+                          and p.platform_id = aa.platform_id
+                        join achievements_hunt.achievements a
+                        on aa.achievement_id  = a.id
+                          and aa.game_id  = a.game_id
+                          and aa.platform_id = a.platform_id
+                        left join achievements_hunt.achievement_translations tr
+                        on tr.achievement_id  = a.id
+                          and tr.game_id = aa.game_id
+                          and tr.platform_id = aa.platform_id
+                          and tr.locale = %s
+                        join achievements_hunt.games g
+                        on aa.game_id = g.id
+                          and aa.platform_id = g.platform_id
+                        left join achievements_hunt.consoles c
+                        on c.id = g.console_id
+                          and c.platform_id = g.platform_id
+                        order by dt_unlock desc, coalesce(tr.name, a.name) limit 25
+                    """, (locale,))
+    buf = cursor.fetchall()
+    activity_list = ""
+    if len(buf) > 0:
+        activity_list = chr(10) + _("Last activity:") + chr(10)
+        for i in buf:
+            activity_list += _(r"{}({}) unlocked {} (game {}) percent owners {}").format(i[3], i[4], i[0], i[2], i[1])
+            activity_list += chr(10)
+
+    context.bot.send_message(chat_id=update.effective_chat.id, text=activity_list,
                              reply_markup=reply_markup)
 
 
