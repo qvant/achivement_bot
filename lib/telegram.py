@@ -935,10 +935,14 @@ def show_account_achievements(update: Update, context: CallbackContext):
         else:
             msg = ""
         if start_achievement == 1:
-            msg += _("Developer: {0}").format(cur_game.developer) + chr(10)
-            msg += _("Publisher: {0}").format(cur_game.publisher) + chr(10)
-            msg += _("Release date: {0}").format(cur_game.release_date) + chr(10)
-            msg += _("Genre: {0}").format(", ".join(cur_game.genres)) + chr(10)
+            if len(cur_game.developer) > 0:
+                msg += _("Developer: {0}").format(cur_game.developer) + chr(10)
+            if len(cur_game.publisher) > 0:
+                msg += _("Publisher: {0}").format(cur_game.publisher) + chr(10)
+            if len(cur_game.release_date) > 0:
+                msg += _("Release date: {0}").format(cur_game.release_date) + chr(10)
+            if len(cur_game.genres) > 0:
+                msg += _("Genre: {0}").format(", ".join(cur_game.genres)) + chr(10)
         prev_unlocked = False
         for i in achievements:
             telegram_logger.debug("Added achievement {1} for user {0} in menu".

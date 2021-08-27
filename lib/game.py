@@ -25,12 +25,21 @@ class Game:
         self.icon_url = icon_url
         self.release_date = release_date
         self.genres = genres
-        self.publisher = publisher
-        self.developer = developer
+        if publisher is not None:
+            self.publisher = publisher
+        else:
+            self.publisher = ""
+        if developer is not None:
+            self.developer = developer
+        else:
+            self.developer = ""
         # this two lists better keep on platform level
         self.companies = {}
         self.genre_ids = {}
-        self.genres = genres
+        if genres is not None:
+            self.genres = genres
+        else:
+            self.genres = []
         if publisher_id is not None and publisher is not None:
             self.companies[publisher] = int(publisher_id)
         if developer_id is not None and developer is not None:
