@@ -182,7 +182,8 @@ class Platform:
                                 left join achievements_hunt.genres gr
                                   on m.genre_id = gr.id
                                 where g.platform_id = %s and g.id = %s
-                                group by g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url, g.release_date,
+                                group by g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url,
+                                         g.release_date,
                                          g.developer_id, d.name, g.publisher_id, p.name
                                 order by g.id
                                 """, (self.id, game_id))

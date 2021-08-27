@@ -42,8 +42,8 @@ class Achievement:
                             set dt_update=current_timestamp, name=EXCLUDED.name, description=EXCLUDED.description,
                             icon_url=EXCLUDED.icon_url, locked_icon_url=EXCLUDED.locked_icon_url
                             where l.name != EXCLUDED.name or l.description != EXCLUDED.description
-                            or coalesce(l.icon_url, '') != coalesce(EXCLUDED.icon_url, l.icon_url, '') 
-                            or coalesce(l.locked_icon_url, '') 
+                            or coalesce(l.icon_url, '') != coalesce(EXCLUDED.icon_url, l.icon_url, '')
+                            or coalesce(l.locked_icon_url, '')
                                     != coalesce(EXCLUDED.locked_icon_url, l.locked_icon_url, '')
                             returning id, name, description
                     """, (self.name, self.ext_id, self.platform_id, self.game_id, self.description, self.icon_url,
