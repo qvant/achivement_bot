@@ -9,7 +9,10 @@ class Achievement:
         self.game_id = game_id
         self.platform_id = platform_id
         self.description = description
-        self.icon_url = icon_url
+        if icon_url is not None:
+            self.icon_url = icon_url
+        else:
+            self.icon_url = ""
         if locked_icon_url is not None:
             self.locked_icon_url = locked_icon_url
         else:

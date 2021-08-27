@@ -945,7 +945,8 @@ def show_account_achievements(update: Update, context: CallbackContext):
                 msg += _("Publisher: {0}").format(cur_game.publisher) + chr(10)
             if len(cur_game.release_date) > 0:
                 msg += _("Release date: {0}").format(cur_game.release_date) + chr(10)
-            if len(cur_game.genres) > 0:
+            # TODO: fix properly
+            if cur_game.genres != [None] and len(cur_game.genres) > 0:
                 msg += _("Genre: {0}").format(", ".join(cur_game.genres)) + chr(10)
         prev_unlocked = False
         for i in achievements:
