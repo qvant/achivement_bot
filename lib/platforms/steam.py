@@ -215,7 +215,7 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
         game_name = "THE LONGING"
     while True:
         # there's limit approx 200 calls per 5 minutes, try ad hoc for it
-        if random.random() > 0.5:
+        if random.random() > 0.4:
             api_log.info("Sleep before https://store.steampowered.com/api/appdetails/ because random")
             time.sleep(1)
             api_log.info("Waked up")
