@@ -362,7 +362,7 @@ def achievement_detail(update: Update, context: CallbackContext):
                 else:
                     msg += _("Status: {0}.").format(_("Locked"))
                 if len(i.get("image_url")) > 0:
-                    msg += "<a href=\"{0}\">&#8205;</a>".format(i.get("image_url"))
+                    msg += """<a href="{0}">&#8205;</a>""".format(i.get("image_url"))
                 context.bot.send_message(chat_id=chat_id,
                                          text=msg, reply_markup=reply_markup, parse_mode=ParseMode.HTML,
                                          disable_web_page_preview=False)
@@ -935,7 +935,7 @@ def show_account_achievements(update: Update, context: CallbackContext):
             if len(achievements) >= ACHIEVEMENT_MENU_LENGTH:
                 break
         if start_achievement == 1 and len(player.cur_achievements_game.icon_url) > 0:
-            msg = "<a href=\"{0}\">&#8205;</a>".format(cur_game.icon_url)
+            msg = """"<a href="{0}">&#8205;</a>""".format(cur_game.icon_url)
         else:
             msg = ""
         if start_achievement == 1:
