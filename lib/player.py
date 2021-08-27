@@ -143,7 +143,15 @@ class Player:
     @property
     def cur_achievement_stats(self):
         for i in self.achievement_stats:
-            return self.achievement_stats[i]
+            return self.achievement_stats[i]\
+
+
+    @property
+    def cur_achievements_game(self):
+        if self.achievement_stats:
+            return self.platform.get_game_by__id(int(next(iter(self.achievement_stats))))
+        else:
+            return None
 
     def get_achievement_stats(self, game_id, locale: str):
         if game_id not in self.achievement_stats:
@@ -151,7 +159,8 @@ class Player:
             conn = self.platform.get_connect()
             cur = conn.cursor()
             cur.execute("""select coalesce (tr.name, a.name) as name, pa.id, a.percent_owners, a.id,
-             coalesce(tr.description, a.description) as description, pa.dt_unlock
+             coalesce(tr.description, a.description) as description, pa.dt_unlock,
+             case when pa.id is not null then a.icon_url else a.locked_icon_url end
              from achievements_hunt.achievements a
              left join achievements_hunt.player_achievements pa
              on pa.achievement_id = a.id and pa.player_id = %s
@@ -167,7 +176,8 @@ class Player:
                 self.achievement_stats[game_id].append({"name": j[0], "owned": j[1] is not None,
                                                         "percent": j[2], "id": j[3],
                                                         "description": j[4],
-                                                        "dt_unlock": j[5]})
+                                                        "dt_unlock": j[5],
+                                                        "image_url": j[6]})
 
     def save(self):
         conn = self.platform.get_connect()

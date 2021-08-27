@@ -9,7 +9,9 @@ create table  achievements_hunt.achievements
 	dt_create	    timestamp with time zone default current_timestamp not null,
 	dt_update	    timestamp with time zone,
 	num_owners      integer  default 0 not null,
-	percent_owners  real  default 0 not null
+	percent_owners  real  default 0 not null,
+	icon_url        varchar(1024),
+	locked_icon_url varchar(1024)
 );
 create unique index u_achievements_ext_key on achievements_hunt.achievements(platform_id, game_id, ext_id);
 alter table  achievements_hunt.achievements ADD CONSTRAINT u_achievements_ext_key unique using index u_achievements_ext_key;

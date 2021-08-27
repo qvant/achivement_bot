@@ -251,6 +251,22 @@ msgstr "Удаление отменено"
 msgid "Achievement_hunt_bot was designed for track and analyze rarity of game achievements and controlled through keyboard under messages. To return to the main menu send text /start.You can see the bot sources on https://github.com/qvant/achivement_bot"
 msgstr "Achievement_hunt_bot был создан для отслеживания и анализа редкости достижений в играх и управляется через клавиатуру под сообщениями. Чтобы вернуться в главное меню, отправьте текст /start. Исходный код доступен на https://github.com/qvant/achivement_bot."
 
+#: ..\lib\telegram.py:938
+msgid "Developer: {0}"
+msgstr "Разрабочик"
+
+#: ..\lib\telegram.py:939
+msgid "Publisher: {0}"
+msgstr "Издатель"
+
+#: ..\lib\telegram.py:940
+msgid "Release date: {0}"
+msgstr "Дата выхода"
+
+#: ..\lib\telegram.py:941
+msgid "Genre: {0}"
+msgstr "Жанр"
+
 #: ..\lib\telegram.py:171
 msgid "About"
 msgstr "Обо мне"
