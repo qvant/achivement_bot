@@ -29,7 +29,7 @@ class Game:
         if release_date is not None:
             self.release_date = release_date
         else:
-            self.release_date = release_date
+            self.release_date = ""
         self.genres = genres
         if publisher is not None:
             self.publisher = publisher
