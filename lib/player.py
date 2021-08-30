@@ -271,7 +271,7 @@ class Player:
                                         select id from achievements_hunt.achievements
                                         where platform_id = %s and ext_id = %s
                                         and game_id = %s
-                                    """, (self.platform.id, self.achievements[self.games[i]][j], game.id))
+                                    """, (self.platform.id, str(self.achievements[self.games[i]][j]), game.id))
                         ret = cur.fetchone()
                         if ret is not None:
                             achievement.id = ret[0]
@@ -288,7 +288,7 @@ class Player:
                                             where platform_id = %s and ext_id = %s
                                             and game_id = %s
                                         """,
-                                        (self.platform.id, self.achievements[self.games[i]][j], game.id))
+                                        (self.platform.id, str(self.achievements[self.games[i]][j]), game.id))
                             ret = cur.fetchone()
                             if ret is not None:
                                 achievement.id = ret[0]
