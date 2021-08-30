@@ -223,7 +223,8 @@ class Game:
         if len(self.achievements) > 0 and not self._achievements_saved:
             if active_locale == 'en':
                 cursor.execute(
-                    """select id, ext_id, name, description, icon_url, locked_icon_url from achievements_hunt.achievements
+                    """select id, ext_id, name, description, icon_url, locked_icon_url
+                            from achievements_hunt.achievements
                             where platform_id = %s and game_id = %s
                     """, (self.platform_id, self.id)
                 )
