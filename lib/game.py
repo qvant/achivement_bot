@@ -157,7 +157,7 @@ class Game:
             else:
                 cursor.execute("""
                     select id from achievements_hunt.games where platform_id = %s and ext_id = %s
-                """, (self.platform_id, self.ext_id))
+                """, (self.platform_id, str(self.ext_id)))
                 ret = cursor.fetchone()
                 if ret is not None:
                     self.id = ret[0]
