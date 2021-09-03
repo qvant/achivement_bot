@@ -138,7 +138,7 @@ def main_worker(config: Config):
                     renew_log.debug("Skip update platform {0}, next update {1}".format(
                         platforms[i].name, dt_next_update[i]))
         except BaseException as err:
-            queue_log.critical(err)
+            queue_log.exception(err)
             if config.supress_errors:
                 pass
             else:

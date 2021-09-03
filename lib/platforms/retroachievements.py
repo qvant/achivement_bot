@@ -153,7 +153,7 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                     achievements[ext_id] = Achievement(id=None,
                                                        game_id=None,
                                                        name=obj_achievements[i].get("Title"),
-                                                       ext_id=obj_achievements[i].get("ID"),
+                                                       ext_id=str(obj_achievements[i].get("ID")),
                                                        platform_id=PLATFORM_RETRO,
                                                        description=obj_achievements[i].get("Description"),
                                                        icon_url=get_icon_url(obj_achievements[i].get("BadgeName")),
