@@ -1,5 +1,6 @@
 import json
 import codecs
+import random
 import requests
 import time
 import datetime
@@ -193,7 +194,10 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                                                        name=i.get("displayName"),
                                                        ext_id=i.get("name"),
                                                        platform_id=PLATFORM_STEAM,
-                                                       description=i.get("description"))
+                                                       description=i.get("description"),
+                                                       icon_url=i.get("icon"),
+                                                       locked_icon_url=i.get("icongray"),
+                                                       )
         api_log.info(
             "For game {0}, found {1} achievements".format(
                 game_id, len(achievements)))
@@ -209,8 +213,52 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     # Hack for some specific names. TODO: make a settings
     if game_name == ":THE LONGING:":
         game_name = "THE LONGING"
+    while True:
+        # there's limit approx 200 calls per 5 minutes, try ad hoc for it
+        if random.random() > 0.4:
+            api_log.info("Sleep before https://store.steampowered.com/api/appdetails/ because random")
+            time.sleep(1)
+            api_log.info("Waked up")
+        # not need to increase call counter - our key not used
+        api_log.info("Request https://store.steampowered.com/api/appdetails/ "
+                     "for game {0}, name {1}".format(game_id, name))
+        r = requests.get(
+            "https://store.steampowered.com/api/appdetails/?appids={0}".
+            format(game_id))
+        api_log.info("Response from https://store.steampowered.com/api/appdetails {0} "
+                     "from Steam".format(r))
+        if r.status_code == 200 or cnt >= MAX_TRIES:
+            break
+        cnt += 1
+        time.sleep(WAIT_BETWEEN_TRIES)
+        if r.status_code == 429:
+            break
+    icon_url = None
+    release_date = None
+    developer = None
+    publisher = None
+    genres = []
+    if r.status_code == 200:
+        obj = r.json().get(game_id)
+        if obj is not None:
+            obj = obj.get("data")
+            if obj is not None:
+                icon_url = obj.get("header_image")
+                developers = obj.get("developers")
+                if developers is not None and len(developers) > 0:
+                    developer = developers[0]
+                publishers = obj.get("publishers")
+                if publishers is not None and len(publishers) > 0:
+                    publisher = publishers[0]
+                if "genres" in obj:
+                    for cur_gen in obj.get("genres"):
+                        genres.append(cur_gen.get("description"))
+                obj = obj.get("release_date")
+                if obj is not None:
+                    release_date = obj.get("date")
     return Game(name=game_name, platform_id=PLATFORM_STEAM, ext_id=game_id, id=None, achievements=achievements,
-                console_ext_id=None, console=None)
+                console_ext_id=None, console=None, icon_url=icon_url, release_date=release_date, publisher=publisher,
+                developer=developer, genres=genres)
 
 
 def get_player_achievements(player_id, game_id):
