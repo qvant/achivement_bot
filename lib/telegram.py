@@ -935,7 +935,7 @@ def show_account_achievements(update: Update, context: CallbackContext):
             if len(achievements) >= ACHIEVEMENT_MENU_LENGTH:
                 break
         if start_achievement == 1 and len(player.cur_achievements_game.icon_url) > 0:
-            msg = """"<a href="{0}">&#8205;</a>""".format(cur_game.icon_url)
+            msg = """<a href="{0}">&#8205;</a>""".format(cur_game.icon_url)
         else:
             msg = ""
         if start_achievement == 1:
@@ -957,11 +957,11 @@ def show_account_achievements(update: Update, context: CallbackContext):
             if first_achievement:
                 first_achievement = False
                 if is_unlocked:
-                    msg = _("Unlocked:")
+                    msg += _("Unlocked:")
                     msg += chr(10)
                     prev_unlocked = True
                 else:
-                    msg = _("Locked:")
+                    msg += _("Locked:")
                     msg += chr(10)
             elif prev_unlocked != is_unlocked:
                 msg += _("Locked:")
