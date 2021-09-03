@@ -172,7 +172,7 @@ class Platform:
                                 select g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url, g.release_date,
                                        g.developer_id, d.name, g.publisher_id, p.name,
                                        ARRAY_AGG(gr.id), ARRAY_AGG(gr.name)
-                                from achievements_hunt.games
+                                from achievements_hunt.games g
                                 left join achievements_hunt.companies p
                                   on p.id = g.publisher_id and p.platform_id = g.platform_id
                                 left join achievements_hunt.companies d

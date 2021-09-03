@@ -157,7 +157,7 @@ class Game:
             else:
                 cursor.execute("""
                     select id from achievements_hunt.games where platform_id = %s and ext_id = %s
-                """, (self.platform_id, self.ext_id))
+                """, (self.platform_id, str(self.ext_id)))
                 ret = cursor.fetchone()
                 if ret is not None:
                     self.id = ret[0]
@@ -223,7 +223,8 @@ class Game:
         if len(self.achievements) > 0 and not self._achievements_saved:
             if active_locale == 'en':
                 cursor.execute(
-                    """select id, ext_id, name, description, icon_url, locked_icon_url from achievements_hunt.achievements
+                    """select id, ext_id, name, description, icon_url, locked_icon_url
+                            from achievements_hunt.achievements
                             where platform_id = %s and game_id = %s
                     """, (self.platform_id, self.id)
                 )
@@ -242,7 +243,9 @@ class Game:
                 )
             need_save = False
             to_save = []
+            rows_found = False
             for id, ext_id, name, description, icon_url, locked_icon_url in cursor:
+                rows_found = True
                 if ext_id in self.achievements:
                     self.achievements[ext_id].id = id
                     if name != self.achievements[ext_id].name \
@@ -254,6 +257,8 @@ class Game:
                 else:
                     need_save = True
                     to_save.append(ext_id)
+            if not rows_found:
+                need_save = True
             if need_save:
                 for i in self.achievements:
                     if self.achievements[i].id is None or i in to_save:

@@ -262,6 +262,42 @@ class Player:
                     achievement_date = self.achievement_dates[self.games[i]][j]
                     if achievement.id in saved_achievements:
                         continue
+                    if achievement.id is None:
+                        # TODO: normally shouldn't be, but is happens
+                        self.platform.logger.warn("Empty id for achievement {} and game {} ({}) on platform {}".
+                                                  format(self.achievements[self.games[i]][j], game.id, game.name,
+                                                         self.platform.name))
+                        cur.execute("""
+                                        select id from achievements_hunt.achievements
+                                        where platform_id = %s and ext_id = %s
+                                        and game_id = %s
+                                    """, (self.platform.id, str(self.achievements[self.games[i]][j]), game.id))
+                        ret = cur.fetchone()
+                        if ret is not None:
+                            achievement.id = ret[0]
+                        else:
+                            new_game = self.platform.get_game(game_id=game.id, name=game.name)
+                            new_game.save(cursor=cur, active_locale='en')
+                            conn.commit()
+                            self.platform.logger.warn("Get id for achievement {} and game {} ({}) on platform {} after "
+                                                      "refresh".
+                                                      format(self.achievements[self.games[i]][j], game.id, game.name,
+                                                             self.platform.name))
+                            cur.execute("""
+                                            select id from achievements_hunt.achievements
+                                            where platform_id = %s and ext_id = %s
+                                            and game_id = %s
+                                        """,
+                                        (self.platform.id, str(self.achievements[self.games[i]][j]), game.id))
+                            ret = cur.fetchone()
+                            if ret is not None:
+                                achievement.id = ret[0]
+                            else:
+                                self.platform.logger.error("Empty id for achievement {} and game {} ({})"
+                                                           " on platform {} after refresh".
+                                                           format(self.achievements[self.games[i]][j], game.id,
+                                                                  game.name,
+                                                                  self.platform.name))
                     cur.execute("""
                                     insert into achievements_hunt.player_achievements
                                     (platform_id, game_id, achievement_id, player_id, dt_unlock)

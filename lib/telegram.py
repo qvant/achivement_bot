@@ -949,11 +949,13 @@ def show_account_achievements(update: Update, context: CallbackContext):
             if cur_game.genres != [None] and len(cur_game.genres) > 0:
                 msg += _("Genre: {0}").format(", ".join(cur_game.genres)) + chr(10)
         prev_unlocked = False
+        first_achievement = True
         for i in achievements:
             telegram_logger.debug("Added achievement {1} for user {0} in menu".
                                   format(chat_id, i))
             is_unlocked = i.get("owned")
-            if len(msg) == 0:
+            if first_achievement:
+                first_achievement = False
                 if is_unlocked:
                     msg = _("Unlocked:")
                     msg += chr(10)
