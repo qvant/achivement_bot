@@ -914,6 +914,7 @@ def show_account_achievements(update: Update, context: CallbackContext):
 
     global user_achievement_offsets
     global user_achievement_details
+    global db
 
     chat_id = update.effective_chat.id
     telegram_logger.info("Show achievements for user {0} in show_account_achievements".
@@ -948,6 +949,16 @@ def show_account_achievements(update: Update, context: CallbackContext):
             # TODO: fix properly
             if cur_game.genres != [None] and len(cur_game.genres) > 0:
                 msg += _("Genre: {0}").format(", ".join(cur_game.genres)) + chr(10)
+            cursor = db.cursor()
+            cursor.execute("""select dt_last_perfected from achievements_hunt.player_games where game_id = %s
+            and platform_id = %s and player_id = %s""",
+                           (cur_game.id, cur_game.platform_id, player.id))
+            dt_last_perfected = cursor.fetchone()
+            if dt_last_perfected is not None:
+                dt_last_perfected = dt_last_perfected[0]
+            cursor.close()
+            if dt_last_perfected is not None:
+                msg += _("Last time was perfected: {0}").format(dt_last_perfected) + chr(10)
         prev_unlocked = False
         first_achievement = True
         for i in achievements:
