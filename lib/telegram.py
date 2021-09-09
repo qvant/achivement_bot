@@ -355,6 +355,9 @@ def achievement_detail(update: Update, context: CallbackContext):
                 msg += chr(10)
                 msg += _("Percent owners: {0}.").format(i.get("percent"))
                 msg += chr(10)
+                if i.get("rarity"):
+                    msg += _("Rarity: {0}.").format(i.get("rarity"))
+                    msg += chr(10)
                 if i.get("owned"):
                     msg += _("Status: {0}.").format(_("Unlocked"))
                     msg += chr(10)
@@ -732,7 +735,8 @@ def show_account_stats(update: Update, context: CallbackContext):
         select
                 coalesce(tr.name, a.name),
                 a.percent_owners,
-                g.name || case when c.name is not null then ' (' || c.name || ')' else '' end
+                g.name || case when c.name is not null then ' (' || c.name || ')' else '' end,
+                ar.name
             from achievements_hunt.player_achievements aa
             join achievements_hunt.achievements a
             on aa.achievement_id  = a.id
@@ -749,6 +753,9 @@ def show_account_stats(update: Update, context: CallbackContext):
             left join achievements_hunt.consoles c
             on c.id = g.console_id
               and c.platform_id = g.platform_id
+            left join achievements_hunt.achievement_rarity ar
+            on ar.n_bottom_border < a.percent_owners
+              and ar.n_upper_border >= a.percent_owners
             where aa.player_id = %s
             order by a.percent_owners, coalesce(tr.name, a.name) limit 10
         """, (locale, player.id))
@@ -757,6 +764,8 @@ def show_account_stats(update: Update, context: CallbackContext):
             achievement_list = chr(10) + chr(10) + _("Rarest achievements:") + chr(10)
             for i in buf:
                 achievement_list += _(r"{} (game {}) percent owners {}").format(i[0], i[2], i[1])
+                if i[3]:
+                    achievement_list += r" ({})".format(i[3])
                 achievement_list += chr(10)
         else:
             achievement_list = ""
@@ -764,7 +773,8 @@ def show_account_stats(update: Update, context: CallbackContext):
                 select
                         coalesce(tr.name, a.name),
                         a.percent_owners,
-                        g.name || case when c.name is not null then ' (' || c.name || ')' else '' end
+                        g.name || case when c.name is not null then ' (' || c.name || ')' else '' end,
+                        ar.name
                     from achievements_hunt.player_achievements aa
                     join achievements_hunt.achievements a
                     on aa.achievement_id  = a.id
@@ -781,6 +791,9 @@ def show_account_stats(update: Update, context: CallbackContext):
                     left join achievements_hunt.consoles c
                     on c.id = g.console_id
                       and c.platform_id = g.platform_id
+                    left join achievements_hunt.achievement_rarity ar
+                    on ar.n_bottom_border < a.percent_owners
+                      and ar.n_upper_border >= a.percent_owners
                     where aa.player_id = %s
                     order by dt_unlock desc, coalesce(tr.name, a.name) limit 5
                 """, (locale, player.id))
@@ -789,6 +802,8 @@ def show_account_stats(update: Update, context: CallbackContext):
             new_achievement_list = chr(10) + _("Last achievements:") + chr(10)
             for i in buf:
                 new_achievement_list += _(r"{} (game {}) percent owners {}").format(i[0], i[2], i[1])
+                if i[3]:
+                    new_achievement_list += r" ({})".format(i[3])
                 new_achievement_list += chr(10)
         else:
             new_achievement_list = ""
@@ -800,7 +815,8 @@ def show_account_stats(update: Update, context: CallbackContext):
                                                          "average completion percent {2}"
                                                          ", perfect games {3}, was updated at {4} {5}{7}{6}").
                                  format(total_games, achievement_games, avg_percent, perfect_games, player.dt_updated,
-                                        achievement_list, private_warning, new_achievement_list))
+                                        achievement_list, private_warning, new_achievement_list),
+                                 parse_mode=ParseMode.HTML, disable_web_page_preview=False)
     else:
         start(update, context)
 
@@ -981,6 +997,7 @@ def show_account_achievements(update: Update, context: CallbackContext):
 
             msg += _(r"{}/{}. Achievement {} percent owners {}").format(
                 current_achievement, achievement_number, i.get("name"), i.get("percent"))
+            msg += " ({})".format(i.get("rarity"))
             msg += chr(10)
             current_achievement += 1
         if len(msg) == 0:
@@ -1146,7 +1163,8 @@ def activity_feed(update: Update, context: CallbackContext):
                             a.percent_owners,
                             g.name || case when c.name is not null then ' (' || c.name || ')' else '' end,
                             p.name,
-                            pr.name
+                            pr.name,
+                            ar.name
                         from achievements_hunt.players p
                         join achievements_hunt.platforms pr
                         on pr.id = p.platform_id
@@ -1168,6 +1186,9 @@ def activity_feed(update: Update, context: CallbackContext):
                         left join achievements_hunt.consoles c
                         on c.id = g.console_id
                           and c.platform_id = g.platform_id
+                        left join achievements_hunt.achievement_rarity ar
+                        on ar.n_bottom_border < a.percent_owners
+                          and ar.n_upper_border >= a.percent_owners
                         order by dt_unlock desc, coalesce(tr.name, a.name) limit 25
                     """, (locale,))
     buf = cursor.fetchall()
@@ -1176,6 +1197,7 @@ def activity_feed(update: Update, context: CallbackContext):
         activity_list = chr(10) + _("Last activity:") + chr(10)
         for i in buf:
             activity_list += _(r"{}({}) unlocked {} (game {}) percent owners {}").format(i[3], i[4], i[0], i[2], i[1])
+            activity_list += " ({})".format(i[5])
             activity_list += chr(10)
 
     context.bot.send_message(chat_id=update.effective_chat.id, text=activity_list,
