@@ -238,6 +238,7 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     developer = None
     publisher = None
     genres = []
+    features = []
     if r.status_code == 200:
         obj = r.json().get(game_id)
         if obj is not None:
@@ -253,12 +254,15 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                 if "genres" in obj:
                     for cur_gen in obj.get("genres"):
                         genres.append(cur_gen.get("description"))
-                obj = obj.get("release_date")
-                if obj is not None:
-                    release_date = obj.get("date")
+                obj_release = obj.get("release_date")
+                if obj_release is not None:
+                    release_date = obj_release.get("date")
+                if "categories" in obj:
+                    for cur_feature in obj.get("categories"):
+                        features.append(cur_feature.get("description"))
     return Game(name=game_name, platform_id=PLATFORM_STEAM, ext_id=game_id, id=None, achievements=achievements,
                 console_ext_id=None, console=None, icon_url=icon_url, release_date=release_date, publisher=publisher,
-                developer=developer, genres=genres)
+                developer=developer, genres=genres, features=features)
 
 
 def get_player_achievements(player_id, game_id):
