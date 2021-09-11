@@ -152,8 +152,8 @@ class Platform:
             cursor.execute("""
                     select g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url, g.release_date,
                            g.developer_id, d.name, g.publisher_id, p.name,
-                           ARRAY_AGG(gr.id), ARRAY_AGG(gr.name)
-                           ,ARRAY_AGG(fr.id), ARRAY_AGG(fr.name)
+                           ARRAY_AGG(distinct gr.id), ARRAY_AGG(distinct gr.name)
+                           ,ARRAY_AGG(distinct fr.id), ARRAY_AGG( distinct fr.name)
                     from achievements_hunt.games g
                     left join achievements_hunt.companies p
                       on p.id = g.publisher_id and p.platform_id = g.platform_id
@@ -176,8 +176,8 @@ class Platform:
             cursor.execute("""
                                 select g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url, g.release_date,
                                        g.developer_id, d.name, g.publisher_id, p.name,
-                                       ARRAY_AGG(gr.id), ARRAY_AGG(gr.name)
-                                       ,ARRAY_AGG(fr.id), ARRAY_AGG(fr.name)
+                                       ARRAY_AGG(distinct gr.id), ARRAY_AGG(distinct gr.name)
+                                       ,ARRAY_AGG(distinct fr.id), ARRAY_AGG(distinct fr.name)
                                 from achievements_hunt.games g
                                 left join achievements_hunt.companies p
                                   on p.id = g.publisher_id and p.platform_id = g.platform_id

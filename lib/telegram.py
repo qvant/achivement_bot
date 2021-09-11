@@ -965,6 +965,8 @@ def show_account_achievements(update: Update, context: CallbackContext):
             # TODO: fix properly
             if cur_game.genres != [None] and len(cur_game.genres) > 0:
                 msg += _("Genre: {0}").format(", ".join(cur_game.genres)) + chr(10)
+            if len(cur_game.features) > 0:
+                msg += _("Features: {0}").format(", ".join(cur_game.features)) + chr(10)
             cursor = db.cursor()
             cursor.execute("""select dt_last_perfected from achievements_hunt.player_games where game_id = %s
             and platform_id = %s and player_id = %s""",
