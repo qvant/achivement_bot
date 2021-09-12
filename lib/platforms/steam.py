@@ -280,6 +280,8 @@ def get_player_achievements(player_id, game_id):
                       format(r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
+        api_log.error("Full response from http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/: {0}".
+                      format(r.text))
         if r.status_code == 403:
             break
         cnt += 1
