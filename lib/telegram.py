@@ -1049,7 +1049,6 @@ def show_account_achievements(update: Update, context: CallbackContext):
                 msg += _("Release date: {0}").format(cur_game.release_date) + chr(10)
             if len(cur_game.genres) > 0:
                 msg += _("Genre: {0}").format(", ".join(cur_game.genres)) + chr(10)
-            print(cur_game.features)
             if len(cur_game.features) > 0:
                 msg += _("Features: {0}").format(", ".join(cur_game.features)) + chr(10)
             cursor = db.cursor()
