@@ -12,7 +12,8 @@ from lib.queue import set_logger as set_queue_log, set_config as set_queue_confi
 from lib.queue_handlers import set_telegram
 from lib.telegram import set_logger, telegram_init, set_connect, set_config as set_telegram_config, set_platforms, \
     start, echo, main_menu, account_choice, platform_choice, game_choice, game_navigation, achievement_navigation, \
-    locale_choice, admin_choice, shutdown_choice, stats_choice, set_locale, main_keyboard, achievement_detail
+    locale_choice, admin_choice, shutdown_choice, stats_choice, set_locale, main_keyboard, achievement_detail, \
+    consoles_navigation
 from lib.db import load, set_load_logger
 from lib.message_types import MT_VALIDATION_OK, MT_VALIDATION_FAILED, MT_ACCOUNT_DELETED, MT_ACCOUNT_UPDATED
 
@@ -42,6 +43,7 @@ def main_bot(config: Config):
     platform_menu_handler = CallbackQueryHandler(platform_choice, pattern="PLATFORM_")
     games_menu_handler = CallbackQueryHandler(game_choice, pattern="games_")
     games_navigation_handler = CallbackQueryHandler(game_navigation, pattern="list_of_games")
+    consoles_navigation_handler = CallbackQueryHandler(consoles_navigation, pattern="list_of_consoles")
     achievement_navigation_handler = CallbackQueryHandler(achievement_navigation, pattern="list_of_achievements")
     language_handler = CallbackQueryHandler(locale_choice, pattern="LOCALE")
     admin_handler = CallbackQueryHandler(admin_choice, pattern="admin_")
@@ -55,6 +57,7 @@ def main_bot(config: Config):
     dispatcher.add_handler(account_choice_handler)
     dispatcher.add_handler(games_menu_handler)
     dispatcher.add_handler(games_navigation_handler)
+    dispatcher.add_handler(consoles_navigation_handler)
     dispatcher.add_handler(achievement_navigation_handler)
     dispatcher.add_handler(language_handler)
     dispatcher.add_handler(admin_handler)

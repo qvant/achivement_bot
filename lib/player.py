@@ -99,7 +99,7 @@ class Player:
             return False, "Only one account per telegram user for platform"
         return True, "Ok"
 
-    def get_owned_games(self, mode=GAMES_ALL, force=False):
+    def get_owned_games(self, mode=GAMES_ALL, force=False, console_id: Union[int, None] = None):
         if len(self.games) == 0 or force:
             if force:
                 self.games = []
@@ -110,29 +110,33 @@ class Player:
                 cur.execute("""select g.game_id, g.is_perfect from achievements_hunt.player_games g
                 join achievements_hunt.games gg on gg.id = g.game_id
                  where g.platform_id = %s and g.player_id = %s
+                   and (gg.console_id = %s or %s is null)
                  order by gg.name""",
-                            (self.platform.id, self.id))
+                            (self.platform.id, self.id, console_id, console_id))
             elif mode == GAMES_WITH_ACHIEVEMENTS:
                 cur.execute("""select g.game_id, g.is_perfect from achievements_hunt.player_games g
                                 join achievements_hunt.games gg on gg.id = g.game_id
                                  where g.platform_id = %s and g.player_id = %s
-                                 and gg.has_achievements
+                                   and gg.has_achievements
+                                   and (gg.console_id = %s or %s is null)
                                  order by gg.name""",
-                            (self.platform.id, self.id))
+                            (self.platform.id, self.id, console_id, console_id))
             elif mode == GAMES_PERFECT:
                 cur.execute("""select g.game_id, g.is_perfect from achievements_hunt.player_games g
                                 join achievements_hunt.games gg on gg.id = g.game_id
                                  where g.platform_id = %s and g.player_id = %s
-                                 and g.is_perfect
+                                   and g.is_perfect
+                                   and (gg.console_id = %s or %s is null)
                                  order by gg.name""",
-                            (self.platform.id, self.id))
+                            (self.platform.id, self.id, console_id, console_id))
             else:
                 self.platform.logger.critical("incorrect get games mode {0}".format(mode))
                 cur.execute("""select g.game_id, g.is_perfect from achievements_hunt.player_games g
                                 join achievements_hunt.games gg on gg.id = g.game_id
                                  where g.platform_id = %s and g.player_id = %s
+                                   and (gg.console_id = %s or %s is null)
                                  order by gg.name""",
-                            (self.platform.id, self.id))
+                            (self.platform.id, self.id, console_id, console_id))
             ret = cur.fetchall()
             self.has_perfect_games = False
             for j in ret:

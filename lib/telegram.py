@@ -7,7 +7,7 @@ from .player import Player, GAMES_ALL, GAMES_PERFECT, GAMES_WITH_ACHIEVEMENTS
 from .log import get_logger
 from .queue import enqueue_command
 from .stats import get_stats
-from typing import Union, List
+from typing import Union, List, Dict
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext.callbackcontext import CallbackContext
 from telegram.update import Update
@@ -47,6 +47,7 @@ GAMES_LIST_PREV = "list_of_games_prev"
 GAMES_LIST_NEXT = "list_of_games_next"
 GAMES_LIST_LAST = "list_of_games_last"
 GAMES_LIST_INDEX = "list_of_games_index"
+GAMES_LIST_CONSOLE = "list_of_games_console"
 GAMES_LIST_ONLY_ACHIEVEMENTS = "list_of_games_only_achievements"
 GAMES_LIST_ONLY_PERFECT = "list_of_games_only_perfect"
 GAMES_LIST_ALL = "list_of_games_all"
@@ -250,7 +251,8 @@ def stats_keyboard(chat_id: int):
     return pretty_menu(keyboard)
 
 
-def games_keyboard(chat_id: int, games, cur_games=GAMES_WITH_ACHIEVEMENTS, has_perfect_games: bool = True):
+def games_keyboard(chat_id: int, games, cur_games=GAMES_WITH_ACHIEVEMENTS, has_perfect_games: bool = True,
+                   show_console_choice: bool = False):
     _ = set_locale(chat_id=chat_id)
     keyboard = [InlineKeyboardButton(_("Begin"), callback_data=GAMES_LIST_FIRST),
                 InlineKeyboardButton(_("Previous"), callback_data=GAMES_LIST_PREV)]
@@ -262,6 +264,8 @@ def games_keyboard(chat_id: int, games, cur_games=GAMES_WITH_ACHIEVEMENTS, has_p
     keyboard.append(InlineKeyboardButton(_("Next"), callback_data=GAMES_LIST_NEXT))
     keyboard.append(InlineKeyboardButton(_("End"), callback_data=GAMES_LIST_LAST))
     keyboard.append(InlineKeyboardButton(_("Index"), callback_data=GAMES_LIST_INDEX))
+    if show_console_choice:
+        keyboard.append(InlineKeyboardButton(_("Platform"), callback_data=GAMES_LIST_CONSOLE))
     if cur_games == GAMES_ALL:
         keyboard.append(InlineKeyboardButton(_("With achievements"), callback_data=GAMES_LIST_ONLY_ACHIEVEMENTS))
     elif cur_games == GAMES_WITH_ACHIEVEMENTS and has_perfect_games:
@@ -277,6 +281,17 @@ def games_index_keyboard():
     for i in range(26):
         keyboard.append(InlineKeyboardButton("{}".format(chr(97+i).upper()),
                                              callback_data="list_of_games_begin_" + chr(97+i)), )
+    return pretty_menu(keyboard)
+
+
+def consoles_index_keyboard(chat_id: int, consoles: Dict):
+    keyboard = []
+    for i in consoles:
+        keyboard.append(InlineKeyboardButton(consoles[i],
+                                             callback_data="list_of_consoles_begin_" + str(i)))
+    _ = set_locale(chat_id=chat_id)
+    keyboard.append(InlineKeyboardButton(_('All'),
+                                         callback_data="list_of_consoles_begin_"))
     return pretty_menu(keyboard)
 
 
@@ -472,6 +487,29 @@ def stats_choice(update: Update, context: CallbackContext):
         telegram_logger.critical("Received illegal cmd {1} from user {0} in stats_choice menu".format(chat_id, update))
 
 
+def consoles_navigation(update: Update, context: CallbackContext):
+    chat_id = update.effective_chat.id
+    cur_item = update["callback_query"]["data"]
+    telegram_logger.info("Received command {0} from user {1} in consoles_navigation menu".
+                         format(cur_item, update.effective_chat.id))
+    inc_command_counter("consoles_navigation")
+    _ = set_locale(update)
+    if chat_id in user_active_accounts:
+        for i in players_by_tlg_id[chat_id]:
+            if str(i.id) == str(user_active_accounts[chat_id]):
+                user_active_accounts[chat_id] = i.id
+                console_id = cur_item[23:]
+                if len(console_id) == 0:
+                    console_id = None
+                i.get_owned_games(mode=user_games_modes[chat_id], force=True, console_id=console_id)
+                games_by_player_id[user_active_accounts[chat_id]] = i.games
+                user_games_offsets[chat_id] = 0
+        show_account_stats(update=update, context=context, console_id=console_id)
+        show_account_games(update=update, context=context)
+    else:
+        start(update, context)
+
+
 def game_navigation(update: Update, context: CallbackContext):
     global user_games_offsets
     global games_by_player_id
@@ -529,6 +567,8 @@ def game_navigation(update: Update, context: CallbackContext):
             show_account_games(update=update, context=context)
     elif cur_item == GAMES_LIST_BACK:
         start(update, context)
+    elif cur_item == GAMES_LIST_CONSOLE:
+        show_account_consoles(update=update, context=context)
     elif cur_item != GAMES_LIST_INDEX:
         show_account_games(update=update, context=context)
     else:
@@ -695,7 +735,7 @@ def account_choice(update: Update, context: CallbackContext):
         list_of_games(update, context)
 
 
-def show_account_stats(update: Update, context: CallbackContext):
+def show_account_stats(update: Update, context: CallbackContext, console_id: Union[int, None] = None):
     chat_id = update.effective_chat.id
     _ = set_locale(update)
     locale = get_locale_name(update)
@@ -757,8 +797,9 @@ def show_account_stats(update: Update, context: CallbackContext):
             on ar.n_bottom_border < a.percent_owners
               and ar.n_upper_border >= a.percent_owners
             where aa.player_id = %s
+              and (c.id = %s or %s is null)
             order by a.percent_owners, coalesce(tr.name, a.name) limit 10
-        """, (locale, player.id))
+        """, (locale, player.id, console_id, console_id))
         buf = cursor.fetchall()
         if len(buf) > 0:
             achievement_list = chr(10) + chr(10) + _("Rarest achievements:") + chr(10)
@@ -795,8 +836,9 @@ def show_account_stats(update: Update, context: CallbackContext):
                     on ar.n_bottom_border < a.percent_owners
                       and ar.n_upper_border >= a.percent_owners
                     where aa.player_id = %s
+                      and (c.id = %s or %s is null)
                     order by dt_unlock desc, coalesce(tr.name, a.name) limit 5
-                """, (locale, player.id))
+                """, (locale, player.id, console_id, console_id))
         buf = cursor.fetchall()
         if len(buf) > 0:
             new_achievement_list = chr(10) + _("Last achievements:") + chr(10)
@@ -856,7 +898,9 @@ def show_account_games(update: Update, context: CallbackContext):
 
     if len(games) > 0:
         reply_markup = InlineKeyboardMarkup(games_keyboard(chat_id, games, cur_games=user_games_modes[chat_id],
-                                                           has_perfect_games=has_perfect_games))
+                                                           has_perfect_games=has_perfect_games,
+                                                           show_console_choice=player.platform.get_consoles is not None
+                                                           ))
         context.bot.send_message(chat_id=chat_id, text=_("Choose games (shown {0})").
                                  format(get_mode_name(user_games_modes[chat_id], chat_id)),
                                  reply_markup=reply_markup)
@@ -904,6 +948,47 @@ def show_games_index(update: Update, context: CallbackContext):
 
     if chat_id in user_active_accounts and chat_id in user_games_modes:
         reply_markup = InlineKeyboardMarkup(games_index_keyboard())
+        context.bot.send_message(chat_id=chat_id, text=_("Choose games (shown {0})").
+                                 format(get_mode_name(user_games_modes[chat_id], chat_id)),
+                                 reply_markup=reply_markup)
+    else:
+        start(update, context)
+
+
+def show_account_consoles(update: Update, context: CallbackContext):
+    global telegram_logger
+    global players_by_tlg_id
+    global games_by_player_id
+    global user_games_offsets
+    global user_active_accounts
+    global user_games_modes
+    global db
+    chat_id = update.effective_chat.id
+    telegram_logger.info("Show games for  user {0} in menu show_account_consoles".
+                         format(update.effective_chat.id))
+    inc_command_counter("show_account_consoles")
+
+    _ = set_locale(update)
+
+    if chat_id in user_active_accounts and chat_id in user_games_modes:
+        player = get_player_by_chat_id(chat_id)
+        cursor = db.cursor()
+        cursor.execute("""select c.id, c.name from achievements_hunt.consoles c
+                            where exists (
+                                select null from achievements_hunt.games g
+                                    join achievements_hunt.player_games gg
+                                    on g.platform_id = gg.platform_id
+                                      and g.id = gg.game_id
+                                    where g.platform_id = c.platform_id
+                                      and gg.player_id = %s
+                                      and g.console_id = c.id)
+                              and c.platform_id = %s
+                            order by c.name""",
+                       (player.id, player.platform.id,))
+        consoles = {}
+        for con_id, con_name in cursor:
+            consoles[con_id] = con_name
+        reply_markup = InlineKeyboardMarkup(consoles_index_keyboard(chat_id, consoles))
         context.bot.send_message(chat_id=chat_id, text=_("Choose games (shown {0})").
                                  format(get_mode_name(user_games_modes[chat_id], chat_id)),
                                  reply_markup=reply_markup)
@@ -962,9 +1047,9 @@ def show_account_achievements(update: Update, context: CallbackContext):
                 msg += _("Publisher: {0}").format(cur_game.publisher) + chr(10)
             if len(cur_game.release_date) > 0:
                 msg += _("Release date: {0}").format(cur_game.release_date) + chr(10)
-            # TODO: fix properly
-            if cur_game.genres != [None] and len(cur_game.genres) > 0:
+            if len(cur_game.genres) > 0:
                 msg += _("Genre: {0}").format(", ".join(cur_game.genres)) + chr(10)
+            print(cur_game.features)
             if len(cur_game.features) > 0:
                 msg += _("Features: {0}").format(", ".join(cur_game.features)) + chr(10)
             cursor = db.cursor()

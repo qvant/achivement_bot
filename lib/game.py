@@ -42,14 +42,16 @@ class Game:
         # this two lists better keep on platform level
         self.companies = {}
         self.genre_ids = {}
+        self.genres = []
         if genres is not None:
-            self.genres = genres
-        else:
-            self.genres = []
+            for i in genres:
+                if i is not None:
+                    self.genres.append(i)
+        self.features = []
         if features is not None:
-            self.features = features
-        else:
-            self.features = []
+            for i in features:
+                if i is not None:
+                    self.features.append(i)
         self.feature_ids = {}
         if feature_ids is not None and features is not None and len(feature_ids) == len(features):
             for i in range(len(feature_ids)):
