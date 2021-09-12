@@ -123,6 +123,8 @@ def get_player_last_games(player_id):
                       "{1} for player {0}".format(player_id, r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
+        api_log.error("Full response from http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/: "
+                      "{1} for player {0}".format(player_id, r.text))
         cnt += 1
         time.sleep(WAIT_BETWEEN_TRIES)
     res = [[], []]
@@ -176,6 +178,8 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                       format(r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
+        api_log.error("Full response from http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/: {0}".
+                      format(r.text))
         cnt += 1
         time.sleep(WAIT_BETWEEN_TRIES)
     achievements = {}
@@ -320,6 +324,8 @@ def get_name(player_name: str):
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
         cnt += 1
+        api_log.error("Full response from http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/: {0}".
+                      format(r.text))
         time.sleep(WAIT_BETWEEN_TRIES)
     buf = r.json().get("response")
     if buf is not None:
@@ -346,6 +352,8 @@ def get_player_stats(player_id):
                       "ISteamUser/GetPlayerSummaries/: {0}".format(r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
+        api_log.error("Full response from http://api.steampowered.com/"
+                      "ISteamUser/GetPlayerSummaries/: {0}".format(r.text))
         cnt += 1
         time.sleep(WAIT_BETWEEN_TRIES)
     res = r.json().get("response").get("players")
