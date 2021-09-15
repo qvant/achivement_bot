@@ -123,6 +123,8 @@ def get_player_last_games(player_id):
                       "{1} for player {0}".format(player_id, r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
+        api_log.error("Full response from http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/: "
+                      "{1} for player {0}".format(player_id, r.text))
         cnt += 1
         time.sleep(WAIT_BETWEEN_TRIES)
     res = [[], []]
@@ -176,6 +178,8 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                       format(r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
+        api_log.error("Full response from http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/: {0}".
+                      format(r.text))
         cnt += 1
         time.sleep(WAIT_BETWEEN_TRIES)
     achievements = {}
@@ -238,6 +242,7 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     developer = None
     publisher = None
     genres = []
+    features = []
     if r.status_code == 200:
         obj = r.json().get(game_id)
         if obj is not None:
@@ -253,12 +258,15 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                 if "genres" in obj:
                     for cur_gen in obj.get("genres"):
                         genres.append(cur_gen.get("description"))
-                obj = obj.get("release_date")
-                if obj is not None:
-                    release_date = obj.get("date")
+                obj_release = obj.get("release_date")
+                if obj_release is not None:
+                    release_date = obj_release.get("date")
+                if "categories" in obj:
+                    for cur_feature in obj.get("categories"):
+                        features.append(cur_feature.get("description"))
     return Game(name=game_name, platform_id=PLATFORM_STEAM, ext_id=game_id, id=None, achievements=achievements,
                 console_ext_id=None, console=None, icon_url=icon_url, release_date=release_date, publisher=publisher,
-                developer=developer, genres=genres)
+                developer=developer, genres=genres, features=features)
 
 
 def get_player_achievements(player_id, game_id):
@@ -276,6 +284,8 @@ def get_player_achievements(player_id, game_id):
                       format(r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
+        api_log.error("Full response from http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/: {0}".
+                      format(r.text))
         if r.status_code == 403:
             break
         cnt += 1
@@ -314,6 +324,8 @@ def get_name(player_name: str):
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
         cnt += 1
+        api_log.error("Full response from http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/: {0}".
+                      format(r.text))
         time.sleep(WAIT_BETWEEN_TRIES)
     buf = r.json().get("response")
     if buf is not None:
@@ -340,6 +352,8 @@ def get_player_stats(player_id):
                       "ISteamUser/GetPlayerSummaries/: {0}".format(r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
+        api_log.error("Full response from http://api.steampowered.com/"
+                      "ISteamUser/GetPlayerSummaries/: {0}".format(r.text))
         cnt += 1
         time.sleep(WAIT_BETWEEN_TRIES)
     res = r.json().get("response").get("players")

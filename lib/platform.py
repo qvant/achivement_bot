@@ -152,7 +152,8 @@ class Platform:
             cursor.execute("""
                     select g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url, g.release_date,
                            g.developer_id, d.name, g.publisher_id, p.name,
-                           ARRAY_AGG(gr.id), ARRAY_AGG(gr.name)
+                           ARRAY_AGG(distinct gr.id), ARRAY_AGG(distinct gr.name)
+                           ,ARRAY_AGG(distinct fr.id), ARRAY_AGG( distinct fr.name)
                     from achievements_hunt.games g
                     left join achievements_hunt.companies p
                       on p.id = g.publisher_id and p.platform_id = g.platform_id
@@ -162,6 +163,10 @@ class Platform:
                       on m.platform_id = g.platform_id and m.game_id = g.id
                     left join achievements_hunt.genres gr
                       on m.genre_id = gr.id
+                    left join achievements_hunt.map_games_to_features mf
+                      on mf.platform_id = g.platform_id and mf.game_id = g.id
+                    left join achievements_hunt.features fr
+                      on mf.feature_id = fr.id
                     where g.platform_id = %s
                     group by g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url, g.release_date,
                              g.developer_id, d.name, g.publisher_id, p.name
@@ -171,7 +176,8 @@ class Platform:
             cursor.execute("""
                                 select g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url, g.release_date,
                                        g.developer_id, d.name, g.publisher_id, p.name,
-                                       ARRAY_AGG(gr.id), ARRAY_AGG(gr.name)
+                                       ARRAY_AGG(distinct gr.id), ARRAY_AGG(distinct gr.name)
+                                       ,ARRAY_AGG(distinct fr.id), ARRAY_AGG(distinct fr.name)
                                 from achievements_hunt.games g
                                 left join achievements_hunt.companies p
                                   on p.id = g.publisher_id and p.platform_id = g.platform_id
@@ -181,6 +187,10 @@ class Platform:
                                   on m.platform_id = g.platform_id and m.game_id = g.id
                                 left join achievements_hunt.genres gr
                                   on m.genre_id = gr.id
+                                left join achievements_hunt.map_games_to_features mf
+                                  on mf.platform_id = g.platform_id and mf.game_id = g.id
+                                left join achievements_hunt.features fr
+                                  on mf.feature_id = fr.id
                                 where g.platform_id = %s and g.id = %s
                                 group by g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url,
                                          g.release_date,
@@ -189,7 +199,7 @@ class Platform:
                                 """, (self.id, game_id))
         games = {}
         for id, platform_id, name, ext_id, console_id, icon_url, release_date, developer_id, developer_name,\
-                publisher_id, publisher_name, genre_ids, genres in cursor:
+                publisher_id, publisher_name, genre_ids, genres, feature_ids, features in cursor:
             self.load_log.info("Loaded game {0} with id {1}, ext_id {2}, for platform {3} and console {4}".
                                format(name, id, ext_id, self.id, console_id))
             if self.get_consoles is not None:
@@ -204,6 +214,8 @@ class Platform:
                                           developer=developer_name,
                                           genres=genres,
                                           genre_ids=genre_ids,
+                                          features=features,
+                                          feature_ids=feature_ids,
                                           )
             else:
                 games[str(ext_id)] = Game(name=name, platform_id=platform_id, id=id, ext_id=ext_id, achievements=None,
@@ -215,6 +227,8 @@ class Platform:
                                           developer=developer_name,
                                           genres=genres,
                                           genre_ids=genre_ids,
+                                          features=features,
+                                          feature_ids=feature_ids,
                                           )
         if load_achievements:
             if game_id is None:
