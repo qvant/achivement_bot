@@ -330,20 +330,21 @@ class Player:
             delta = datetime.timedelta(days=self.platform.incremental_update_interval)
             if (self.dt_updated_inc is not None and (self.dt_updated_inc + delta) > cur_time) or \
                     (self.dt_updated_full is not None and (self.dt_updated_full + delta) > cur_time):
-                self.games, names, = self.platform.get_last_games(self.ext_id)
-                self.platform.logger.info("Prepared incremental update for player {0}. "
-                                          "Last inc update {1}, last full update {2}".
-                                          format(self.name, self.dt_updated_inc, self.dt_updated_full))
-                self.dt_updated_inc = cur_time
-            elif random.random() < self.platform.incremental_skip_chance:
-                self.games, names, = self.platform.get_games(self.ext_id)
-                self.dt_updated_full = cur_time
-                self.platform.logger.info("Prepared full update (because random) for player {0}. "
-                                          "Last inc update {1}, last full update {2}".
-                                          format(self.name, self.dt_updated_inc, self.dt_updated_full))
+                if random.random() >= self.platform.incremental_skip_chance:
+                    self.games, names, = self.platform.get_last_games(self.ext_id)
+                    self.platform.logger.info("Prepared incremental update for player {0}. "
+                                              "Last inc update {1}, last full update {2}".
+                                              format(self.name, self.dt_updated_inc, self.dt_updated_full))
+                    self.dt_updated_inc = cur_time
+                else:
+                    self.games, names, = self.platform.get_games(self.ext_id)
+                    self.dt_updated_full = cur_time
+                    self.platform.logger.info("Prepared full update (because random) for player {0}. "
+                                              "Last inc update {1}, last full update {2}".
+                                              format(self.name, self.dt_updated_inc, self.dt_updated_full))
             else:
                 self.games, names, = self.platform.get_games(self.ext_id)
-                self.platform.logger.info("Prepared full update for player {0}. "
+                self.platform.logger.info("Prepared full update (because inc not possible) for player {0}. "
                                           "Last inc update {1}, last full update {2}".
                                           format(self.name, self.dt_updated_inc, self.dt_updated_full))
                 self.dt_updated_full = cur_time
