@@ -5,7 +5,8 @@ create table  achievements_hunt.player_games
 	game_id             integer not null,
 	player_id           integer not null,
 	percent_complete    real,
-	is_perfect          boolean
+	is_perfect          boolean,
+	dt_last_perfected   timestamp with time zone
 );
 create unique index u_player_games_key on achievements_hunt.player_games(platform_id, game_id, player_id);
 create index idx_player_games_player on achievements_hunt.player_games(player_id);
