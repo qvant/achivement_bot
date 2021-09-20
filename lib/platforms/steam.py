@@ -1,5 +1,6 @@
 import json
 import codecs
+import random
 import requests
 import time
 import datetime
@@ -122,6 +123,8 @@ def get_player_last_games(player_id):
                       "{1} for player {0}".format(player_id, r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
+        api_log.error("Full response from http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/: "
+                      "{1} for player {0}".format(player_id, r.text))
         cnt += 1
         time.sleep(WAIT_BETWEEN_TRIES)
     res = [[], []]
@@ -175,6 +178,8 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                       format(r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
+        api_log.error("Full response from http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/: {0}".
+                      format(r.text))
         cnt += 1
         time.sleep(WAIT_BETWEEN_TRIES)
     achievements = {}
@@ -193,7 +198,10 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                                                        name=i.get("displayName"),
                                                        ext_id=i.get("name"),
                                                        platform_id=PLATFORM_STEAM,
-                                                       description=i.get("description"))
+                                                       description=i.get("description"),
+                                                       icon_url=i.get("icon"),
+                                                       locked_icon_url=i.get("icongray"),
+                                                       )
         api_log.info(
             "For game {0}, found {1} achievements".format(
                 game_id, len(achievements)))
@@ -209,8 +217,56 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     # Hack for some specific names. TODO: make a settings
     if game_name == ":THE LONGING:":
         game_name = "THE LONGING"
+    while True:
+        # there's limit approx 200 calls per 5 minutes, try ad hoc for it
+        if random.random() > 0.4:
+            api_log.info("Sleep before https://store.steampowered.com/api/appdetails/ because random")
+            time.sleep(1)
+            api_log.info("Waked up")
+        # not need to increase call counter - our key not used
+        api_log.info("Request https://store.steampowered.com/api/appdetails/ "
+                     "for game {0}, name {1}".format(game_id, name))
+        r = requests.get(
+            "https://store.steampowered.com/api/appdetails/?appids={0}".
+            format(game_id))
+        api_log.info("Response from https://store.steampowered.com/api/appdetails {0} "
+                     "from Steam".format(r))
+        if r.status_code == 200 or cnt >= MAX_TRIES:
+            break
+        cnt += 1
+        time.sleep(WAIT_BETWEEN_TRIES)
+        if r.status_code == 429:
+            break
+    icon_url = None
+    release_date = None
+    developer = None
+    publisher = None
+    genres = []
+    features = []
+    if r.status_code == 200:
+        obj = r.json().get(game_id)
+        if obj is not None:
+            obj = obj.get("data")
+            if obj is not None:
+                icon_url = obj.get("header_image")
+                developers = obj.get("developers")
+                if developers is not None and len(developers) > 0:
+                    developer = developers[0]
+                publishers = obj.get("publishers")
+                if publishers is not None and len(publishers) > 0:
+                    publisher = publishers[0]
+                if "genres" in obj:
+                    for cur_gen in obj.get("genres"):
+                        genres.append(cur_gen.get("description"))
+                obj_release = obj.get("release_date")
+                if obj_release is not None:
+                    release_date = obj_release.get("date")
+                if "categories" in obj:
+                    for cur_feature in obj.get("categories"):
+                        features.append(cur_feature.get("description"))
     return Game(name=game_name, platform_id=PLATFORM_STEAM, ext_id=game_id, id=None, achievements=achievements,
-                console_ext_id=None, console=None)
+                console_ext_id=None, console=None, icon_url=icon_url, release_date=release_date, publisher=publisher,
+                developer=developer, genres=genres, features=features)
 
 
 def get_player_achievements(player_id, game_id):
@@ -228,6 +284,8 @@ def get_player_achievements(player_id, game_id):
                       format(r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
+        api_log.error("Full response from http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/: {0}".
+                      format(r.text))
         if r.status_code == 403:
             break
         cnt += 1
@@ -266,6 +324,8 @@ def get_name(player_name: str):
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
         cnt += 1
+        api_log.error("Full response from http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/: {0}".
+                      format(r.text))
         time.sleep(WAIT_BETWEEN_TRIES)
     buf = r.json().get("response")
     if buf is not None:
@@ -292,6 +352,8 @@ def get_player_stats(player_id):
                       "ISteamUser/GetPlayerSummaries/: {0}".format(r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
+        api_log.error("Full response from http://api.steampowered.com/"
+                      "ISteamUser/GetPlayerSummaries/: {0}".format(r.text))
         cnt += 1
         time.sleep(WAIT_BETWEEN_TRIES)
     res = r.json().get("response").get("players")

@@ -5,5 +5,5 @@ create table achievements_hunt.version
 	dt_update timestamp with time zone
 );
 alter table  achievements_hunt.version owner to achievements_hunt_bot;
-insert into achievements_hunt.version(v_name, n_version, dt_update) values('Achievement hunt bot', 1, current_timestamp);
+insert into achievements_hunt.version(v_name, n_version, dt_update) values('Achievement hunt bot', 3, current_timestamp);
 commit;

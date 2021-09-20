@@ -17,6 +17,9 @@ WAIT_BETWEEN_TRIES = 5
 
 PLATFORM_RETRO = 2
 
+ACHIEVEMENT_ICON_URL_TEMPLATE = "https://s3-eu-west-1.amazonaws.com/i.retroachievements.org/Badge/{0}.png"
+GAME_ICON_URL_TEMPLATE = "https://retroachievements.org{0}"
+
 global api_log
 global api_key
 global api_user
@@ -107,6 +110,18 @@ def get_name(player_name: str):
     return player_id
 
 
+def get_game_icon_url(icon_id: str):
+    return GAME_ICON_URL_TEMPLATE.format(icon_id)
+
+
+def get_icon_url(badge_id: str):
+    return ACHIEVEMENT_ICON_URL_TEMPLATE.format(badge_id)
+
+
+def get_icon_locked_url(badge_id: str):
+    return ACHIEVEMENT_ICON_URL_TEMPLATE.format(str(badge_id) + "_lock")
+
+
 def get_game(game_id: str, name: str, language: str = "English") -> Game:
     global api_log
     cnt = 0
@@ -138,9 +153,12 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                     achievements[ext_id] = Achievement(id=None,
                                                        game_id=None,
                                                        name=obj_achievements[i].get("Title"),
-                                                       ext_id=obj_achievements[i].get("ID"),
+                                                       ext_id=str(obj_achievements[i].get("ID")),
                                                        platform_id=PLATFORM_RETRO,
-                                                       description=obj_achievements[i].get("Description"))
+                                                       description=obj_achievements[i].get("Description"),
+                                                       icon_url=get_icon_url(obj_achievements[i].get("BadgeName")),
+                                                       locked_icon_url=get_icon_locked_url(obj_achievements[i].
+                                                                                           get("BadgeName")))
                     achievements[str(ext_id) + "_hardcore"] = Achievement(id=None,
                                                                           game_id=None,
                                                                           name=obj_achievements[i].get(
@@ -149,7 +167,13 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                                                                               "ID")) + "_hardcore",
                                                                           platform_id=PLATFORM_RETRO,
                                                                           description=obj_achievements[i].get(
-                                                                              "Description"))
+                                                                              "Description"),
+                                                                          icon_url=get_icon_url(
+                                                                              obj_achievements[i].get("BadgeName")),
+                                                                          locked_icon_url=get_icon_locked_url(
+                                                                              obj_achievements[i].
+                                                                              get("BadgeName"))
+                                                                          )
         api_log.info(
             "For game {0}, found {1} achievements and console type {2}".format(
                 game_id, len(achievements), console_ext_id))
@@ -157,7 +181,13 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
         "For game {0}, found name {1}".format(
             game_id, game_name)
     return Game(name=game_name, platform_id=PLATFORM_RETRO, ext_id=game_id, id=None, achievements=achievements,
-                console_ext_id=str(obj.get("ConsoleID")), console=None)
+                console_ext_id=str(obj.get("ConsoleID")), console=None,
+                icon_url=get_game_icon_url(str(obj.get("ImageIcon"))),
+                release_date=str(obj.get("Released")),
+                publisher=obj.get("Publisher"),
+                developer=obj.get("Developer"),
+                genres=obj.get("Genre").replace("\\/", "\\").split(","),
+                )
 
 
 def get_player_achievements(player_id, game_id):
