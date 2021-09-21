@@ -84,7 +84,7 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
         api_log.info("Response from {} for {} is {}".
                      format(url, params, r))
         if r.status_code == 200 or cnt >= max_api_call_tries:
-            api_log.debug("Full response {} for {}".
+            api_log.debug("Full response {} for {} is {}".
                           format(url, params, r.text))
             break
         api_log.error("Full response from {} for {} is {}".
