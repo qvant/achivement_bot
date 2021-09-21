@@ -4,6 +4,7 @@ import random
 import requests
 import time
 import datetime
+from typing import Dict
 from ..achievement import Achievement
 from ..config import Config
 from ..game import Game
@@ -12,14 +13,16 @@ from ..platform import Platform
 from ..security import is_password_encrypted, encrypt_password, decrypt_password
 from ..config import MODE_CORE
 
-MAX_TRIES = 3
-WAIT_BETWEEN_TRIES = 5
-
 PLATFORM_STEAM = 1
 
 global api_log
 global api_key
 global call_counters
+global api_calls_daily_limit
+global max_api_call_tries
+global api_call_pause_on_error
+global app_details_sleep_time
+global app_details_sleep_chance
 
 
 def get_key():
@@ -57,6 +60,42 @@ def inc_call_cnt(method: str):
         call_counters.pop(old_dt, 'None')
 
 
+def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool = True) -> requests.Response:
+    global max_api_call_tries
+    global api_call_pause_on_error
+    global api_log
+    cnt = 0
+    if require_auth:
+        real_url = "{}?key={}&".format(url, get_key())
+    elif len(params) > 0:
+        real_url = "{}?".format(url)
+    else:
+        real_url = "{}".format(url)
+    for i in params:
+        real_url += "{}={}&".format(i, params[i])
+    if len(params) > 0:
+        real_url = real_url[:len(real_url) - 1]
+    while True:
+        if require_auth:
+            inc_call_cnt(method_name)
+        api_log.info("Request to {} for {}".
+                     format(url, params))
+        r = requests.get(real_url)
+        api_log.info("Response from {} for {} is {}".
+                     format(url, params, r))
+        if r.status_code == 200 or cnt >= max_api_call_tries:
+            api_log.debug("Full response {} for {}".
+                          format(url, params, r.text))
+            break
+        api_log.error("Full response from {} for {} is {}".
+                      format(url, params, r.text),
+                      exc_info=True,
+                      )
+        cnt += 1
+        time.sleep(api_call_pause_on_error)
+    return r
+
+
 def get_call_cnt():
     global call_counters
     if call_counters is not None:
@@ -68,7 +107,7 @@ def get_call_cnt():
             call_counters[i]["Total"] = total
             call_counters[i]["Used calls %"] = 0
             if total > 0:
-                call_counters[i]["Used calls %"] = round(total / 100000 * 100, 2)
+                call_counters[i]["Used calls %"] = round(total / api_calls_daily_limit * 100, 2)
 
     return call_counters
 
@@ -76,6 +115,11 @@ def get_call_cnt():
 def init_platform(config: Config) -> Platform:
     global api_log
     global call_counters
+    global api_calls_daily_limit
+    global max_api_call_tries
+    global api_call_pause_on_error
+    global app_details_sleep_time
+    global app_details_sleep_chance
     call_counters = {}
     api_log = get_logger("LOG_API_steam_" + str(config.mode), config.log_level, True)
     f = config.file_path[:config.file_path.rfind('/')] + "steam.json"
@@ -85,8 +129,34 @@ def init_platform(config: Config) -> Platform:
     incremental_update_enabled = steam_config.get("INCREMENTAL_UPDATE_ENABLED")
     incremental_update_interval = steam_config.get("INCREMENTAL_UPDATE_INTERVAL")
     incremental_skip_chance = steam_config.get("INCREMENTAL_SKIP_CHANCE")
+    api_calls_daily_limit = steam_config.get("API_CALLS_DAILY_LIMIT")
+    if api_calls_daily_limit is None:
+        api_calls_daily_limit = 100000
+    else:
+        api_calls_daily_limit = int(api_calls_daily_limit)
+    max_api_call_tries = steam_config.get("MAX_API_CALL_TRIES")
+    if max_api_call_tries is None:
+        max_api_call_tries = 3
+    else:
+        max_api_call_tries = int(max_api_call_tries)
+    api_call_pause_on_error = steam_config.get("API_CALL_PAUSE_ON_ERROR")
+    if api_call_pause_on_error is None:
+        api_call_pause_on_error = 5
+    else:
+        api_call_pause_on_error = int(api_call_pause_on_error)
+    app_details_sleep_chance = steam_config.get("APP_DETAILS_SLEEP_CHANCE")
+    if app_details_sleep_chance is None:
+        app_details_sleep_chance = 0.4
+    else:
+        app_details_sleep_chance = float(app_details_sleep_chance)
+    app_details_sleep_time = steam_config.get("APP_DETAILS_SLEEP_TIME")
+    if app_details_sleep_time is None:
+        app_details_sleep_time = 1
+    else:
+        app_details_sleep_time = int(app_details_sleep_time)
     steam = Platform(name='Steam', get_games=get_player_games, get_achivements=get_player_achievements,
-                     get_game=get_game, games=None, id=1, validate_player=get_player_stats, get_player_id=get_name,
+                     get_game=get_game, games=None, id=PLATFORM_STEAM, validate_player=get_player_stats,
+                     get_player_id=get_name,
                      get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,
                      incremental_update_interval=incremental_update_interval, get_last_games=get_player_last_games,
                      incremental_skip_chance=incremental_skip_chance, get_consoles=None)
@@ -107,26 +177,14 @@ def init_platform(config: Config) -> Platform:
 
 
 def get_player_last_games(player_id):
-    global api_log
-    cnt = 0
-    while True:
-        inc_call_cnt("GetRecentlyPlayedGames")
-        api_log.info("Request http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/ for user {0}".
-                     format(player_id))
-        r = requests.get(
-            "http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key={0}&steamid={1}"
-            "&include_played_free_games=true&include_appinfo=true".format(get_key(), player_id))
-        api_log.info("Response from http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/:"
-                     " {1} for player {0}".
-                     format(player_id, r))
-        api_log.debug("Full response from http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/: "
-                      "{1} for player {0}".format(player_id, r.text))
-        if r.status_code == 200 or cnt >= MAX_TRIES:
-            break
-        api_log.error("Full response from http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/: "
-                      "{1} for player {0}".format(player_id, r.text))
-        cnt += 1
-        time.sleep(WAIT_BETWEEN_TRIES)
+    params = {
+        "steamid": player_id,
+        "include_played_free_games": True,
+        "include_appinfo": True,
+              }
+    r = _call_steam_api(url="http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/",
+                        method_name="GetRecentlyPlayedGames",
+                        params=params)
     res = [[], []]
     obj = r.json().get("response")
     if obj is not None and "games" in obj:
@@ -137,22 +195,14 @@ def get_player_last_games(player_id):
 
 
 def get_player_games(player_id):
-    global api_log
-    cnt = 0
-    while True:
-        inc_call_cnt("GetOwnedGames")
-        api_log.info("Request http://api.steampowered.com/IPlayerService/GetOwnedGames/ for user {0}".format(player_id))
-        r = requests.get(
-            "http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={0}&steamid={1}"
-            "&include_played_free_games=true&include_appinfo=true".format(get_key(), player_id))
-        api_log.info("Response from http://api.steampowered.com/IPlayerService/GetOwnedGames/: {1} for player {0}".
-                     format(player_id, r))
-        api_log.debug("Full response from http://api.steampowered.com/IPlayerService/GetOwnedGames/: "
-                      "{1} for player {0}".format(player_id, r.text))
-        if r.status_code == 200 or cnt >= MAX_TRIES:
-            break
-        cnt += 1
-        time.sleep(WAIT_BETWEEN_TRIES)
+    params = {
+        "steamid": player_id,
+        "include_played_free_games": True,
+        "include_appinfo": True,
+    }
+    r = _call_steam_api(url="http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/",
+                        method_name="GetOwnedGames",
+                        params=params)
     res = [[], []]
     obj = r.json().get("response")
     if obj is not None and "games" in obj:
@@ -164,24 +214,13 @@ def get_player_games(player_id):
 
 def get_game(game_id: str, name: str, language: str = "English") -> Game:
     global api_log
-    cnt = 0
-    while True:
-        inc_call_cnt("GetSchemaForGame")
-        api_log.info("Request http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/ "
-                     "for game {0}, name {1} language {2} supplied".format(game_id, name, language))
-        r = requests.get(
-            "http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key={0}&appid={1}&l={2}".
-            format(get_key(), game_id, language))
-        api_log.info("Response from http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/ "
-                     "{0} from Steam".format(r))
-        api_log.debug("Full response from http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/: {0}".
-                      format(r.text))
-        if r.status_code == 200 or cnt >= MAX_TRIES:
-            break
-        api_log.error("Full response from http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/: {0}".
-                      format(r.text))
-        cnt += 1
-        time.sleep(WAIT_BETWEEN_TRIES)
+    params = {
+        "appid": game_id,
+        "l": language,
+    }
+    r = _call_steam_api(url="http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/",
+                        method_name="GetSchemaForGame",
+                        params=params)
     achievements = {}
     game_name = None
     obj = r.json().get("game")
@@ -217,26 +256,17 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     # Hack for some specific names. TODO: make a settings
     if game_name == ":THE LONGING:":
         game_name = "THE LONGING"
-    while True:
-        # there's limit approx 200 calls per 5 minutes, try ad hoc for it
-        if random.random() > 0.4:
-            api_log.info("Sleep before https://store.steampowered.com/api/appdetails/ because random")
-            time.sleep(1)
-            api_log.info("Waked up")
-        # not need to increase call counter - our key not used
-        api_log.info("Request https://store.steampowered.com/api/appdetails/ "
-                     "for game {0}, name {1}".format(game_id, name))
-        r = requests.get(
-            "https://store.steampowered.com/api/appdetails/?appids={0}".
-            format(game_id))
-        api_log.info("Response from https://store.steampowered.com/api/appdetails {0} "
-                     "from Steam".format(r))
-        if r.status_code == 200 or cnt >= MAX_TRIES:
-            break
-        cnt += 1
-        time.sleep(WAIT_BETWEEN_TRIES)
-        if r.status_code == 429:
-            break
+    params = {
+        "appids": game_id,
+    }
+    if random.random() > app_details_sleep_chance:
+        api_log.info("Sleep before https://store.steampowered.com/api/appdetails/ because random")
+        time.sleep(app_details_sleep_time)
+        api_log.info("Waked up")
+    r = _call_steam_api(url="https://store.steampowered.com/api/appdetails/",
+                        method_name="appdetails",
+                        params=params,
+                        require_auth=False)
     icon_url = None
     release_date = None
     developer = None
@@ -270,26 +300,13 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
 
 
 def get_player_achievements(player_id, game_id):
-    global api_log
-    cnt = 0
-    while True:
-        inc_call_cnt("GetPlayerAchievements")
-        api_log.info("Request http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements "
-                     "for game {0} and player {1}".format(game_id, player_id))
-        r = requests.get(
-            "http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/"
-            "v0001/?key={0}&steamid={1}&appid={2}".format(get_key(), player_id, game_id))
-        api_log.info("Response from http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/:{0}".format(r))
-        api_log.debug("Full response from http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/: {0}".
-                      format(r.text))
-        if r.status_code == 200 or cnt >= MAX_TRIES:
-            break
-        api_log.error("Full response from http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/: {0}".
-                      format(r.text))
-        if r.status_code == 403:
-            break
-        cnt += 1
-        time.sleep(WAIT_BETWEEN_TRIES)
+    params = {
+        "steamid": player_id,
+        "appid": game_id,
+    }
+    r = _call_steam_api(url="http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/",
+                        method_name="GetPlayerAchievements",
+                        params=params)
     player_stats = r.json().get("playerstats")
     if player_stats.get("success"):
         if player_stats.get("achievements"):
@@ -308,25 +325,13 @@ def get_player_achievements(player_id, game_id):
 
 
 def get_name(player_name: str):
-    global api_log
-    cnt = 0
+    params = {
+        "vanityurl": player_name,
+    }
+    r = _call_steam_api(url="http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/",
+                        method_name="ResolveVanityURL",
+                        params=params)
     player_id = None
-    while True:
-        inc_call_cnt("ResolveVanityURL")
-        api_log.info("Request http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001"
-                     " for player {0}".format(player_name))
-        r = requests.get(
-            "http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key={0}&vanityurl={1}".format(
-                get_key(), player_name))
-        api_log.info("Response from http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/:{0}".format(r))
-        api_log.debug("Full response from http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/: {0}".
-                      format(r.text))
-        if r.status_code == 200 or cnt >= MAX_TRIES:
-            break
-        cnt += 1
-        api_log.error("Full response from http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/: {0}".
-                      format(r.text))
-        time.sleep(WAIT_BETWEEN_TRIES)
     buf = r.json().get("response")
     if buf is not None:
         player_id = buf.get("steamid")
@@ -338,24 +343,12 @@ def get_name(player_name: str):
 
 
 def get_player_stats(player_id):
-    global api_log
-    cnt = 0
-    while True:
-        inc_call_cnt("GetPlayerSummaries")
-        api_log.info("Request http://api.steampowered.com/ISteamUser/GetPlayerSummaries/ "
-                     "for player {0}".format(player_id))
-        r = requests.get(
-            "http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={0}&steamids={1}".format(get_key(),
-                                                                                                           player_id))
-        api_log.info("Response from http://api.steampowered.com/ISteamUser/GetPlayerSummaries/: {0}".format(r))
-        api_log.debug("Full response from http://api.steampowered.com/"
-                      "ISteamUser/GetPlayerSummaries/: {0}".format(r.text))
-        if r.status_code == 200 or cnt >= MAX_TRIES:
-            break
-        api_log.error("Full response from http://api.steampowered.com/"
-                      "ISteamUser/GetPlayerSummaries/: {0}".format(r.text))
-        cnt += 1
-        time.sleep(WAIT_BETWEEN_TRIES)
+    params = {
+        "steamids": player_id,
+    }
+    r = _call_steam_api(url="http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/",
+                        method_name="GetPlayerSummaries",
+                        params=params)
     res = r.json().get("response").get("players")
     if len(res) == 0:
         return None
