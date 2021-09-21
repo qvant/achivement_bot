@@ -222,7 +222,7 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                         method_name="GetSchemaForGame",
                         params=params)
     achievements = {}
-    game_name = None
+    game_name = name
     obj = r.json().get("game")
     if len(obj) > 0:
         if "availableGameStats" in obj:
@@ -244,18 +244,9 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
         api_log.info(
             "For game {0}, found {1} achievements".format(
                 game_id, len(achievements)))
-        game_name = obj.get("gameName")
-        "For game {0}, found name {1}".format(
-            game_id, game_name)
-    # there was logic of getting name from GetSchemaForGame responce, but it seems, that this data have lower quality
-    if 1 == 1:
-        api_log.info(
-            "For game {0} skip name not found in response ({2}), used supplied name {1}".format(
-                game_id, name, game_name))
-        game_name = name
-    # Hack for some specific names. TODO: make a settings
-    if game_name == ":THE LONGING:":
-        game_name = "THE LONGING"
+        if len(game_name) == 0:
+            game_name = obj.get("gameName")
+            api_log.warn("For game {0}, found name {1} instead of empty one".format(game_id, game_name))
     params = {
         "appids": game_id,
     }
