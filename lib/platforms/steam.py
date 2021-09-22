@@ -199,6 +199,7 @@ def get_player_games(player_id):
         "steamid": player_id,
         "include_played_free_games": True,
         "include_appinfo": True,
+        "skip_unvetted_apps": False,
     }
     r = _call_steam_api(url="http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/",
                         method_name="GetOwnedGames",
