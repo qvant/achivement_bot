@@ -159,7 +159,7 @@ def init_platform(config: Config) -> Platform:
         app_details_sleep_time = int(app_details_sleep_time)
     call_counters_retain = steam_config.get("CALL_COUNTERS_RETAIN")
     if call_counters_retain is None:
-        call_counters_retain = 1
+        call_counters_retain = 7
     else:
         call_counters_retain = int(call_counters_retain)
     steam = Platform(name='Steam', get_games=get_player_games, get_achivements=get_player_achievements,
