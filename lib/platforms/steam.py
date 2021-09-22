@@ -23,6 +23,7 @@ global max_api_call_tries
 global api_call_pause_on_error
 global app_details_sleep_time
 global app_details_sleep_chance
+global call_counters_retain
 
 
 def get_key():
@@ -47,6 +48,7 @@ def _save_api_key(password: str, path: str):
 
 def inc_call_cnt(method: str):
     global call_counters
+    global call_counters_retain
     cur_dt = str(datetime.date.today())
     if call_counters is None:
         call_counters = {}
@@ -55,8 +57,8 @@ def inc_call_cnt(method: str):
     if method not in call_counters[cur_dt]:
         call_counters[cur_dt][method] = int(0)
     call_counters[cur_dt][method] += 1
-    if len(call_counters) > 7:
-        old_dt = str(datetime.date.today() - datetime.timedelta(days=7))
+    if len(call_counters) > call_counters_retain:
+        old_dt = str(datetime.date.today() - datetime.timedelta(days=call_counters_retain))
         call_counters.pop(old_dt, 'None')
 
 
@@ -120,6 +122,7 @@ def init_platform(config: Config) -> Platform:
     global api_call_pause_on_error
     global app_details_sleep_time
     global app_details_sleep_chance
+    global call_counters_retain
     call_counters = {}
     api_log = get_logger("LOG_API_steam_" + str(config.mode), config.log_level, True)
     f = config.file_path[:config.file_path.rfind('/')] + "steam.json"
@@ -154,6 +157,11 @@ def init_platform(config: Config) -> Platform:
         app_details_sleep_time = 1
     else:
         app_details_sleep_time = int(app_details_sleep_time)
+    call_counters_retain = steam_config.get("CALL_COUNTERS_RETAIN")
+    if call_counters_retain is None:
+        call_counters_retain = 1
+    else:
+        call_counters_retain = int(call_counters_retain)
     steam = Platform(name='Steam', get_games=get_player_games, get_achivements=get_player_achievements,
                      get_game=get_game, games=None, id=PLATFORM_STEAM, validate_player=get_player_stats,
                      get_player_id=get_name,
