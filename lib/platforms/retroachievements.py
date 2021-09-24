@@ -320,7 +320,7 @@ def init_platform(config: Config) -> Platform:
     else:
         call_counters_retain = int(call_counters_retain)
     retro = Platform(name='Retroachievements', get_games=get_player_games, get_achivements=get_player_achievements,
-                     get_game=get_game, games=None, id=2, validate_player=get_name, get_player_id=get_name,
+                     get_game=get_game, games=None, id=PLATFORM_RETRO, validate_player=get_name, get_player_id=get_name,
                      get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,
                      incremental_update_interval=incremental_update_interval, get_last_games=get_last_player_games,
                      incremental_skip_chance=incremental_skip_chance, get_consoles=get_consoles)
