@@ -241,6 +241,11 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                     ext_id = i.get("ext_id")
                     if ext_id is None or len(ext_id) == 0:
                         ext_id = i.get("name")
+                    hidden_flag = i.get("hidden")
+                    if hidden_flag is not None:
+                        is_hidden = str(hidden_flag) != "0"
+                    else:
+                        is_hidden = False
                     achievements[ext_id] = Achievement(id=None,
                                                        game_id=None,
                                                        name=i.get("displayName"),
@@ -249,6 +254,7 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                                                        description=i.get("description"),
                                                        icon_url=i.get("icon"),
                                                        locked_icon_url=i.get("icongray"),
+                                                       is_hidden=is_hidden,
                                                        )
         api_log.info(
             "For game {0}, found {1} achievements".format(
