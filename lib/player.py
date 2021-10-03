@@ -65,7 +65,8 @@ class Player:
             else:
                 self.platform.logger.warn("Error: {} {} when set ext_id {} on platform {} for player {} and telegram "
                                           "account {}".
-                                          format(err, err.pgcode, self.ext_id, self.platform.id, self.id, self.telegram_id))
+                                          format(err, err.pgcode, self.ext_id, self.platform.id, self.id,
+                                                 self.telegram_id))
                 raise
         conn.commit()
 

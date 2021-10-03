@@ -1315,7 +1315,8 @@ def echo(update: Update, context: CallbackContext):
                 if buf[0]:
                     player.save()
                     cmd = {"cmd": "create_player", "player_id": player.id, "platform_id": player.platform.id,
-                           "chat_id": chat_id }
+                           "chat_id": chat_id
+                           }
                     enqueue_command(cmd, MODE_CORE)
                 if player.id is not None:
                     context.bot.send_message(chat_id=chat_id, text=_("Account {0} bound to you").format(player.name))
