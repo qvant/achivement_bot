@@ -1314,13 +1314,14 @@ def echo(update: Update, context: CallbackContext):
                 buf = player.is_unique()
                 if buf[0]:
                     player.save()
-                    cmd = {"cmd": "create_player", "player_id": player.id, "platform_id": player.platform.id}
+                    cmd = {"cmd": "create_player", "player_id": player.id, "platform_id": player.platform.id,
+                           "chat_id": chat_id }
                     enqueue_command(cmd, MODE_CORE)
                 if player.id is not None:
                     context.bot.send_message(chat_id=chat_id, text=_("Account {0} bound to you").format(player.name))
                 else:
                     context.bot.send_message(chat_id=chat_id,
-                                             text=_("You already have account for this platform"))
+                                             text=_("You already have account for platform {}").format(i.name))
         if not player_created:
             context.bot.send_message(chat_id=update.effective_chat.id, text=_("Platform {0} not found").
                                      format(cur_platform))
