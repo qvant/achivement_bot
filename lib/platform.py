@@ -109,9 +109,10 @@ class Platform:
                 self._consoles_by_ext_id[i].save(conn)
                 if self._consoles_by_ext_id[i].id is not None:
                     self._consoles_by_id[self._consoles_by_ext_id[i].id] = i
-                    self.logger.error("Set map id for console {0}".format(self._consoles_by_ext_id[i].name))
+                    self.logger.info("Set map id for console {0}".format(self._consoles_by_ext_id[i].name))
                 else:
-                    self.logger.error("Missed id for console {0}".format(self._consoles_by_ext_id[i].name))
+                    self.logger.error("Missed id for console {0} with ext_id {1}".
+                                      format(self._consoles_by_ext_id[i].name, i))
         for i in self.games:
             if self.games[i].console_ext_id is not None and self.games[i].console is None:
                 self.logger.info("Set console {0} for game {1}".format(self.games[i].console_ext_id,
@@ -234,7 +235,7 @@ class Platform:
             if game_id is None:
                 cursor.execute("""
                                     select a.id, a.platform_id, a.name, a.ext_id, g.ext_id, a.description, a.game_id,
-                                        a.icon_url, a.locked_icon_url
+                                        a.icon_url, a.locked_icon_url, a.is_hidden
                                      from achievements_hunt.achievements a
                                      join  achievements_hunt.games g on a.game_id = g.id
                                       where a.platform_id = %s order by id
@@ -242,19 +243,21 @@ class Platform:
             else:
                 cursor.execute("""
                                     select a.id, a.platform_id, a.name, a.ext_id, g.ext_id, a.description, a.game_id,
-                                        a.icon_url, a.locked_icon_url
+                                        a.icon_url, a.locked_icon_url, a.is_hidden
                                      from achievements_hunt.achievements a
                                      join  achievements_hunt.games g on a.game_id = g.id  where a.platform_id = %s
                                       and a.game_id = %s order by id
                                                     """, (self.id, game_id))
-            for id, platform_id, name, ext_id, game_ext_id, description, game_id, icon_url, locked_icon_url in cursor:
+            for id, platform_id, name, ext_id, game_ext_id, description, game_id, icon_url, locked_icon_url, \
+                    is_hidden in cursor:
                 self.load_log.debug("Loaded achievement {0} with id {1}, ext_id {2}, for game {3} "
                                     "on platform {4}".format(name, id, ext_id, game_ext_id, self.id))
                 games[str(game_ext_id)].add_achievement(achievement=Achievement(id=id, game_id=game_id, name=name,
                                                                                 platform_id=platform_id, ext_id=ext_id,
                                                                                 description=description,
                                                                                 icon_url=icon_url,
-                                                                                locked_icon_url=locked_icon_url))
+                                                                                locked_icon_url=locked_icon_url,
+                                                                                is_hidden=is_hidden))
         if game_id is not None:
             self.games = {**self.games, **games}
         self.set_games(games=games)

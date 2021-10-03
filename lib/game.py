@@ -301,7 +301,7 @@ class Game:
         if len(self.achievements) > 0 and not self._achievements_saved:
             if active_locale == 'en':
                 cursor.execute(
-                    """select id, ext_id, name, description, icon_url, locked_icon_url
+                    """select id, ext_id, name, description, icon_url, locked_icon_url, is_hidden
                             from achievements_hunt.achievements
                             where platform_id = %s and game_id = %s
                     """, (self.platform_id, self.id)
@@ -309,7 +309,7 @@ class Game:
             else:
                 cursor.execute(
                     """select a.id, a.ext_id, coalesce(l.name, a.name), coalesce(a.description, l.description),
-                              icon_url, locked_icon_url
+                              icon_url, locked_icon_url, is_hidden
                             from achievements_hunt.achievements a
                             left join achievements_hunt.achievement_translations l
                             on l.achievement_id  = a.id
@@ -322,14 +322,15 @@ class Game:
             need_save = False
             to_save = []
             rows_found = False
-            for id, ext_id, name, description, icon_url, locked_icon_url in cursor:
+            for id, ext_id, name, description, icon_url, locked_icon_url, is_hidden in cursor:
                 rows_found = True
                 if ext_id in self.achievements:
                     self.achievements[ext_id].id = id
                     if name != self.achievements[ext_id].name \
                             or description != self.achievements[ext_id].description\
                             or icon_url != self.achievements[ext_id].icon_url \
-                            or locked_icon_url != self.achievements[ext_id].locked_icon_url:
+                            or locked_icon_url != self.achievements[ext_id].locked_icon_url\
+                            or is_hidden != self.achievements[ext_id].is_hidden:
                         need_save = True
                         to_save.append(ext_id)
                 else:

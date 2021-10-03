@@ -3,6 +3,7 @@ import codecs
 import requests
 import time
 import datetime
+from typing import Dict
 from ..achievement import Achievement
 from ..config import Config
 from ..console import Console
@@ -12,8 +13,6 @@ from ..platform import Platform
 from ..security import is_password_encrypted, encrypt_password, decrypt_password
 from ..config import MODE_CORE
 
-MAX_TRIES = 3
-WAIT_BETWEEN_TRIES = 5
 
 PLATFORM_RETRO = 2
 
@@ -24,6 +23,10 @@ global api_log
 global api_key
 global api_user
 global call_counters
+global api_calls_daily_limit
+global max_api_call_tries
+global api_call_pause_on_error
+global call_counters_retain
 
 
 def get_key():
@@ -58,6 +61,7 @@ def _save_api_key(password: str, path: str):
 
 def inc_call_cnt(method: str):
     global call_counters
+    global call_counters_retain
     cur_dt = str(datetime.date.today())
     if call_counters is None:
         call_counters = {}
@@ -66,8 +70,8 @@ def inc_call_cnt(method: str):
     if method not in call_counters[cur_dt]:
         call_counters[cur_dt][method] = int(0)
     call_counters[cur_dt][method] += 1
-    if len(call_counters) > 7:
-        old_dt = str(datetime.date.today() - datetime.timedelta(days=7))
+    if len(call_counters) > call_counters_retain:
+        old_dt = str(datetime.date.today() - datetime.timedelta(days=call_counters_retain))
         call_counters.pop(old_dt, 'None')
 
 
@@ -86,24 +90,43 @@ def get_call_cnt():
     return call_counters
 
 
-def get_name(player_name: str):
+def _call_api(url: str, method_name: str, params: Dict) -> requests.Response:
+    global max_api_call_tries
+    global api_call_pause_on_error
     global api_log
     cnt = 0
-    player_id = None
+    real_url = "{}?y={}&z={}".format(url, get_key(), get_user())
+    for i in params:
+        real_url += "&{}={}".format(i, params[i])
     while True:
-        inc_call_cnt("API_GetUserSummary")
-        api_log.info("Request https://retroachievements.org/API/API_GetUserSummary.php"
-                     " for player {0}".format(player_name))
-        r = requests.get(
-            "https://retroachievements.org/API/API_GetUserSummary.php?u={}&y={}&z={}".format(
-                player_name, get_key(), get_user()))
-        api_log.info("https://retroachievements.org/API/API_GetUserSummary.php:{0}".format(r))
-        api_log.debug("Full https://retroachievements.org/API/API_GetUserSummary.php: {0}".
-                      format(r.text))
-        if r.status_code == 200 or cnt >= MAX_TRIES:
+        inc_call_cnt(method_name)
+        api_log.info("Request to {} for {}".
+                     format(url, params))
+        r = requests.get(real_url)
+        api_log.info("Response from {} for {} is {}".
+                     format(url, params, r))
+        if r.status_code == 200 or cnt >= max_api_call_tries:
+            api_log.debug("Full response {} for {} is {}".
+                          format(url, params, r.text))
             break
+        api_log.error("Full response from {} for {} is {}".
+                      format(url, params, r.text),
+                      exc_info=True,
+                      )
         cnt += 1
-        time.sleep(WAIT_BETWEEN_TRIES)
+        time.sleep(api_call_pause_on_error)
+    return r
+
+
+def get_name(player_name: str):
+    player_id = None
+    params = {
+        "u": player_name,
+    }
+    r = _call_api(url="https://retroachievements.org/API/API_GetUserSummary.php",
+                  method_name="API_GetUserSummary",
+                  params=params
+                  )
     buf = r.json().get("MemberSince")
     if buf is not None:
         player_id = player_name
@@ -124,22 +147,13 @@ def get_icon_locked_url(badge_id: str):
 
 def get_game(game_id: str, name: str, language: str = "English") -> Game:
     global api_log
-    cnt = 0
-    while True:
-        inc_call_cnt("API_GetUserSummary")
-        api_log.info("https://retroachievements.org/API/API_GetGameExtended.php "
-                     "for game {0}, name {1} language {2} supplied".format(game_id, name, language))
-        r = requests.get(
-            "https://retroachievements.org/API/API_GetGameExtended.php?i={}&y={}&z={}".format(
-                game_id, get_key(), get_user()))
-        api_log.info("Response from https://retroachievements.org/API/API_GetGameExtended.php "
-                     "{0} from retroachievements".format(r))
-        api_log.debug("Full response from https://retroachievements.org/API/API_GetGameExtended.php: {0}".
-                      format(r.text))
-        if r.status_code == 200 or cnt >= MAX_TRIES:
-            break
-        cnt += 1
-        time.sleep(WAIT_BETWEEN_TRIES)
+    params = {
+        "i": game_id,
+    }
+    r = _call_api(url="https://retroachievements.org/API/API_GetGameExtended.php",
+                  method_name="API_GetGameExtended",
+                  params=params,
+                  )
     achievements = {}
     game_name = None
     obj = r.json()
@@ -191,24 +205,14 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
 
 
 def get_player_achievements(player_id, game_id):
-    global api_log
-    cnt = 0
-    while True:
-        inc_call_cnt("API_GetGameInfoAndUserProgress")
-        api_log.info("Request https://retroachievements.org/API/API_GetGameInfoAndUserProgress.php "
-                     "for game {0} and player {1}".format(game_id, player_id))
-        r = requests.get(
-            "https://retroachievements.org/API/API_GetGameInfoAndUserProgress.php?u={}&y={}&z={}&g={}".format(
-                player_id, get_key(), get_user(), game_id))
-        api_log.info("Response from https://retroachievements.org/API/API_GetGameInfoAndUserProgress.php:{0}".format(r))
-        api_log.debug("Full response from https://retroachievements.org/API/API_GetGameInfoAndUserProgress.php/: {0}".
-                      format(r.text))
-        if r.status_code == 200 or cnt >= MAX_TRIES:
-            break
-        if r.status_code == 403:
-            break
-        cnt += 1
-        time.sleep(WAIT_BETWEEN_TRIES)
+    params = {
+        "u": player_id,
+        "g": game_id,
+    }
+    r = _call_api(url="https://retroachievements.org/API/API_GetGameInfoAndUserProgress.php",
+                  method_name="API_GetGameInfoAndUserProgress",
+                  params=params,
+                  )
     player_stats = r.json()
     achievements_list = player_stats.get("Achievements")
     if len(achievements_list) > 0:
@@ -229,23 +233,14 @@ def get_player_achievements(player_id, game_id):
 
 def get_player_games(player_id):
     global api_log
-    cnt = 0
-    while True:
-        inc_call_cnt("API_GetUserRecentlyPlayedGames")
-        api_log.info("Request https://retroachievements.org/API/API_GetUserRecentlyPlayedGames.php "
-                     "for user {0}".format(player_id))
-        r = requests.get(
-            "https://retroachievements.org/API/API_GetUserRecentlyPlayedGames.php?y="
-            "{}&z={}&u={}&c=99999".format(get_key(), get_user(), player_id))
-        api_log.info("Response from https://retroachievements.org/API/API_GetUserRecentlyPlayedGames.php: "
-                     "{1} for player {0}".
-                     format(player_id, r))
-        api_log.debug("Full response from https://retroachievements.org/API/API_GetUserRecentlyPlayedGames.php: "
-                      "{1} for player {0}".format(player_id, r.text))
-        if r.status_code == 200 or cnt >= MAX_TRIES:
-            break
-        cnt += 1
-        time.sleep(WAIT_BETWEEN_TRIES)
+    params = {
+        "u": player_id,
+        "c": 99999,
+    }
+    r = _call_api(url="https://retroachievements.org/API/API_GetUserRecentlyPlayedGames.php",
+                  method_name="API_GetUserRecentlyPlayedGames",
+                  params=params,
+                  )
     res = [[], []]
     obj = r.json()
     if obj is not None and len(obj) > 0 and len(obj[0]) > 0:
@@ -257,23 +252,13 @@ def get_player_games(player_id):
 
 def get_last_player_games(player_id):
     global api_log
-    cnt = 0
-    while True:
-        inc_call_cnt("API_GetUserSummary")
-        api_log.info("Request https://retroachievements.org/API/API_GetUserSummary.php "
-                     "for user {0}".format(player_id))
-        r = requests.get(
-            "https://retroachievements.org/API/API_GetUserSummary.php?y="
-            "{}&z={}&u={}".format(get_key(), get_user(), player_id))
-        api_log.info("Response from https://retroachievements.org/API/API_GetUserSummary.php: "
-                     "{1} for player {0}".
-                     format(player_id, r))
-        api_log.debug("Full response from https://retroachievements.org/API/API_GetUserSummary.php: "
-                      "{1} for player {0}".format(player_id, r.text))
-        if r.status_code == 200 or cnt >= MAX_TRIES:
-            break
-        cnt += 1
-        time.sleep(WAIT_BETWEEN_TRIES)
+    params = {
+        "u": player_id,
+    }
+    r = _call_api(url="https://retroachievements.org/API/API_GetUserSummary.php",
+                  method_name="API_GetUserSummary",
+                  params=params,
+                  )
     res = [[], []]
     obj = r.json().get("RecentlyPlayed")
     if obj is not None and len(obj) > 0 and len(obj[0]) > 0:
@@ -284,23 +269,11 @@ def get_last_player_games(player_id):
 
 
 def get_consoles():
-    global api_log
-    cnt = 0
-    while True:
-        inc_call_cnt("API_GetConsoleIDs")
-        api_log.info("Request https://retroachievements.org/API/API_GetConsoleIDs.php")
-        r = requests.get(
-            "https://retroachievements.org/API/API_GetConsoleIDs.php?y="
-            "{}&z={}".format(get_key(), get_user()))
-        api_log.info("Response from https://retroachievements.org/API/API_GetConsoleIDs.php: "
-                     "{0}".
-                     format(r))
-        api_log.debug("Full response from https://retroachievements.org/API/API_GetUserSummary.php: "
-                      "{0}".format(r.text))
-        if r.status_code == 200 or cnt >= MAX_TRIES:
-            break
-        cnt += 1
-        time.sleep(WAIT_BETWEEN_TRIES)
+    params = {}
+    r = _call_api(url="https://retroachievements.org/API/API_GetConsoleIDs.php",
+                  method_name="API_GetConsoleIDs",
+                  params=params,
+                  )
     res = []
     obj = r.json()
     if obj is not None and len(obj) > 0:
@@ -312,6 +285,10 @@ def get_consoles():
 def init_platform(config: Config) -> Platform:
     global api_log
     global call_counters
+    global api_calls_daily_limit
+    global max_api_call_tries
+    global api_call_pause_on_error
+    global call_counters_retain
     call_counters = {}
     api_log = get_logger("LOG_API_RETRO_" + str(config.mode), config.log_level, True)
     f = config.file_path[:config.file_path.rfind('/')] + "retroachievements.json"
@@ -322,8 +299,28 @@ def init_platform(config: Config) -> Platform:
     incremental_update_enabled = retro_config.get("INCREMENTAL_UPDATE_ENABLED")
     incremental_update_interval = retro_config.get("INCREMENTAL_UPDATE_INTERVAL")
     incremental_skip_chance = retro_config.get("INCREMENTAL_SKIP_CHANCE")
+    api_calls_daily_limit = retro_config.get("API_CALLS_DAILY_LIMIT")
+    if api_calls_daily_limit is None:
+        api_calls_daily_limit = 100000
+    else:
+        api_calls_daily_limit = int(api_calls_daily_limit)
+    max_api_call_tries = retro_config.get("MAX_API_CALL_TRIES")
+    if max_api_call_tries is None:
+        max_api_call_tries = 3
+    else:
+        max_api_call_tries = int(max_api_call_tries)
+    api_call_pause_on_error = retro_config.get("API_CALL_PAUSE_ON_ERROR")
+    if api_call_pause_on_error is None:
+        api_call_pause_on_error = 5
+    else:
+        api_call_pause_on_error = int(api_call_pause_on_error)
+    call_counters_retain = retro_config.get("CALL_COUNTERS_RETAIN")
+    if call_counters_retain is None:
+        call_counters_retain = 7
+    else:
+        call_counters_retain = int(call_counters_retain)
     retro = Platform(name='Retroachievements', get_games=get_player_games, get_achivements=get_player_achievements,
-                     get_game=get_game, games=None, id=2, validate_player=get_name, get_player_id=get_name,
+                     get_game=get_game, games=None, id=PLATFORM_RETRO, validate_player=get_name, get_player_id=get_name,
                      get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,
                      incremental_update_interval=incremental_update_interval, get_last_games=get_last_player_games,
                      incremental_skip_chance=incremental_skip_chance, get_consoles=get_consoles)

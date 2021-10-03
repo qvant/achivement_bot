@@ -379,6 +379,9 @@ def achievement_detail(update: Update, context: CallbackContext):
                     msg += _("Obtained at: {0}.").format(i.get("dt_unlock"))
                 else:
                     msg += _("Status: {0}.").format(_("Locked"))
+                if i.get("is_hidden"):
+                    msg += chr(10)
+                    msg += _("Hidden: True.")
                 if i.get("image_url") is not None and len(i.get("image_url")) > 0:
                     msg += """<a href="{0}">&#8205;</a>""".format(i.get("image_url"))
                 context.bot.send_message(chat_id=chat_id,
@@ -1311,13 +1314,15 @@ def echo(update: Update, context: CallbackContext):
                 buf = player.is_unique()
                 if buf[0]:
                     player.save()
-                    cmd = {"cmd": "create_player", "player_id": player.id, "platform_id": player.platform.id}
+                    cmd = {"cmd": "create_player", "player_id": player.id, "platform_id": player.platform.id,
+                           "chat_id": chat_id
+                           }
                     enqueue_command(cmd, MODE_CORE)
                 if player.id is not None:
                     context.bot.send_message(chat_id=chat_id, text=_("Account {0} bound to you").format(player.name))
                 else:
                     context.bot.send_message(chat_id=chat_id,
-                                             text=_("You already have account for this platform"))
+                                             text=_("You already have account for platform {}").format(i.name))
         if not player_created:
             context.bot.send_message(chat_id=update.effective_chat.id, text=_("Platform {0} not found").
                                      format(cur_platform))

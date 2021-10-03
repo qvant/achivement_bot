@@ -60,8 +60,10 @@ def main_core(config: Config):
                                 players = load_players(platform=i, config=config, player_id=player_id)
                                 if len(players) > 0:
                                     player = players[0]
+                                    if player.telegram_id is None:
+                                        player.telegram_id = cmd.get("chat_id")
                                     on_create(platform=i, player=player)
-                                    queue_log.error("Player {0} validated".format(player_id))
+                                    queue_log.info("Player {0} validated".format(player_id))
                                 else:
                                     queue_log.error("Player {0} not found".format(player_id))
                     elif cmd_type == 'delete_user':
