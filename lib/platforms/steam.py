@@ -232,9 +232,20 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                         params=params)
     achievements = {}
     game_name = name
+    if game_name is None or len(game_name) == 0:
+        game_name = "EMPTY_NAME: id" + str(game_id)
+    stats = {}
     obj = r.json().get("game")
     if len(obj) > 0:
         if "availableGameStats" in obj:
+            obj_stats = obj.get("availableGameStats").get("stats")
+            if obj_stats is not None:
+                for i in obj_stats:
+                    ext_id = i.get("name")
+                    stat_name = i.get("displayName")
+                    if stat_name is None or len(stat_name) == 0:
+                        stat_name = ext_id
+                    stats[ext_id] = stat_name
             obj_achievements = obj.get("availableGameStats").get("achievements")
             if obj_achievements is not None:
                 for i in obj_achievements:
@@ -302,7 +313,7 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                         features.append(cur_feature.get("description"))
     return Game(name=game_name, platform_id=PLATFORM_STEAM, ext_id=game_id, id=None, achievements=achievements,
                 console_ext_id=None, console=None, icon_url=icon_url, release_date=release_date, publisher=publisher,
-                developer=developer, genres=genres, features=features)
+                developer=developer, genres=genres, features=features, stats=stats)
 
 
 def get_player_achievements(player_id, game_id):

@@ -1,4 +1,4 @@
-from typing import Union, List
+from typing import Union, List, Dict
 from .achievement import Achievement
 from .console import Console
 
@@ -9,7 +9,7 @@ class Game:
                  icon_url: Union[str, None] = None, release_date: Union[str, None] = None,
                  genres: List[str] = None, publisher: str = None, developer: str = None, publisher_id: int = None,
                  developer_id: int = None, genre_ids: List[int] = None, features: List[str] = None,
-                 feature_ids: List[int] = None):
+                 feature_ids: List[int] = None, stats: Dict = None):
         self.name = name
         self.platform_id = platform_id
         self.id = id
@@ -43,6 +43,11 @@ class Game:
         self.companies = {}
         self.genre_ids = {}
         self.genres = []
+        if stats is not None:
+            self.stats = stats
+        else:
+            self.stats = {}
+        self._stats_ext__to_id_map = {}
         if genres is not None:
             for i in genres:
                 if i is not None:
@@ -65,6 +70,7 @@ class Game:
                 self.genre_ids[genres[i]] = genre_ids[i]
         self._is_persist = self.id is not None
         self._achievements_saved = False
+        self._stats_saved = len(self.stats) == 0
 
     @property
     def console_name(self) -> Union[str, None]:
@@ -344,8 +350,33 @@ class Game:
                         self.achievements[i].set_game_id(self.id)
                         self.achievements[i].id = None
                         self.achievements[i].save(cursor, active_locale)
+        if not self._stats_saved:
+            stats_to_save = {}
+            stats_exists = {}
+            cursor.execute("""
+                select s.ext_id, s.name from achievements_hunt.game_stats s where s.platform_id = %s and s.game_id = %s
+            """, (self.platform_id, self.id))
+            for stat_ext_id, stat_name in cursor:
+                stats_exists[stat_ext_id] = stat_name
+            for i in self.stats:
+                if i not in stats_exists:
+                    stats_to_save[i] = self.stats[i]
+                elif stats_exists[i] != self.stats[i]:
+                    stats_to_save[i] = self.stats[i]
+            for i in stats_to_save:
+                cursor.execute("""
+                    insert into achievements_hunt.game_stats as s(platform_id, game_id, ext_id, name)
+                    values (%s, %s, %s, %s )
+                    on conflict ON CONSTRAINT u_game_stats_ext_key do update
+                        set dt_update=current_timestamp, name=EXCLUDED.name
+                    returning id
+                """, (self.platform_id, self.id, i, stats_to_save[i]))
+                ret = cursor.fetchone()
+                if ret is not None:
+                    self._stats_ext__to_id_map[i] = ret[0]
         self._is_persist = True
         self._achievements_saved = True
+        self._stats_saved = True
 
     def __str__(self):
         return "{0}".format(self.id)
