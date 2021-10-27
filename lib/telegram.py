@@ -28,6 +28,7 @@ global games_by_player_id
 global user_states
 global user_games_offsets
 global user_achievement_offsets
+global user_active_games
 global user_achievement_details
 global user_active_accounts
 global user_locales
@@ -59,6 +60,7 @@ ACHIEVEMENTS_LIST_NEXT = "list_of_achievements_next"
 ACHIEVEMENTS_LIST_LAST = "list_of_achievements_last"
 ACHIEVEMENTS_LIST_DETAIL = "list_of_achievements_detail"
 ACHIEVEMENTS_LIST_BACK = "list_of_achievements_back"
+ACHIEVEMENTS_LIST_GAME_STATS = "list_of_achievements_game_stats"
 
 SHUTDOWN_CORE = "shutdown_core"
 SHUTDOWN_BOT = "shutdown_bot"
@@ -81,6 +83,7 @@ def telegram_init():
     global games_by_player_id
     global user_states
     global user_games_offsets
+    global user_active_games
     global user_achievement_offsets
     global user_achievement_details
     global user_active_accounts
@@ -90,6 +93,7 @@ def telegram_init():
     global user_command_counters
     user_states = {}
     user_games_offsets = {}
+    user_active_games = {}
     user_achievement_offsets = {}
     user_achievement_details = {}
     user_active_accounts = {}
@@ -302,7 +306,9 @@ def achievements_keyboard(chat_id: int, achievements: List):
                 InlineKeyboardButton(_("Next"), callback_data=ACHIEVEMENTS_LIST_NEXT),
                 InlineKeyboardButton(_("End"), callback_data=ACHIEVEMENTS_LIST_LAST),
                 InlineKeyboardButton(_("Detail on/off"), callback_data=ACHIEVEMENTS_LIST_DETAIL),
-                InlineKeyboardButton(_("To the games..."), callback_data=ACHIEVEMENTS_LIST_BACK)]
+                InlineKeyboardButton(_("To the games..."), callback_data=ACHIEVEMENTS_LIST_BACK),
+                InlineKeyboardButton(_("Show game stats..."), callback_data=ACHIEVEMENTS_LIST_GAME_STATS),
+                ]
     if len(achievements) > 0:
         for i in achievements:
             keyboard.append(InlineKeyboardButton(i.get("name"), callback_data="ACHIEVEMENT_ID_" + str(i.get("id"))))
@@ -326,6 +332,7 @@ def delete_account(update: Update, context: CallbackContext):
 def game_choice(update: Update, context: CallbackContext):
     global telegram_logger
     global user_achievement_offsets
+    global user_active_games
     chat_id = update.effective_chat.id
     cur_item = update["callback_query"]["data"][9:]
     telegram_logger.info("Received command {0} from user {1} in game_choice menu".
@@ -336,6 +343,7 @@ def game_choice(update: Update, context: CallbackContext):
                          format(locale, update.effective_chat.id))
     player = get_player_by_chat_id(chat_id)
     if player is not None:
+        user_active_games[chat_id] = cur_item
         player.get_achievement_stats(cur_item, locale)
         user_achievement_offsets[chat_id] = 0
         show_account_achievements(update, context)
@@ -578,6 +586,36 @@ def game_navigation(update: Update, context: CallbackContext):
         show_games_index(update=update, context=context)
 
 
+def game_stats(update: Update, context: CallbackContext):
+    global user_games_offsets
+    global games_by_player_id
+    global players_by_tlg_id
+    global user_active_accounts
+    global user_active_games
+    global telegram_logger
+    chat_id = update.effective_chat.id
+    cur_item = update["callback_query"]["data"]
+    telegram_logger.info("Received command {0} from user {1} in game_stats menu".
+                         format(cur_item, update.effective_chat.id))
+    inc_command_counter("game_navigation")
+    _ = set_locale(update)
+    player = None
+    if chat_id in user_active_accounts:
+        if user_active_accounts[chat_id] in games_by_player_id:
+            if chat_id in user_games_offsets and chat_id in user_active_games:
+                player = get_player_by_chat_id(chat_id)
+    if player is not None:
+        stats = player.get_game_stats(user_active_games[chat_id])
+        msg = _("Custom game stats:")
+        for i in range(len(stats)):
+            msg += chr(10) + "{}: {}".format(stats[i].get("name"), stats[i].get("value"))
+        reply_markup = InlineKeyboardMarkup(achievements_keyboard(chat_id, []))
+        context.bot.send_message(chat_id=chat_id, text=msg,
+                                 reply_markup=reply_markup)
+    else:
+        account_choice(update, context)
+
+
 def achievement_navigation(update: Update, context: CallbackContext):
     global user_achievement_offsets
     global user_achievement_details
@@ -624,6 +662,8 @@ def achievement_navigation(update: Update, context: CallbackContext):
         account_choice(update, context)
     elif cur_item == ACHIEVEMENTS_LIST_BACK:
         game_navigation(update, context)
+    elif cur_item == ACHIEVEMENTS_LIST_GAME_STATS:
+        game_stats(update, context)
     else:
         show_account_achievements(update=update, context=context)
 

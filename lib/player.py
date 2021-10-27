@@ -233,6 +233,26 @@ class Player:
                                                         "is_hidden": j[8],
                                                         })
 
+    def get_game_stats(self, game_id):
+        stats = []
+        conn = self.platform.get_connect()
+        cur = conn.cursor()
+        cur.execute("""
+            select gs.name,
+                   s.stat_value
+            from achievements_hunt.player_game_stats s
+            join achievements_hunt.game_stats gs
+            on gs.id = s.stat_id
+            where s.player_id = %s
+                and s.platform_id = %s
+                and s.game_id = %s
+            order by gs.name""",
+                    (self.id, self.platform.id, game_id))
+        ret = cur.fetchall()
+        for j in ret:
+            stats.append({"name": j[0], "value": j[1]})
+        return stats
+
     def save(self):
         conn = self.platform.get_connect()
         cur = conn.cursor()
