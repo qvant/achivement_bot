@@ -167,7 +167,8 @@ def init_platform(config: Config) -> Platform:
                      get_player_id=get_name,
                      get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,
                      incremental_update_interval=incremental_update_interval, get_last_games=get_player_last_games,
-                     incremental_skip_chance=incremental_skip_chance, get_consoles=None)
+                     incremental_skip_chance=incremental_skip_chance, get_consoles=None,
+                     get_player_stats=get_player_stats_for_game)
     if is_password_encrypted(key_read):
         api_log.info("Steam key encrypted, do nothing")
         open_key = decrypt_password(key_read, config.server_name, config.db_port)
@@ -339,6 +340,25 @@ def get_player_achievements(player_id, game_id):
         if err == "Profile is not public":
             raise ValueError("Profile is not public")
     return [], []
+
+
+def get_player_stats_for_game(player_id, game_id):
+    params = {
+        "steamid": player_id,
+        "appid": game_id,
+    }
+    r = _call_steam_api(url="http://api.steampowered.com/ISteamUserStats/GetUserStatsForGame/v0002/",
+                        method_name="GetUserStatsForGame",
+                        params=params)
+    player_stats = r.json().get("playerstats")
+    stats = {}
+    player_stats = player_stats.get("stats")
+    if player_stats is not None:
+        for i in player_stats:
+            ext_id = i.get("name")
+            val = i.get("value")
+            stats[ext_id] = str(val)
+    return stats
 
 
 def get_name(player_name: str):

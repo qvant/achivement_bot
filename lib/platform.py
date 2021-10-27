@@ -13,7 +13,7 @@ class Platform:
     def __init__(self, name: str, get_games, get_game, get_achivements, games: [Game], id: int,
                  validate_player, get_player_id, get_stats, incremental_update_enabled: bool,
                  incremental_update_interval: int, get_last_games, incremental_skip_chance: int,
-                 get_consoles):
+                 get_consoles, get_player_stats = None):
         self.id = id
         self._is_persist = False
         self.name = name
@@ -24,6 +24,7 @@ class Platform:
         self.validate_player = validate_player
         self.get_player_id = get_player_id
         self.get_consoles = get_consoles
+        self.get_player_stats = get_player_stats
         self.games = {}
         self.games_by_id = {}
         self.get_stats = get_stats

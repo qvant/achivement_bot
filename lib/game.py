@@ -47,7 +47,7 @@ class Game:
             self.stats = stats
         else:
             self.stats = {}
-        self._stats_ext__to_id_map = {}
+        self._stats_ext_to_id_map = {}
         if genres is not None:
             for i in genres:
                 if i is not None:
@@ -97,6 +97,10 @@ class Game:
     def set_console(self, cons: Console):
         self.console = cons
         self._is_persist = False
+
+    def get_stat_id(self, stat_ext_id: str) -> int:
+        if stat_ext_id in self._stats_ext_to_id_map:
+            return int(self._stats_ext_to_id_map[stat_ext_id])
 
     def _get_company_id(self, company_name: str, cursor) -> Union[None, int]:
         if company_name is None:
@@ -354,10 +358,12 @@ class Game:
             stats_to_save = {}
             stats_exists = {}
             cursor.execute("""
-                select s.ext_id, s.name from achievements_hunt.game_stats s where s.platform_id = %s and s.game_id = %s
+                select s.id, s.ext_id, s.name from achievements_hunt.game_stats s
+                where s.platform_id = %s and s.game_id = %s
             """, (self.platform_id, self.id))
-            for stat_ext_id, stat_name in cursor:
+            for stat_id, stat_ext_id, stat_name in cursor:
                 stats_exists[stat_ext_id] = stat_name
+                self._stats_ext_to_id_map[stat_ext_id] = stat_id
             for i in self.stats:
                 if i not in stats_exists:
                     stats_to_save[i] = self.stats[i]
@@ -373,7 +379,7 @@ class Game:
                 """, (self.platform_id, self.id, i, stats_to_save[i]))
                 ret = cursor.fetchone()
                 if ret is not None:
-                    self._stats_ext__to_id_map[i] = ret[0]
+                    self._stats_ext_to_id_map[i] = ret[0]
         self._is_persist = True
         self._achievements_saved = True
         self._stats_saved = True
