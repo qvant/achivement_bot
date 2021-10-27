@@ -98,9 +98,10 @@ class Game:
         self.console = cons
         self._is_persist = False
 
-    def get_stat_id(self, stat_ext_id: str) -> int:
+    def get_stat_id(self, stat_ext_id: str) -> Union[None, int]:
         if stat_ext_id in self._stats_ext_to_id_map:
             return int(self._stats_ext_to_id_map[stat_ext_id])
+        return None
 
     def _get_company_id(self, company_name: str, cursor) -> Union[None, int]:
         if company_name is None:

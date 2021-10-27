@@ -410,6 +410,10 @@ class Player:
                     elif saved_stats[j] != self.stats[i][j]:
                         stats_to_save[j] = self.stats[i][j]
                 for j in stats_to_save:
+                    if game.get_stat_id(j) is None:
+                        new_game = self.platform.get_game(game_id=game.id, name=game.name)
+                        new_game.save(cursor=cur, active_locale='en')
+                        game = new_game
                     cur.execute(
                         """
                             insert into achievements_hunt.player_game_stats as s
