@@ -45,7 +45,7 @@ create unique index u_games_hardcoded_key on achievements_hunt.games_hardcoded(p
 alter table achievements_hunt.games_hardcoded ADD CONSTRAINT fk_games_hardcoded_to_platforms foreign key (platform_id) references  achievements_hunt.platforms(id);
 alter table achievements_hunt.games_hardcoded owner to achievements_hunt_bot;
 
-insert into achievements_hunt.games_hardcoded (platform_id, ext_id, name) values (1, '1317860', 'The Riftbreaker')
+insert into achievements_hunt.games_hardcoded (platform_id, ext_id, name) values (1, '1317860', 'The Riftbreaker');
 
 update achievements_hunt.version set n_version=5, dt_update=current_timestamp  where v_name = 'Achievement hunt bot';
 commit;
