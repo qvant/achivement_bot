@@ -79,7 +79,7 @@ def get_call_cnt():
     global call_counters
     if call_counters is not None:
         for i in call_counters:
-            total = 0
+            total = int(0)
             for j in call_counters[i]:
                 if j != "Total":
                     total += call_counters[i][j]

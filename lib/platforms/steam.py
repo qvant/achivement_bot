@@ -24,6 +24,7 @@ global api_call_pause_on_error
 global app_details_sleep_time
 global app_details_sleep_chance
 global call_counters_retain
+global hardcoded_games
 
 
 def get_key():
@@ -102,7 +103,7 @@ def get_call_cnt():
     global call_counters
     if call_counters is not None:
         for i in call_counters:
-            total = 0
+            total = int(0)
             for j in call_counters[i]:
                 if j != "Total":
                     total += call_counters[i][j]
@@ -123,7 +124,9 @@ def init_platform(config: Config) -> Platform:
     global app_details_sleep_time
     global app_details_sleep_chance
     global call_counters_retain
+    global hardcoded_games
     call_counters = {}
+    hardcoded_games = {}
     api_log = get_logger("LOG_API_steam_" + str(config.mode), config.log_level, True)
     f = config.file_path[:config.file_path.rfind('/')] + "steam.json"
     fp = codecs.open(f, 'r', "utf-8")
@@ -167,7 +170,8 @@ def init_platform(config: Config) -> Platform:
                      get_player_id=get_name,
                      get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,
                      incremental_update_interval=incremental_update_interval, get_last_games=get_player_last_games,
-                     incremental_skip_chance=incremental_skip_chance, get_consoles=None)
+                     incremental_skip_chance=incremental_skip_chance, get_consoles=None,
+                     get_player_stats=get_player_stats_for_game, set_hardcoded=set_hardcoded)
     if is_password_encrypted(key_read):
         api_log.info("Steam key encrypted, do nothing")
         open_key = decrypt_password(key_read, config.server_name, config.db_port)
@@ -223,6 +227,7 @@ def get_player_games(player_id):
 
 def get_game(game_id: str, name: str, language: str = "English") -> Game:
     global api_log
+    global hardcoded_games
     params = {
         "appid": game_id,
         "l": language,
@@ -232,9 +237,23 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                         params=params)
     achievements = {}
     game_name = name
+    if game_name is None or len(game_name) == 0:
+        game_name = "EMPTY_NAME: id" + str(game_id)
+        # If there is API error, using hardcoded name
+        if game_id in hardcoded_games:
+            game_name = hardcoded_games[game_id]
+    stats = {}
     obj = r.json().get("game")
     if len(obj) > 0:
         if "availableGameStats" in obj:
+            obj_stats = obj.get("availableGameStats").get("stats")
+            if obj_stats is not None:
+                for i in obj_stats:
+                    ext_id = i.get("name")
+                    stat_name = i.get("displayName")
+                    if stat_name is None or len(stat_name) == 0:
+                        stat_name = ext_id
+                    stats[ext_id] = stat_name
             obj_achievements = obj.get("availableGameStats").get("achievements")
             if obj_achievements is not None:
                 for i in obj_achievements:
@@ -302,7 +321,7 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                         features.append(cur_feature.get("description"))
     return Game(name=game_name, platform_id=PLATFORM_STEAM, ext_id=game_id, id=None, achievements=achievements,
                 console_ext_id=None, console=None, icon_url=icon_url, release_date=release_date, publisher=publisher,
-                developer=developer, genres=genres, features=features)
+                developer=developer, genres=genres, features=features, stats=stats)
 
 
 def get_player_achievements(player_id, game_id):
@@ -328,6 +347,25 @@ def get_player_achievements(player_id, game_id):
         if err == "Profile is not public":
             raise ValueError("Profile is not public")
     return [], []
+
+
+def get_player_stats_for_game(player_id, game_id):
+    params = {
+        "steamid": player_id,
+        "appid": game_id,
+    }
+    r = _call_steam_api(url="http://api.steampowered.com/ISteamUserStats/GetUserStatsForGame/v0002/",
+                        method_name="GetUserStatsForGame",
+                        params=params)
+    player_stats = r.json().get("playerstats")
+    stats = {}
+    player_stats = player_stats.get("stats")
+    if player_stats is not None:
+        for i in player_stats:
+            ext_id = i.get("name")
+            val = i.get("value")
+            stats[ext_id] = str(val)
+    return stats
 
 
 def get_name(player_name: str):
@@ -366,3 +404,8 @@ def get_player_stats(player_id):
         else:
             name = None
         return name
+
+
+def set_hardcoded(games_names_map: Dict):
+    global hardcoded_games
+    hardcoded_games = games_names_map

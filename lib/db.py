@@ -2,7 +2,7 @@ from typing import Union
 
 import psycopg2
 
-from lib.config import Config
+from lib.config import Config, MODE_WORKER
 from lib.platform import Platform
 from lib.platforms.steam import init_platform as init_steam
 from lib.platforms.retroachievements import init_platform as init_retro
@@ -24,7 +24,8 @@ def load(config: Config, load_games: bool = True, load_achievements: bool = True
     Platform.set_load_log(load_log)
     if load_games:
         for i in platforms:
-            i.load_games(load_achievements)
+            hardcoded = config.mode == MODE_WORKER
+            i.load_games(load_achievements, load_hardcoded=hardcoded)
     return platforms
 
 

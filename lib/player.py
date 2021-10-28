@@ -28,6 +28,7 @@ class Player:
         self.achievements = {}
         self.achievement_dates = {}
         self.achievement_stats = {}
+        self.stats = {}
         self.has_perfect_games = True
         self.is_public = True
 
@@ -232,6 +233,26 @@ class Player:
                                                         "is_hidden": j[8],
                                                         })
 
+    def get_game_stats(self, game_id):
+        stats = []
+        conn = self.platform.get_connect()
+        cur = conn.cursor()
+        cur.execute("""
+            select gs.name,
+                   s.stat_value
+            from achievements_hunt.player_game_stats s
+            join achievements_hunt.game_stats gs
+            on gs.id = s.stat_id
+            where s.player_id = %s
+                and s.platform_id = %s
+                and s.game_id = %s
+            order by gs.name""",
+                    (self.id, self.platform.id, game_id))
+        ret = cur.fetchall()
+        for j in ret:
+            stats.append({"name": j[0], "value": j[1]})
+        return stats
+
     def save(self):
         conn = self.platform.get_connect()
         cur = conn.cursor()
@@ -364,6 +385,46 @@ class Player:
                     "Saved achievements for player {0} and game {1}: {2}".format(self.ext_id, game.name, saved_cnt))
         self.platform.logger.info("Saved achievements for player {0}".format(self.ext_id))
 
+        if len(self.stats) > 0:
+            self.platform.logger.info(
+                "Find stats for player {0} games: {1}".format(
+                    self.ext_id, len(self.stats)))
+            for i in self.stats:
+                game = self.platform.get_game_by_ext_id(str(i))
+                self.platform.logger.info("Find stats for player {0} game{1}: {2}".format(
+                    self.ext_id, game.ext_id, len(self.stats[i])))
+                saved_stats = {}
+                stats_to_save = {}
+                cur.execute("""
+                    select gs.ext_id, s.stat_value from achievements_hunt.player_game_stats s
+                            join achievements_hunt.game_stats gs
+                            on gs.id = s.stat_id
+                            where s.player_id = %s
+                            and s.platform_id = %s and s.game_id = %s""",
+                            (self.id, self.platform.id, game.id))
+                for stat_id, stat_value in cur:
+                    saved_stats[stat_id] = stat_value
+                for j in self.stats[i]:
+                    if j not in saved_stats:
+                        stats_to_save[j] = self.stats[i][j]
+                    elif saved_stats[j] != self.stats[i][j]:
+                        stats_to_save[j] = self.stats[i][j]
+                for j in stats_to_save:
+                    if game.get_stat_id(j) is None:
+                        new_game = self.platform.get_game(game_id=game.id, name=game.name)
+                        new_game.save(cursor=cur, active_locale='en')
+                        game = new_game
+                    cur.execute(
+                        """
+                            insert into achievements_hunt.player_game_stats as s
+                            (platform_id, game_id, stat_id, player_id, stat_value)
+                            values (%s, %s, %s, %s, %s )
+                            on conflict ON CONSTRAINT u_player_game_stats_key do update
+                                set dt_update=current_timestamp, stat_value=EXCLUDED.stat_value
+                        """,
+                        (self.platform.id, game.id, game.get_stat_id(j), self.id, stats_to_save[j])
+                    )
+
         conn.commit()
         conn.close()
         self.platform.logger.info("Saved player {0}".format(self.ext_id))
@@ -417,6 +478,9 @@ class Player:
                             self.is_public = False
                             self.dt_updated_inc = None
                             self.dt_updated_full = None
+                    if self.platform.get_player_stats is not None and \
+                            len(self.platform.get_game_by_ext_id(str(self.games[i])).stats) > 0:
+                        self.stats[self.games[i]] = self.platform.get_player_stats(self.ext_id, self.games[i])
                 else:
                     self.platform.logger.info(
                         "Skip checking achievements for game with id {1} and name {2} for player {0} {3}, "

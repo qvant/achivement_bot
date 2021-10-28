@@ -1,3 +1,4 @@
+drop table achievements_hunt.player_game_stats;
 drop table achievements_hunt.player_achievements;
 drop table achievements_hunt.player_games;
 drop table achievements_hunt.players;
@@ -6,6 +7,7 @@ drop table achievements_hunt.achievement_translations;
 drop table achievements_hunt.achievements;
 drop table achievements_hunt.map_games_to_features;
 drop table achievements_hunt.map_games_to_genres;
+drop table achievements_hunt.game_stats;
 drop table achievements_hunt.games;
 drop table achievements_hunt.features;
 drop table achievements_hunt.genres;
