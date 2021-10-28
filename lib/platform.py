@@ -13,7 +13,7 @@ class Platform:
     def __init__(self, name: str, get_games, get_game, get_achivements, games: [Game], id: int,
                  validate_player, get_player_id, get_stats, incremental_update_enabled: bool,
                  incremental_update_interval: int, get_last_games, incremental_skip_chance: int,
-                 get_consoles, get_player_stats = None):
+                 get_consoles, get_player_stats=None, set_hardcoded=None):
         self.id = id
         self._is_persist = False
         self.name = name
@@ -25,6 +25,7 @@ class Platform:
         self.get_player_id = get_player_id
         self.get_consoles = get_consoles
         self.get_player_stats = get_player_stats
+        self.set_hardcoded = set_hardcoded
         self.games = {}
         self.games_by_id = {}
         self.get_stats = get_stats
@@ -40,6 +41,7 @@ class Platform:
         self.languages = []
         self._consoles_by_id = {}
         self._consoles_by_ext_id = {}
+        self._hardcoded_games = {}
 
     @classmethod
     def set_config(cls, config: Config):
@@ -147,10 +149,21 @@ class Platform:
             consoles.append(Console(id=id, name=name, ext_id=ext_id, platform_id=self.id))
         self.set_consoles(consoles)
 
-    def load_games(self, load_achievements=True, game_id=None):
+    def load_games(self, load_achievements=True, game_id=None, load_hardcoded: bool = False):
         conn = self.get_connect()
         cursor = conn.cursor()
         if game_id is None:
+            if load_hardcoded:
+                cursor.execute("""
+                    select ext_id,
+                           name
+                      from achievements_hunt.games_hardcoded h
+                      where h.platform_id = %s
+                """, (self.id,))
+                for game_ext_id, game_name in cursor:
+                    self._hardcoded_games[str(game_ext_id)] = game_name
+                if self.set_hardcoded is not None:
+                    self.set_hardcoded(self._hardcoded_games)
             cursor.execute("""
                     select g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url, g.release_date,
                            g.developer_id, d.name, g.publisher_id, p.name,
