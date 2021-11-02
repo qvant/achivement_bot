@@ -89,10 +89,34 @@ def get_name(player_name: str):
     return player_id
 
 
-def get_game(game_id: str, name: str, language: str = "English") -> Game:
+def get_game(game_id: str, name: str, language: str = "en-US") -> Game:
     global api_log
     cnt = 0
-    return Game(name=game_id, platform_id=PLATFORM_GOG, ext_id=game_id, id=None, achievements=None,
+    game_name = name
+    while True:
+        inc_call_cnt("api.gog.com/v2/games")
+        api_log.info("Request https://api.gog.com/v2/games/ "
+                     "for game {0}, name {1} language {2} supplied".format(game_id, name, language))
+        r = requests.get(
+            "https://api.gog.com/v2/games/{}?locale={}".
+            format(game_id, language))
+        api_log.info("Response from https://api.gog.com/v2/games/ "
+                     "{0} from GOG".format(r))
+        api_log.debug("Full response from https://api.gog.com/v2/games/: {0}".
+                      format(r.text))
+        if r.status_code == 200 or cnt >= MAX_TRIES:
+            break
+        api_log.error("Full response from https://api.gog.com/v2/games/: {0}".
+                      format(r.text))
+        cnt += 1
+        time.sleep(WAIT_BETWEEN_TRIES)
+    obj = r.json().get("_embedded")
+    if len(obj) > 0:
+        product = obj.get("product")
+        if len(product) > 0:
+            game_name = product.get("title")
+    # TODO: more info
+    return Game(name=game_name, platform_id=PLATFORM_GOG, ext_id=game_id, id=None, achievements=None,
                 console_ext_id=None, console=None)
 
 
