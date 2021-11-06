@@ -3,6 +3,7 @@ import codecs
 import requests
 import time
 import datetime
+from bs4 import BeautifulSoup
 from ..achievement import Achievement
 from ..config import Config
 from ..game import Game
@@ -85,7 +86,32 @@ def get_call_cnt():
 def get_name(player_name: str):
     global api_log
     cnt = 0
+    while True:
+        inc_call_cnt("https://www.gog.com/u/")
+        api_log.info("Check if user {} exists".format(player_name))
+        r = requests.get(
+            "https://www.gog.com/u/{}".
+            format(player_name))
+        api_log.info("Response from https://www.gog.com/u/{} "
+                     "{} from GOG".format(player_name, r))
+        api_log.debug("Full response from https://www.gog.com/u/{1}: {0}".
+                      format(r.text, player_name))
+        if r.status_code == 200 or r.status_code == 404 or cnt >= MAX_TRIES:
+            break
+        api_log.error("Full response from https://www.gog.com/u/{1}: {0}".
+                      format(r.text, player_name))
+        cnt += 1
+        time.sleep(WAIT_BETWEEN_TRIES)
     player_id = None
+    if r.status_code == 200:
+        soup = BeautifulSoup(r.text, 'html.parser')
+        for i in soup.find_all('div'):
+            player_id = i.get("prof-game-statistics-user-id")
+            if player_id is not None:
+                break
+            player_id = i.get("prof-user-status")
+            if player_id is not None:
+                break
     return player_id
 
 
