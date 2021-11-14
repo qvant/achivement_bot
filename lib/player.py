@@ -391,8 +391,8 @@ class Player:
                     self.ext_id, len(self.stats)))
             for i in self.stats:
                 game = self.platform.get_game_by_ext_id(str(i))
-                self.platform.logger.info("Find stats for player {0} game{1}: {2}".format(
-                    self.ext_id, game.ext_id, len(self.stats[i])))
+                self.platform.logger.info("Find stats for player {0} game {1} ({3}): {2}".format(
+                    self.ext_id, game.ext_id, len(self.stats[i]), game.name))
                 saved_stats = {}
                 stats_to_save = {}
                 cur.execute("""
