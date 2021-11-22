@@ -1,5 +1,6 @@
 import datetime
 import random
+from psycopg2 import Error as pg_error
 from typing import Union
 from .platform import Platform
 from datetime import timezone
@@ -27,6 +28,7 @@ class Player:
         self.achievements = {}
         self.achievement_dates = {}
         self.achievement_stats = {}
+        self.stats = {}
         self.has_perfect_games = True
         self.is_public = True
 
@@ -35,9 +37,38 @@ class Player:
         self.dt_updated = datetime.datetime.now()
         conn = self.platform.get_connect()
         cur = conn.cursor()
-        cur.execute("""
-                        update achievements_hunt.players set ext_id = %s, dt_update = %s where id = %s
-                    """, (self.ext_id, self.dt_updated, self.id,))
+        try:
+            cur.execute("""
+                            update achievements_hunt.players set ext_id = %s, dt_update = %s where id = %s
+                        """, (self.ext_id, self.dt_updated, self.id,))
+        except pg_error as err:
+            if err.pgcode == "23505":
+                conn.rollback()
+                cur.execute("""
+                    delete from achievements_hunt.players where id = %s
+                """, (self.id,))
+                cur.execute("""
+                update achievements_hunt.players set telegram_id = %s where ext_id = %s and platform_id = %s
+                    and telegram_id is null
+                returning id
+                                """, (self.telegram_id, self.ext_id, self.platform.id,))
+                buf = cur.fetchone()
+                if buf is not None:
+                    self.id = buf[0]
+                else:
+                    conn.rollback()
+                    self.platform.logger.warn("Player with ext_id {0} on platform {1} already exists and can't be "
+                                              "bound to the telegram account {2}".
+                                              format(self.id, self.platform.id, self.telegram_id))
+                    raise
+                self.platform.logger.info("Bound existed player {0} to telegram account {1}".
+                                          format(self.id, self.telegram_id))
+            else:
+                self.platform.logger.warn("Error: {} {} when set ext_id {} on platform {} for player {} and telegram "
+                                          "account {}".
+                                          format(err, err.pgcode, self.ext_id, self.platform.id, self.id,
+                                                 self.telegram_id))
+                raise
         conn.commit()
 
     def set_name(self, name):
@@ -87,19 +118,30 @@ class Player:
     def is_unique(self):
         conn = self.platform.get_connect()
         cur = conn.cursor()
-        cur.execute("""select count(1) from achievements_hunt.players where platform_id = %s and ext_id = %s""",
-                    (self.platform.id, self.ext_id))
-        ret = cur.fetchone()
-        if ret[0] > 0:
-            return False, "Account already bound"
         cur.execute("""select count(1) from achievements_hunt.players where platform_id = %s and telegram_id = %s""",
                     (self.platform.id, self.telegram_id))
         ret = cur.fetchone()
         if ret[0] > 0:
             return False, "Only one account per telegram user for platform"
+        cur.execute("""select count(1) from achievements_hunt.players where platform_id = %s and ext_id = %s""",
+                    (self.platform.id, self.ext_id))
+        ret = cur.fetchone()
+        if ret[0] > 0:
+            cur.execute("""select telegram_id, id from achievements_hunt.players where platform_id = %s
+                        and ext_id = %s""",
+                        (self.platform.id, self.ext_id))
+            ret = cur.fetchone()
+            if ret[0] is not None:
+                return False, "Account already bound"
+            else:
+                self.id = ret[1]
+                cur.execute("""update achievements_hunt.players set telegram_id = %s where platform_id = %s
+                        and ext_id = %s and telegram_id is null""",
+                            (self.telegram_id, self.platform.id, self.ext_id))
+                conn.commit()
         return True, "Ok"
 
-    def get_owned_games(self, mode=GAMES_ALL, force=False):
+    def get_owned_games(self, mode=GAMES_ALL, force=False, console_id: Union[int, None] = None):
         if len(self.games) == 0 or force:
             if force:
                 self.games = []
@@ -110,29 +152,33 @@ class Player:
                 cur.execute("""select g.game_id, g.is_perfect from achievements_hunt.player_games g
                 join achievements_hunt.games gg on gg.id = g.game_id
                  where g.platform_id = %s and g.player_id = %s
+                   and (gg.console_id = %s or %s is null)
                  order by gg.name""",
-                            (self.platform.id, self.id))
+                            (self.platform.id, self.id, console_id, console_id))
             elif mode == GAMES_WITH_ACHIEVEMENTS:
                 cur.execute("""select g.game_id, g.is_perfect from achievements_hunt.player_games g
                                 join achievements_hunt.games gg on gg.id = g.game_id
                                  where g.platform_id = %s and g.player_id = %s
-                                 and gg.has_achievements
+                                   and gg.has_achievements
+                                   and (gg.console_id = %s or %s is null)
                                  order by gg.name""",
-                            (self.platform.id, self.id))
+                            (self.platform.id, self.id, console_id, console_id))
             elif mode == GAMES_PERFECT:
                 cur.execute("""select g.game_id, g.is_perfect from achievements_hunt.player_games g
                                 join achievements_hunt.games gg on gg.id = g.game_id
                                  where g.platform_id = %s and g.player_id = %s
-                                 and g.is_perfect
+                                   and g.is_perfect
+                                   and (gg.console_id = %s or %s is null)
                                  order by gg.name""",
-                            (self.platform.id, self.id))
+                            (self.platform.id, self.id, console_id, console_id))
             else:
                 self.platform.logger.critical("incorrect get games mode {0}".format(mode))
                 cur.execute("""select g.game_id, g.is_perfect from achievements_hunt.player_games g
                                 join achievements_hunt.games gg on gg.id = g.game_id
                                  where g.platform_id = %s and g.player_id = %s
+                                   and (gg.console_id = %s or %s is null)
                                  order by gg.name""",
-                            (self.platform.id, self.id))
+                            (self.platform.id, self.id, console_id, console_id))
             ret = cur.fetchall()
             self.has_perfect_games = False
             for j in ret:
@@ -160,13 +206,18 @@ class Player:
             cur = conn.cursor()
             cur.execute("""select coalesce (tr.name, a.name) as name, pa.id, a.percent_owners, a.id,
              coalesce(tr.description, a.description) as description, pa.dt_unlock,
-             case when pa.id is not null then a.icon_url else a.locked_icon_url end
+             case when pa.id is not null then a.icon_url else a.locked_icon_url end,
+             ar.name,
+             a.is_hidden
              from achievements_hunt.achievements a
              left join achievements_hunt.player_achievements pa
              on pa.achievement_id = a.id and pa.player_id = %s
              left join achievements_hunt.achievement_translations tr
              on tr.achievement_id = a.id and tr.platform_id = a.platform_id
              and tr.locale = %s
+             left join achievements_hunt.achievement_rarity ar
+             on ar.n_bottom_border < a.percent_owners
+               and ar.n_upper_border >= a.percent_owners
              where a.platform_id = %s
              and a.game_id = %s
              order by a.percent_owners desc, a.name""",
@@ -177,7 +228,30 @@ class Player:
                                                         "percent": j[2], "id": j[3],
                                                         "description": j[4],
                                                         "dt_unlock": j[5],
-                                                        "image_url": j[6]})
+                                                        "image_url": j[6],
+                                                        "rarity": j[7],
+                                                        "is_hidden": j[8],
+                                                        })
+
+    def get_game_stats(self, game_id):
+        stats = []
+        conn = self.platform.get_connect()
+        cur = conn.cursor()
+        cur.execute("""
+            select gs.name,
+                   s.stat_value
+            from achievements_hunt.player_game_stats s
+            join achievements_hunt.game_stats gs
+            on gs.id = s.stat_id
+            where s.player_id = %s
+                and s.platform_id = %s
+                and s.game_id = %s
+            order by gs.name""",
+                    (self.id, self.platform.id, game_id))
+        ret = cur.fetchall()
+        for j in ret:
+            stats.append({"name": j[0], "value": j[1]})
+        return stats
 
     def save(self):
         conn = self.platform.get_connect()
@@ -311,6 +385,46 @@ class Player:
                     "Saved achievements for player {0} and game {1}: {2}".format(self.ext_id, game.name, saved_cnt))
         self.platform.logger.info("Saved achievements for player {0}".format(self.ext_id))
 
+        if len(self.stats) > 0:
+            self.platform.logger.info(
+                "Find stats for player {0} games: {1}".format(
+                    self.ext_id, len(self.stats)))
+            for i in self.stats:
+                game = self.platform.get_game_by_ext_id(str(i))
+                self.platform.logger.info("Find stats for player {0} game{1}: {2}".format(
+                    self.ext_id, game.ext_id, len(self.stats[i])))
+                saved_stats = {}
+                stats_to_save = {}
+                cur.execute("""
+                    select gs.ext_id, s.stat_value from achievements_hunt.player_game_stats s
+                            join achievements_hunt.game_stats gs
+                            on gs.id = s.stat_id
+                            where s.player_id = %s
+                            and s.platform_id = %s and s.game_id = %s""",
+                            (self.id, self.platform.id, game.id))
+                for stat_id, stat_value in cur:
+                    saved_stats[stat_id] = stat_value
+                for j in self.stats[i]:
+                    if j not in saved_stats:
+                        stats_to_save[j] = self.stats[i][j]
+                    elif saved_stats[j] != self.stats[i][j]:
+                        stats_to_save[j] = self.stats[i][j]
+                for j in stats_to_save:
+                    if game.get_stat_id(j) is None:
+                        new_game = self.platform.get_game(game_id=game.id, name=game.name)
+                        new_game.save(cursor=cur, active_locale='en')
+                        game = new_game
+                    cur.execute(
+                        """
+                            insert into achievements_hunt.player_game_stats as s
+                            (platform_id, game_id, stat_id, player_id, stat_value)
+                            values (%s, %s, %s, %s, %s )
+                            on conflict ON CONSTRAINT u_player_game_stats_key do update
+                                set dt_update=current_timestamp, stat_value=EXCLUDED.stat_value
+                        """,
+                        (self.platform.id, game.id, game.get_stat_id(j), self.id, stats_to_save[j])
+                    )
+
         conn.commit()
         conn.close()
         self.platform.logger.info("Saved player {0}".format(self.ext_id))
@@ -321,20 +435,21 @@ class Player:
             delta = datetime.timedelta(days=self.platform.incremental_update_interval)
             if (self.dt_updated_inc is not None and (self.dt_updated_inc + delta) > cur_time) or \
                     (self.dt_updated_full is not None and (self.dt_updated_full + delta) > cur_time):
-                self.games, names, = self.platform.get_last_games(self.ext_id)
-                self.platform.logger.info("Prepared incremental update for player {0}. "
-                                          "Last inc update {1}, last full update {2}".
-                                          format(self.name, self.dt_updated_inc, self.dt_updated_full))
-                self.dt_updated_inc = cur_time
-            elif random.random() < self.platform.incremental_skip_chance:
-                self.games, names, = self.platform.get_games(self.ext_id)
-                self.dt_updated_full = cur_time
-                self.platform.logger.info("Prepared full update (because random) for player {0}. "
-                                          "Last inc update {1}, last full update {2}".
-                                          format(self.name, self.dt_updated_inc, self.dt_updated_full))
+                if random.random() >= self.platform.incremental_skip_chance:
+                    self.games, names, = self.platform.get_last_games(self.ext_id)
+                    self.platform.logger.info("Prepared incremental update for player {0}. "
+                                              "Last inc update {1}, last full update {2}".
+                                              format(self.name, self.dt_updated_inc, self.dt_updated_full))
+                    self.dt_updated_inc = cur_time
+                else:
+                    self.games, names, = self.platform.get_games(self.ext_id)
+                    self.dt_updated_full = cur_time
+                    self.platform.logger.info("Prepared full update (because random) for player {0}. "
+                                              "Last inc update {1}, last full update {2}".
+                                              format(self.name, self.dt_updated_inc, self.dt_updated_full))
             else:
                 self.games, names, = self.platform.get_games(self.ext_id)
-                self.platform.logger.info("Prepared full update for player {0}. "
+                self.platform.logger.info("Prepared full update (because inc not possible) for player {0}. "
                                           "Last inc update {1}, last full update {2}".
                                           format(self.name, self.dt_updated_inc, self.dt_updated_full))
                 self.dt_updated_full = cur_time
@@ -363,6 +478,9 @@ class Player:
                             self.is_public = False
                             self.dt_updated_inc = None
                             self.dt_updated_full = None
+                    if self.platform.get_player_stats is not None and \
+                            len(self.platform.get_game_by_ext_id(str(self.games[i])).stats) > 0:
+                        self.stats[self.games[i]] = self.platform.get_player_stats(self.ext_id, self.games[i])
                 else:
                     self.platform.logger.info(
                         "Skip checking achievements for game with id {1} and name {2} for player {0} {3}, "

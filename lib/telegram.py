@@ -7,7 +7,7 @@ from .player import Player, GAMES_ALL, GAMES_PERFECT, GAMES_WITH_ACHIEVEMENTS
 from .log import get_logger
 from .queue import enqueue_command
 from .stats import get_stats
-from typing import Union, List
+from typing import Union, List, Dict
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext.callbackcontext import CallbackContext
 from telegram.update import Update
@@ -28,6 +28,7 @@ global games_by_player_id
 global user_states
 global user_games_offsets
 global user_achievement_offsets
+global user_active_games
 global user_achievement_details
 global user_active_accounts
 global user_locales
@@ -47,6 +48,7 @@ GAMES_LIST_PREV = "list_of_games_prev"
 GAMES_LIST_NEXT = "list_of_games_next"
 GAMES_LIST_LAST = "list_of_games_last"
 GAMES_LIST_INDEX = "list_of_games_index"
+GAMES_LIST_CONSOLE = "list_of_games_console"
 GAMES_LIST_ONLY_ACHIEVEMENTS = "list_of_games_only_achievements"
 GAMES_LIST_ONLY_PERFECT = "list_of_games_only_perfect"
 GAMES_LIST_ALL = "list_of_games_all"
@@ -58,6 +60,7 @@ ACHIEVEMENTS_LIST_NEXT = "list_of_achievements_next"
 ACHIEVEMENTS_LIST_LAST = "list_of_achievements_last"
 ACHIEVEMENTS_LIST_DETAIL = "list_of_achievements_detail"
 ACHIEVEMENTS_LIST_BACK = "list_of_achievements_back"
+ACHIEVEMENTS_LIST_GAME_STATS = "list_of_achievements_game_stats"
 
 SHUTDOWN_CORE = "shutdown_core"
 SHUTDOWN_BOT = "shutdown_bot"
@@ -80,6 +83,7 @@ def telegram_init():
     global games_by_player_id
     global user_states
     global user_games_offsets
+    global user_active_games
     global user_achievement_offsets
     global user_achievement_details
     global user_active_accounts
@@ -89,6 +93,7 @@ def telegram_init():
     global user_command_counters
     user_states = {}
     user_games_offsets = {}
+    user_active_games = {}
     user_achievement_offsets = {}
     user_achievement_details = {}
     user_active_accounts = {}
@@ -250,7 +255,8 @@ def stats_keyboard(chat_id: int):
     return pretty_menu(keyboard)
 
 
-def games_keyboard(chat_id: int, games, cur_games=GAMES_WITH_ACHIEVEMENTS, has_perfect_games: bool = True):
+def games_keyboard(chat_id: int, games, cur_games=GAMES_WITH_ACHIEVEMENTS, has_perfect_games: bool = True,
+                   show_console_choice: bool = False):
     _ = set_locale(chat_id=chat_id)
     keyboard = [InlineKeyboardButton(_("Begin"), callback_data=GAMES_LIST_FIRST),
                 InlineKeyboardButton(_("Previous"), callback_data=GAMES_LIST_PREV)]
@@ -262,6 +268,8 @@ def games_keyboard(chat_id: int, games, cur_games=GAMES_WITH_ACHIEVEMENTS, has_p
     keyboard.append(InlineKeyboardButton(_("Next"), callback_data=GAMES_LIST_NEXT))
     keyboard.append(InlineKeyboardButton(_("End"), callback_data=GAMES_LIST_LAST))
     keyboard.append(InlineKeyboardButton(_("Index"), callback_data=GAMES_LIST_INDEX))
+    if show_console_choice:
+        keyboard.append(InlineKeyboardButton(_("Platform"), callback_data=GAMES_LIST_CONSOLE))
     if cur_games == GAMES_ALL:
         keyboard.append(InlineKeyboardButton(_("With achievements"), callback_data=GAMES_LIST_ONLY_ACHIEVEMENTS))
     elif cur_games == GAMES_WITH_ACHIEVEMENTS and has_perfect_games:
@@ -280,6 +288,17 @@ def games_index_keyboard():
     return pretty_menu(keyboard)
 
 
+def consoles_index_keyboard(chat_id: int, consoles: Dict):
+    keyboard = []
+    for i in consoles:
+        keyboard.append(InlineKeyboardButton(consoles[i],
+                                             callback_data="list_of_consoles_begin_" + str(i)))
+    _ = set_locale(chat_id=chat_id)
+    keyboard.append(InlineKeyboardButton(_('All'),
+                                         callback_data="list_of_consoles_begin_"))
+    return pretty_menu(keyboard)
+
+
 def achievements_keyboard(chat_id: int, achievements: List):
     _ = set_locale(chat_id=chat_id)
     keyboard = [InlineKeyboardButton(_("Begin"), callback_data=ACHIEVEMENTS_LIST_FIRST),
@@ -287,7 +306,9 @@ def achievements_keyboard(chat_id: int, achievements: List):
                 InlineKeyboardButton(_("Next"), callback_data=ACHIEVEMENTS_LIST_NEXT),
                 InlineKeyboardButton(_("End"), callback_data=ACHIEVEMENTS_LIST_LAST),
                 InlineKeyboardButton(_("Detail on/off"), callback_data=ACHIEVEMENTS_LIST_DETAIL),
-                InlineKeyboardButton(_("To the games..."), callback_data=ACHIEVEMENTS_LIST_BACK)]
+                InlineKeyboardButton(_("To the games..."), callback_data=ACHIEVEMENTS_LIST_BACK),
+                InlineKeyboardButton(_("Show game stats..."), callback_data=ACHIEVEMENTS_LIST_GAME_STATS),
+                ]
     if len(achievements) > 0:
         for i in achievements:
             keyboard.append(InlineKeyboardButton(i.get("name"), callback_data="ACHIEVEMENT_ID_" + str(i.get("id"))))
@@ -311,6 +332,7 @@ def delete_account(update: Update, context: CallbackContext):
 def game_choice(update: Update, context: CallbackContext):
     global telegram_logger
     global user_achievement_offsets
+    global user_active_games
     chat_id = update.effective_chat.id
     cur_item = update["callback_query"]["data"][9:]
     telegram_logger.info("Received command {0} from user {1} in game_choice menu".
@@ -321,6 +343,7 @@ def game_choice(update: Update, context: CallbackContext):
                          format(locale, update.effective_chat.id))
     player = get_player_by_chat_id(chat_id)
     if player is not None:
+        user_active_games[chat_id] = cur_item
         player.get_achievement_stats(cur_item, locale)
         user_achievement_offsets[chat_id] = 0
         show_account_achievements(update, context)
@@ -355,12 +378,18 @@ def achievement_detail(update: Update, context: CallbackContext):
                 msg += chr(10)
                 msg += _("Percent owners: {0}.").format(i.get("percent"))
                 msg += chr(10)
+                if i.get("rarity"):
+                    msg += _("Rarity: {0}.").format(i.get("rarity"))
+                    msg += chr(10)
                 if i.get("owned"):
                     msg += _("Status: {0}.").format(_("Unlocked"))
                     msg += chr(10)
                     msg += _("Obtained at: {0}.").format(i.get("dt_unlock"))
                 else:
                     msg += _("Status: {0}.").format(_("Locked"))
+                if i.get("is_hidden"):
+                    msg += chr(10)
+                    msg += _("Hidden: True.")
                 if i.get("image_url") is not None and len(i.get("image_url")) > 0:
                     msg += """<a href="{0}">&#8205;</a>""".format(i.get("image_url"))
                 context.bot.send_message(chat_id=chat_id,
@@ -469,6 +498,29 @@ def stats_choice(update: Update, context: CallbackContext):
         telegram_logger.critical("Received illegal cmd {1} from user {0} in stats_choice menu".format(chat_id, update))
 
 
+def consoles_navigation(update: Update, context: CallbackContext):
+    chat_id = update.effective_chat.id
+    cur_item = update["callback_query"]["data"]
+    telegram_logger.info("Received command {0} from user {1} in consoles_navigation menu".
+                         format(cur_item, update.effective_chat.id))
+    inc_command_counter("consoles_navigation")
+    _ = set_locale(update)
+    if chat_id in user_active_accounts:
+        for i in players_by_tlg_id[chat_id]:
+            if str(i.id) == str(user_active_accounts[chat_id]):
+                user_active_accounts[chat_id] = i.id
+                console_id = cur_item[23:]
+                if len(console_id) == 0:
+                    console_id = None
+                i.get_owned_games(mode=user_games_modes[chat_id], force=True, console_id=console_id)
+                games_by_player_id[user_active_accounts[chat_id]] = i.games
+                user_games_offsets[chat_id] = 0
+        show_account_stats(update=update, context=context, console_id=console_id)
+        show_account_games(update=update, context=context)
+    else:
+        start(update, context)
+
+
 def game_navigation(update: Update, context: CallbackContext):
     global user_games_offsets
     global games_by_player_id
@@ -526,10 +578,42 @@ def game_navigation(update: Update, context: CallbackContext):
             show_account_games(update=update, context=context)
     elif cur_item == GAMES_LIST_BACK:
         start(update, context)
+    elif cur_item == GAMES_LIST_CONSOLE:
+        show_account_consoles(update=update, context=context)
     elif cur_item != GAMES_LIST_INDEX:
         show_account_games(update=update, context=context)
     else:
         show_games_index(update=update, context=context)
+
+
+def game_stats(update: Update, context: CallbackContext):
+    global user_games_offsets
+    global games_by_player_id
+    global players_by_tlg_id
+    global user_active_accounts
+    global user_active_games
+    global telegram_logger
+    chat_id = update.effective_chat.id
+    cur_item = update["callback_query"]["data"]
+    telegram_logger.info("Received command {0} from user {1} in game_stats menu".
+                         format(cur_item, update.effective_chat.id))
+    inc_command_counter("game_navigation")
+    _ = set_locale(update)
+    player = None
+    if chat_id in user_active_accounts:
+        if user_active_accounts[chat_id] in games_by_player_id:
+            if chat_id in user_games_offsets and chat_id in user_active_games:
+                player = get_player_by_chat_id(chat_id)
+    if player is not None:
+        stats = player.get_game_stats(user_active_games[chat_id])
+        msg = _("Custom game stats:")
+        for i in range(len(stats)):
+            msg += chr(10) + "{}: {}".format(stats[i].get("name"), stats[i].get("value"))
+        reply_markup = InlineKeyboardMarkup(achievements_keyboard(chat_id, []))
+        context.bot.send_message(chat_id=chat_id, text=msg,
+                                 reply_markup=reply_markup)
+    else:
+        account_choice(update, context)
 
 
 def achievement_navigation(update: Update, context: CallbackContext):
@@ -578,6 +662,8 @@ def achievement_navigation(update: Update, context: CallbackContext):
         account_choice(update, context)
     elif cur_item == ACHIEVEMENTS_LIST_BACK:
         game_navigation(update, context)
+    elif cur_item == ACHIEVEMENTS_LIST_GAME_STATS:
+        game_stats(update, context)
     else:
         show_account_achievements(update=update, context=context)
 
@@ -692,7 +778,7 @@ def account_choice(update: Update, context: CallbackContext):
         list_of_games(update, context)
 
 
-def show_account_stats(update: Update, context: CallbackContext):
+def show_account_stats(update: Update, context: CallbackContext, console_id: Union[int, None] = None):
     chat_id = update.effective_chat.id
     _ = set_locale(update)
     locale = get_locale_name(update)
@@ -732,7 +818,8 @@ def show_account_stats(update: Update, context: CallbackContext):
         select
                 coalesce(tr.name, a.name),
                 a.percent_owners,
-                g.name || case when c.name is not null then ' (' || c.name || ')' else '' end
+                g.name || case when c.name is not null then ' (' || c.name || ')' else '' end,
+                ar.name
             from achievements_hunt.player_achievements aa
             join achievements_hunt.achievements a
             on aa.achievement_id  = a.id
@@ -749,14 +836,20 @@ def show_account_stats(update: Update, context: CallbackContext):
             left join achievements_hunt.consoles c
             on c.id = g.console_id
               and c.platform_id = g.platform_id
+            left join achievements_hunt.achievement_rarity ar
+            on ar.n_bottom_border < a.percent_owners
+              and ar.n_upper_border >= a.percent_owners
             where aa.player_id = %s
+              and (c.id = %s or %s is null)
             order by a.percent_owners, coalesce(tr.name, a.name) limit 10
-        """, (locale, player.id))
+        """, (locale, player.id, console_id, console_id))
         buf = cursor.fetchall()
         if len(buf) > 0:
             achievement_list = chr(10) + chr(10) + _("Rarest achievements:") + chr(10)
             for i in buf:
                 achievement_list += _(r"{} (game {}) percent owners {}").format(i[0], i[2], i[1])
+                if i[3]:
+                    achievement_list += r" ({})".format(i[3])
                 achievement_list += chr(10)
         else:
             achievement_list = ""
@@ -764,7 +857,8 @@ def show_account_stats(update: Update, context: CallbackContext):
                 select
                         coalesce(tr.name, a.name),
                         a.percent_owners,
-                        g.name || case when c.name is not null then ' (' || c.name || ')' else '' end
+                        g.name || case when c.name is not null then ' (' || c.name || ')' else '' end,
+                        ar.name
                     from achievements_hunt.player_achievements aa
                     join achievements_hunt.achievements a
                     on aa.achievement_id  = a.id
@@ -781,14 +875,20 @@ def show_account_stats(update: Update, context: CallbackContext):
                     left join achievements_hunt.consoles c
                     on c.id = g.console_id
                       and c.platform_id = g.platform_id
+                    left join achievements_hunt.achievement_rarity ar
+                    on ar.n_bottom_border < a.percent_owners
+                      and ar.n_upper_border >= a.percent_owners
                     where aa.player_id = %s
+                      and (c.id = %s or %s is null)
                     order by dt_unlock desc, coalesce(tr.name, a.name) limit 5
-                """, (locale, player.id))
+                """, (locale, player.id, console_id, console_id))
         buf = cursor.fetchall()
         if len(buf) > 0:
             new_achievement_list = chr(10) + _("Last achievements:") + chr(10)
             for i in buf:
                 new_achievement_list += _(r"{} (game {}) percent owners {}").format(i[0], i[2], i[1])
+                if i[3]:
+                    new_achievement_list += r" ({})".format(i[3])
                 new_achievement_list += chr(10)
         else:
             new_achievement_list = ""
@@ -800,7 +900,8 @@ def show_account_stats(update: Update, context: CallbackContext):
                                                          "average completion percent {2}"
                                                          ", perfect games {3}, was updated at {4} {5}{7}{6}").
                                  format(total_games, achievement_games, avg_percent, perfect_games, player.dt_updated,
-                                        achievement_list, private_warning, new_achievement_list))
+                                        achievement_list, private_warning, new_achievement_list),
+                                 parse_mode=ParseMode.HTML, disable_web_page_preview=False)
     else:
         start(update, context)
 
@@ -840,7 +941,9 @@ def show_account_games(update: Update, context: CallbackContext):
 
     if len(games) > 0:
         reply_markup = InlineKeyboardMarkup(games_keyboard(chat_id, games, cur_games=user_games_modes[chat_id],
-                                                           has_perfect_games=has_perfect_games))
+                                                           has_perfect_games=has_perfect_games,
+                                                           show_console_choice=player.platform.get_consoles is not None
+                                                           ))
         context.bot.send_message(chat_id=chat_id, text=_("Choose games (shown {0})").
                                  format(get_mode_name(user_games_modes[chat_id], chat_id)),
                                  reply_markup=reply_markup)
@@ -895,6 +998,47 @@ def show_games_index(update: Update, context: CallbackContext):
         start(update, context)
 
 
+def show_account_consoles(update: Update, context: CallbackContext):
+    global telegram_logger
+    global players_by_tlg_id
+    global games_by_player_id
+    global user_games_offsets
+    global user_active_accounts
+    global user_games_modes
+    global db
+    chat_id = update.effective_chat.id
+    telegram_logger.info("Show games for  user {0} in menu show_account_consoles".
+                         format(update.effective_chat.id))
+    inc_command_counter("show_account_consoles")
+
+    _ = set_locale(update)
+
+    if chat_id in user_active_accounts and chat_id in user_games_modes:
+        player = get_player_by_chat_id(chat_id)
+        cursor = db.cursor()
+        cursor.execute("""select c.id, c.name from achievements_hunt.consoles c
+                            where exists (
+                                select null from achievements_hunt.games g
+                                    join achievements_hunt.player_games gg
+                                    on g.platform_id = gg.platform_id
+                                      and g.id = gg.game_id
+                                    where g.platform_id = c.platform_id
+                                      and gg.player_id = %s
+                                      and g.console_id = c.id)
+                              and c.platform_id = %s
+                            order by c.name""",
+                       (player.id, player.platform.id,))
+        consoles = {}
+        for con_id, con_name in cursor:
+            consoles[con_id] = con_name
+        reply_markup = InlineKeyboardMarkup(consoles_index_keyboard(chat_id, consoles))
+        context.bot.send_message(chat_id=chat_id, text=_("Choose games (shown {0})").
+                                 format(get_mode_name(user_games_modes[chat_id], chat_id)),
+                                 reply_markup=reply_markup)
+    else:
+        start(update, context)
+
+
 def get_player_by_chat_id(chat_id: int) -> Union[Player, None]:
     global user_active_accounts
     global players_by_tlg_id
@@ -914,6 +1058,7 @@ def show_account_achievements(update: Update, context: CallbackContext):
 
     global user_achievement_offsets
     global user_achievement_details
+    global db
 
     chat_id = update.effective_chat.id
     telegram_logger.info("Show achievements for user {0} in show_account_achievements".
@@ -935,7 +1080,7 @@ def show_account_achievements(update: Update, context: CallbackContext):
             if len(achievements) >= ACHIEVEMENT_MENU_LENGTH:
                 break
         if start_achievement == 1 and len(player.cur_achievements_game.icon_url) > 0:
-            msg = """"<a href="{0}">&#8205;</a>""".format(cur_game.icon_url)
+            msg = """<a href="{0}">&#8205;</a>""".format(cur_game.icon_url)
         else:
             msg = ""
         if start_achievement == 1:
@@ -945,9 +1090,20 @@ def show_account_achievements(update: Update, context: CallbackContext):
                 msg += _("Publisher: {0}").format(cur_game.publisher) + chr(10)
             if len(cur_game.release_date) > 0:
                 msg += _("Release date: {0}").format(cur_game.release_date) + chr(10)
-            # TODO: fix properly
-            if cur_game.genres != [None] and len(cur_game.genres) > 0:
+            if len(cur_game.genres) > 0:
                 msg += _("Genre: {0}").format(", ".join(cur_game.genres)) + chr(10)
+            if len(cur_game.features) > 0:
+                msg += _("Features: {0}").format(", ".join(cur_game.features)) + chr(10)
+            cursor = db.cursor()
+            cursor.execute("""select dt_last_perfected from achievements_hunt.player_games where game_id = %s
+            and platform_id = %s and player_id = %s""",
+                           (cur_game.id, cur_game.platform_id, player.id))
+            dt_last_perfected = cursor.fetchone()
+            if dt_last_perfected is not None:
+                dt_last_perfected = dt_last_perfected[0]
+            cursor.close()
+            if dt_last_perfected is not None:
+                msg += _("Last time was perfected: {0}").format(dt_last_perfected) + chr(10)
         prev_unlocked = False
         first_achievement = True
         for i in achievements:
@@ -957,11 +1113,11 @@ def show_account_achievements(update: Update, context: CallbackContext):
             if first_achievement:
                 first_achievement = False
                 if is_unlocked:
-                    msg = _("Unlocked:")
+                    msg += _("Unlocked:")
                     msg += chr(10)
                     prev_unlocked = True
                 else:
-                    msg = _("Locked:")
+                    msg += _("Locked:")
                     msg += chr(10)
             elif prev_unlocked != is_unlocked:
                 msg += _("Locked:")
@@ -970,6 +1126,7 @@ def show_account_achievements(update: Update, context: CallbackContext):
 
             msg += _(r"{}/{}. Achievement {} percent owners {}").format(
                 current_achievement, achievement_number, i.get("name"), i.get("percent"))
+            msg += " ({})".format(i.get("rarity"))
             msg += chr(10)
             current_achievement += 1
         if len(msg) == 0:
@@ -1135,7 +1292,8 @@ def activity_feed(update: Update, context: CallbackContext):
                             a.percent_owners,
                             g.name || case when c.name is not null then ' (' || c.name || ')' else '' end,
                             p.name,
-                            pr.name
+                            pr.name,
+                            ar.name
                         from achievements_hunt.players p
                         join achievements_hunt.platforms pr
                         on pr.id = p.platform_id
@@ -1157,6 +1315,9 @@ def activity_feed(update: Update, context: CallbackContext):
                         left join achievements_hunt.consoles c
                         on c.id = g.console_id
                           and c.platform_id = g.platform_id
+                        left join achievements_hunt.achievement_rarity ar
+                        on ar.n_bottom_border < a.percent_owners
+                          and ar.n_upper_border >= a.percent_owners
                         order by dt_unlock desc, coalesce(tr.name, a.name) limit 25
                     """, (locale,))
     buf = cursor.fetchall()
@@ -1165,6 +1326,7 @@ def activity_feed(update: Update, context: CallbackContext):
         activity_list = chr(10) + _("Last activity:") + chr(10)
         for i in buf:
             activity_list += _(r"{}({}) unlocked {} (game {}) percent owners {}").format(i[3], i[4], i[0], i[2], i[1])
+            activity_list += " ({})".format(i[5])
             activity_list += chr(10)
 
     context.bot.send_message(chat_id=update.effective_chat.id, text=activity_list,
@@ -1192,13 +1354,15 @@ def echo(update: Update, context: CallbackContext):
                 buf = player.is_unique()
                 if buf[0]:
                     player.save()
-                    cmd = {"cmd": "create_player", "player_id": player.id, "platform_id": player.platform.id}
+                    cmd = {"cmd": "create_player", "player_id": player.id, "platform_id": player.platform.id,
+                           "chat_id": chat_id
+                           }
                     enqueue_command(cmd, MODE_CORE)
                 if player.id is not None:
                     context.bot.send_message(chat_id=chat_id, text=_("Account {0} bound to you").format(player.name))
                 else:
                     context.bot.send_message(chat_id=chat_id,
-                                             text=_("You already have account for this platform"))
+                                             text=_("You already have account for platform {}").format(i.name))
         if not player_created:
             context.bot.send_message(chat_id=update.effective_chat.id, text=_("Platform {0} not found").
                                      format(cur_platform))
