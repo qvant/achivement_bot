@@ -176,6 +176,7 @@ def main_keyboard(chat_id: int):
                     where telegram_id = %s
                     order by id
                     """, (chat_id,))
+        db.commit()
 
         for id, platform_id, name, ext_id, dt_update, is_public in cursor:
             for i in platforms:
@@ -697,6 +698,7 @@ def list_of_games(update: Update, context: CallbackContext):
             """, (update.effective_chat.id,))
     players_by_tlg_id[update.effective_chat.id] = []
     _ = set_locale(update)
+    db.commit()
 
     for id, platform_id, name, ext_id in cursor:
         for i in platforms:
@@ -893,6 +895,8 @@ def show_account_stats(update: Update, context: CallbackContext, console_id: Uni
         else:
             new_achievement_list = ""
         private_warning = ""
+        # close RO transaction
+        db.commit()
         if not player.is_public:
             private_warning = chr(10)
             private_warning += _("Profile is private, available information is limited")
@@ -1031,6 +1035,7 @@ def show_account_consoles(update: Update, context: CallbackContext):
         consoles = {}
         for con_id, con_name in cursor:
             consoles[con_id] = con_name
+        db.commit()
         reply_markup = InlineKeyboardMarkup(consoles_index_keyboard(chat_id, consoles))
         context.bot.send_message(chat_id=chat_id, text=_("Choose games (shown {0})").
                                  format(get_mode_name(user_games_modes[chat_id], chat_id)),
@@ -1102,6 +1107,7 @@ def show_account_achievements(update: Update, context: CallbackContext):
             if dt_last_perfected is not None:
                 dt_last_perfected = dt_last_perfected[0]
             cursor.close()
+            db.commit()
             if dt_last_perfected is not None:
                 msg += _("Last time was perfected: {0}").format(dt_last_perfected) + chr(10)
         prev_unlocked = False
@@ -1176,7 +1182,7 @@ def set_locale(update: Union[Update, None] = None, chat_id: Union[int, None] = N
                                                 values (%s, %s)
                                                 on conflict (telegram_id) do nothing
                                             """, (chat_id, locale))
-                db.commit()
+            db.commit()
             if len(locale) == 0:
                 locale = "en"
         except psycopg2.Error as err:
@@ -1233,7 +1239,7 @@ def get_locale_name(update: Union[Update, None], chat_id: Union[int, None] = Non
                                             values (%s, %s)
                                             on conflict (telegram_id) do nothing
                                         """, (chat_id, locale))
-            db.commit()
+        db.commit()
         if len(locale) == 0:
             locale = "en"
         user_locales[chat_id] = locale
@@ -1321,6 +1327,7 @@ def activity_feed(update: Update, context: CallbackContext):
                         order by dt_unlock desc, coalesce(tr.name, a.name) limit 25
                     """, (locale,))
     buf = cursor.fetchall()
+    db.commit()
     activity_list = ""
     if len(buf) > 0:
         activity_list = chr(10) + _("Last activity:") + chr(10)

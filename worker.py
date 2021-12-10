@@ -62,6 +62,7 @@ def main_worker(config: Config):
         i.reset_games()
         i.load_languages()
         i.set_next_language()
+    conn.commit()
 
     cur_players = []
     platform_players = []
@@ -129,11 +130,11 @@ def main_worker(config: Config):
                                     where id_platform = %s
                                     and dt_ended is null
                                 """, (dt_next_update[i], platforms[i].id))
-                        conn.commit()
                     else:
                         renew_log.info(
                             "Update platform {0} postponed, progress {1}/{2}".format(platforms[i].name, cur_players[i],
                                                                                      len(platform_players[i])))
+                    conn.commit()
                 else:
                     renew_log.debug("Skip update platform {0}, next update {1}".format(
                         platforms[i].name, dt_next_update[i]))
@@ -234,6 +235,7 @@ def main_worker(config: Config):
                         msg["players"] = {}
                         for cnt, platform_name in cursor:
                             msg["players"][platform_name] = cnt
+                        conn.commit()
                         msg["module"] = "Worker"
                         msg["platform_stats"] = {}
                         for i in platforms:
