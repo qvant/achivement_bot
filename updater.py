@@ -38,11 +38,14 @@ def main_updater(config: Config):
                          routing_key=config.mode)
 
     is_running = True
+    need_wait = True
 
     cmd = {"cmd": "process_response", "text": "Updater started at {0}.".format(datetime.datetime.now())}
     enqueue_command(cmd, MODE_BOT)
 
     while is_running:
+
+        need_wait = True
 
         try:
             db_log.info("""Check queue_games_update""")
@@ -70,6 +73,7 @@ def main_updater(config: Config):
                 db_log.info("""Process queue_games_update, found {0} records for {1} games""".
                             format(len(recs), len(games)))
                 if len(games) > 0:
+                    need_wait = False
                     cursor.execute("""
                             PREPARE upd_games as
                             update achievements_hunt.games set num_owners = num_owners + $1 where id = $2
@@ -128,6 +132,7 @@ def main_updater(config: Config):
                         games.append((game_id, platform_id))
                     recs.append((id_rec,))
                 if len(games) > 0:
+                    need_wait = False
                     db_log.info("""Process queue_achievements_update, found {0} records for {1} games""".
                                 format(len(recs), len(games_ids)))
                     cursor.execute("""
@@ -194,6 +199,7 @@ def main_updater(config: Config):
                     recs.append((id_rec,))
                     player_games.append((player_id, game_id, platform_id))
                 if len(player_games) > 0:
+                    need_wait = False
                     db_log.info("""Process queue_player_achievements_update, found {0} records for {1} achievements""".
                                 format(len(recs), len(achievements)))
                     cursor.execute("""
@@ -234,24 +240,19 @@ def main_updater(config: Config):
                                                  where pg.player_id = $1 and pg.game_id = $2
                                                  and pg.platform_id = $3
                                                 """)
-                    cursor.execute("""
-                                                PREPARE update_player_games_perf as
-                                                update achievements_hunt.player_games pg
-                                                set is_perfect = (percent_complete = 100)
-                                                where pg.player_id = $1 and pg.game_id = $2 and pg.platform_id = $3
-                                                """)
+                    db_log.debug(""" start EXECUTE update_player_games""")
                     psycopg2.extras.execute_batch(cursor, """EXECUTE update_player_games (%s, %s, %s)""", player_games)
-                    psycopg2.extras.execute_batch(cursor, """EXECUTE update_player_games_perf (%s, %s, %s)""",
-                                                  player_games)
+                    db_log.debug(""" end EXECUTE update_player_games""")
 
                     cursor.execute("""
                                     PREPARE del_q as
                                     delete from achievements_hunt.queue_player_achievements_update
                                     where id = $1
                                     """)
+                    db_log.debug(""" start EXECUTE del_q""")
                     psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
+                    db_log.debug(""" end EXECUTE del_q""")
                     cursor.execute("""DEALLOCATE update_player_games""")
-                    cursor.execute("""DEALLOCATE update_player_games_perf""")
                     cursor.execute("""DEALLOCATE upd_achievements""")
                     cursor.execute("""DEALLOCATE del_q""")
                     cursor.execute("""DEALLOCATE upd_achievement_percent""")
@@ -296,7 +297,8 @@ def main_updater(config: Config):
                     queue_log.info("No more messages in {0}".format(UPDATER_QUEUE_NAME))
                     m_channel.cancel()
                     break
-            time.sleep(4)
+            if need_wait:
+                time.sleep(4)
         except BaseException as err:
             queue_log.exception(err)
             if config.supress_errors:
