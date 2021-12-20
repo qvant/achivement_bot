@@ -157,6 +157,7 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     achievements = {}
     game_name = None
     obj = r.json()
+    genres = None
     if len(obj) > 0:
         console_ext_id = obj.get("ConsoleID")
         if "Achievements" in obj:
@@ -192,15 +193,19 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
             "For game {0}, found {1} achievements and console type {2}".format(
                 game_id, len(achievements), console_ext_id))
         game_name = obj.get("Title")
+        if game_name is None and game_id == "0":
+            game_name = "UNRECOGNISED"
         "For game {0}, found name {1}".format(
             game_id, game_name)
+        if obj.get("Genre") is not None:
+            genres = obj.get("Genre").replace("\\/", "\\").split(",")
     return Game(name=game_name, platform_id=PLATFORM_RETRO, ext_id=game_id, id=None, achievements=achievements,
                 console_ext_id=str(obj.get("ConsoleID")), console=None,
                 icon_url=get_game_icon_url(str(obj.get("ImageIcon"))),
                 release_date=str(obj.get("Released")),
                 publisher=obj.get("Publisher"),
                 developer=obj.get("Developer"),
-                genres=obj.get("Genre").replace("\\/", "\\").split(","),
+                genres=genres,
                 )
 
 
@@ -237,6 +242,7 @@ def get_player_games(player_id):
         "u": player_id,
         "c": 99999,
     }
+    # TODO: 50 gaems max and offset not working. sad :(
     r = _call_api(url="https://retroachievements.org/API/API_GetUserRecentlyPlayedGames.php",
                   method_name="API_GetUserRecentlyPlayedGames",
                   params=params,
