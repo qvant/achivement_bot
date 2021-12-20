@@ -73,6 +73,8 @@ def main_worker(config: Config):
     while is_running:
 
         try:
+            conn = Platform.get_connect()
+            cursor = conn.cursor()
 
             for i in range(len(platforms)):
                 if datetime.datetime.now().replace(tzinfo=timezone.utc) > \
@@ -123,6 +125,8 @@ def main_worker(config: Config):
                         platforms[i].mark_language_done()
                         renew_log.info("Update platform {0} finished, next_update {1}".format(platforms[i].name,
                                                                                               dt_next_update[i]))
+                        conn = Platform.get_connect()
+                        cursor = conn.cursor()
                         cursor.execute("""
                                 update achievements_hunt.update_history
                                     set dt_ended = current_timestamp,

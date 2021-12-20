@@ -162,13 +162,13 @@ def platform_choice(update: Update, context: CallbackContext):
 
 
 def main_keyboard(chat_id: int):
-    global db
     global platforms
     global config
     global telegram_logger
     _ = set_locale(chat_id=chat_id)
     players_by_tlg_id[chat_id] = []
     try:
+        db = Platform.get_connect()
         cursor = db.cursor()
         cursor.execute("""
                     select id, platform_id, name, ext_id, dt_update, is_public
@@ -786,6 +786,7 @@ def show_account_stats(update: Update, context: CallbackContext, console_id: Uni
     locale = get_locale_name(update)
     player = get_player_by_chat_id(chat_id)
     if player is not None:
+        db = Platform.get_connect()
         cursor = db.cursor()
         cursor.execute("""
         select
@@ -1009,7 +1010,6 @@ def show_account_consoles(update: Update, context: CallbackContext):
     global user_games_offsets
     global user_active_accounts
     global user_games_modes
-    global db
     chat_id = update.effective_chat.id
     telegram_logger.info("Show games for  user {0} in menu show_account_consoles".
                          format(update.effective_chat.id))
@@ -1019,7 +1019,8 @@ def show_account_consoles(update: Update, context: CallbackContext):
 
     if chat_id in user_active_accounts and chat_id in user_games_modes:
         player = get_player_by_chat_id(chat_id)
-        cursor = db.cursor()
+        conn = Platform.get_connect()
+        cursor = conn.cursor()
         cursor.execute("""select c.id, c.name from achievements_hunt.consoles c
                             where exists (
                                 select null from achievements_hunt.games g
@@ -1035,7 +1036,7 @@ def show_account_consoles(update: Update, context: CallbackContext):
         consoles = {}
         for con_id, con_name in cursor:
             consoles[con_id] = con_name
-        db.commit()
+        conn.commit()
         reply_markup = InlineKeyboardMarkup(consoles_index_keyboard(chat_id, consoles))
         context.bot.send_message(chat_id=chat_id, text=_("Choose games (shown {0})").
                                  format(get_mode_name(user_games_modes[chat_id], chat_id)),

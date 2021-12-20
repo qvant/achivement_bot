@@ -9,6 +9,7 @@ from typing import Union, List
 
 class Platform:
     config = None
+    conn = None
 
     def __init__(self, name: str, get_games, get_game, get_achivements, games: [Game], id: int,
                  validate_player, get_player_id, get_stats, incremental_update_enabled: bool,
@@ -86,9 +87,20 @@ class Platform:
     # Temp!
     @classmethod
     def get_connect(cls):
-        conn = psycopg2.connect(dbname=cls.config.db_name, user=cls.config.db_user,
-                                password=cls.config.db_password, host=cls.config.db_host, port=cls.config.db_port)
-        return conn
+        if cls.conn is None:
+            cls.conn = psycopg2.connect(dbname=cls.config.db_name, user=cls.config.db_user,
+                                        password=cls.config.db_password, host=cls.config.db_host,
+                                        port=cls.config.db_port)
+        elif cls.conn.closed != 0:
+            cls.conn = psycopg2.connect(dbname=cls.config.db_name, user=cls.config.db_user,
+                                        password=cls.config.db_password, host=cls.config.db_host,
+                                        port=cls.config.db_port)
+        return cls.conn
+
+    @classmethod
+    def reset_connect(cls):
+        cls.conn.close()
+        cls.conn = None
 
     def save(self):
         conn = self.get_connect()
@@ -275,8 +287,6 @@ class Platform:
         if game_id is not None:
             self.games = {**self.games, **games}
         self.set_games(games=games)
-
-        conn.close()
 
     # TODO make fast
     @property

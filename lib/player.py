@@ -113,7 +113,7 @@ class Player:
                             """, (self.telegram_id,))
                 conn.commit()
                 self.platform.logger.info("Deleted player {0}".format(self.ext_id))
-        conn.close()
+        self.platform.reset_connect()
 
     def is_unique(self):
         conn = self.platform.get_connect()
