@@ -94,6 +94,8 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
                       format(url, params, r.text),
                       exc_info=True,
                       )
+        if r.status_code == 400:
+            break
         cnt += 1
         time.sleep(api_call_pause_on_error)
     return r
