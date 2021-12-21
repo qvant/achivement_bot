@@ -361,12 +361,13 @@ def get_player_stats_for_game(player_id, game_id):
                         params=params)
     player_stats = r.json().get("playerstats")
     stats = {}
-    player_stats = player_stats.get("stats")
     if player_stats is not None:
-        for i in player_stats:
-            ext_id = i.get("name")
-            val = i.get("value")
-            stats[ext_id] = str(val)
+        player_stats = player_stats.get("stats")
+        if player_stats is not None:
+            for i in player_stats:
+                ext_id = i.get("name")
+                val = i.get("value")
+                stats[ext_id] = str(val)
     return stats
 
 
