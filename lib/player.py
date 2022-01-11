@@ -1,7 +1,7 @@
 import datetime
 import random
 from psycopg2 import Error as pg_error
-from typing import Union
+from typing import Union, Dict
 from .platform import Platform
 from datetime import timezone
 
@@ -187,10 +187,10 @@ class Player:
                     self.has_perfect_games = True
 
     @property
-    def cur_achievement_stats(self):
+    def cur_achievement_stats(self) -> Dict:
         for i in self.achievement_stats:
-            return self.achievement_stats[i]\
-
+            return self.achievement_stats[i]
+        return {}
 
     @property
     def cur_achievements_game(self):
@@ -436,7 +436,25 @@ class Player:
             if (self.dt_updated_inc is not None and (self.dt_updated_inc + delta) > cur_time) or \
                     (self.dt_updated_full is not None and (self.dt_updated_full + delta) > cur_time):
                 if random.random() >= self.platform.incremental_skip_chance:
+                    owned_games, owned_games_names = self.platform.get_games(self.ext_id)
+                    self.get_owned_games(force=True)
+                    new_games = []
+                    new_game_names = []
+                    saved_games_by_ext = {}
+                    saved_game_names_by_ext = {}
+                    for cg in self.games:
+                        saved_games_by_ext[cg.ext_id] = cg
+                        saved_game_names_by_ext[cg.ext_id] =cg.name
                     self.games, names, = self.platform.get_last_games(self.ext_id)
+                    str_games = list(map(str, self.games))
+                    for cg in range(len(owned_games)):
+                        if str(owned_games[cg]) not in saved_games_by_ext and str(owned_games[cg]) not in str_games:
+                            new_games.append(owned_games[cg])
+                            new_game_names.append(owned_games_names[cg])
+                            self.platform.logger.info("Found new owned, but unplayed game {1} for player {0}. ".
+                                                      format(self.name, owned_games[cg]))
+                    self.games = [*self.games, *new_games]
+                    names = [*names, *new_game_names]
                     self.platform.logger.info("Prepared incremental update for player {0}. "
                                               "Last inc update {1}, last full update {2}".
                                               format(self.name, self.dt_updated_inc, self.dt_updated_full))
