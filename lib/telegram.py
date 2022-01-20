@@ -203,8 +203,8 @@ def main_keyboard(chat_id: int):
         InlineKeyboardButton(_("List of games"), callback_data="main_LIST_OF_GAMES"),
         InlineKeyboardButton(_("Language choice"), callback_data="main_SET_LOCALE"),
         InlineKeyboardButton(_("About"), callback_data="main_ABOUT"),
-        # there's still not enough users to make it look interesting
-        # InlineKeyboardButton(_("Activity feed"), callback_data="main_ACTIVITY"),
+        # there's still not enough users to make it look interesting, but let's try
+        InlineKeyboardButton(_("Activity feed"), callback_data="main_ACTIVITY"),
     ]
     for i in players_by_tlg_id[chat_id]:
         keyboard.append(InlineKeyboardButton("{}({})".format(i.name, i.platform.name),
