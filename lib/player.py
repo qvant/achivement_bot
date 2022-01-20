@@ -15,7 +15,7 @@ GAMES_PERFECT = 3
 
 class Player:
     def __init__(self, name: str, ext_id: str, platform: Platform, id: Union[int, None], telegram_id: Union[int, None],
-                 dt_updated=None, dt_updated_full=None, dt_updated_inc=None):
+                 dt_updated=None, dt_updated_full=None, dt_updated_inc=None, avatar_url: Union[str, None] = None):
         self.id = id
         self.telegram_id = telegram_id
         self.ext_id = ext_id
@@ -31,6 +31,7 @@ class Player:
         self.stats = {}
         self.has_perfect_games = True
         self.is_public = True
+        self.avatar_url = avatar_url
 
     def set_ext_id(self, ext_id):
         self.ext_id = ext_id
@@ -73,6 +74,10 @@ class Player:
 
     def set_name(self, name):
         self.name = name
+        self.dt_updated = datetime.datetime.now()
+
+    def set_avatar(self, avatar):
+        self.avatar_url = avatar
         self.dt_updated = datetime.datetime.now()
 
     def mark_valid(self):
@@ -267,11 +272,11 @@ class Player:
             self.platform.logger.info("Saving player {0}".format(self.ext_id))
             cur.execute("""
                 insert into achievements_hunt.players(platform_id, name, ext_id, telegram_id, status_id, dt_update,
-                                                      is_public)
+                                                      is_public, avatar_url)
                 values (%s, %s, %s, %s, %s, %s,
-                        %s) on conflict ON CONSTRAINT u_players_ext_key do nothing returning id
+                        %s, %s) on conflict ON CONSTRAINT u_players_ext_key do nothing returning id
             """, (self.platform.id, self.name, self.ext_id, self.telegram_id, STATUS_NEW, self.dt_updated,
-                  self.is_public))
+                  self.is_public, self.avatar_url))
             ret = cur.fetchone()
             if ret is not None:
                 self.id = ret[0]
@@ -288,9 +293,13 @@ class Player:
                 update achievements_hunt.players set dt_update = %s,
                                                      is_public = %s,
                                                      dt_update_full = coalesce(%s, dt_update_full),
-                                                     dt_update_inc = coalesce(%s, dt_update_inc)
+                                                     dt_update_inc = coalesce(%s, dt_update_inc),
+                                                     name = coalesce(%s, name),
+                                                     avatar_url = coalesce(%s, avatar_url)
                 where id = %s
-            """, (self.dt_updated, self.is_public, self.dt_updated_full, self.dt_updated_inc, self.id,))
+            """, (self.dt_updated, self.is_public, self.dt_updated_full, self.dt_updated_inc,
+                  self.name, self.avatar_url,
+                  self.id))
         self.platform.logger.info("Get saved games for player {0} ".format(self.ext_id))
         cur.execute("""
                             select game_id
@@ -430,6 +439,17 @@ class Player:
         self.platform.logger.info("Saved player {0}".format(self.ext_id))
 
     def renew(self):
+        new_name = self.platform.validate_player(self.ext_id)
+        if new_name != self.name:
+            self.platform.logger.info("Found new name {1} for player {0}. ".
+                                      format(self.name, new_name))
+            self.set_name(new_name)
+        if self.platform.get_player_avatar is not None:
+            new_avatar = self.platform.get_player_avatar(self.ext_id)
+            if self.avatar_url != new_avatar:
+                self.platform.logger.info("Found new avatar {1} for player {0}. Old one: {2}".
+                                          format(self.name, new_avatar, self.avatar_url))
+                self.set_avatar(new_avatar)
         cur_time = datetime.datetime.now().replace(tzinfo=datetime.timezone.utc)
         if self.platform.incremental_update_enabled:
             delta = datetime.timedelta(days=self.platform.incremental_update_interval)

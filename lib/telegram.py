@@ -171,18 +171,18 @@ def main_keyboard(chat_id: int):
         db = Platform.get_connect()
         cursor = db.cursor()
         cursor.execute("""
-                    select id, platform_id, name, ext_id, dt_update, is_public
+                    select id, platform_id, name, ext_id, dt_update, is_public, avatar_url
                     from achievements_hunt.players
                     where telegram_id = %s
                     order by id
                     """, (chat_id,))
         db.commit()
 
-        for id, platform_id, name, ext_id, dt_update, is_public in cursor:
+        for id, platform_id, name, ext_id, dt_update, is_public, avatar_url in cursor:
             for i in platforms:
                 if i.id == platform_id:
                     player = Player(name=name, platform=i, ext_id=ext_id, id=id, telegram_id=chat_id,
-                                    dt_updated=dt_update)
+                                    dt_updated=dt_update, avatar_url=avatar_url)
                     player.is_public = is_public
                     players_by_tlg_id[chat_id].append(player)
                     user_games_offsets[chat_id] = 0
@@ -694,16 +694,17 @@ def list_of_games(update: Update, context: CallbackContext):
     _ = set_locale(chat_id=chat_id)
     cursor = db.cursor()
     cursor.execute("""
-            select id, platform_id, name, ext_id from achievements_hunt.players where telegram_id = %s order by id
+            select id, platform_id, name, ext_id, avatar_url from achievements_hunt.players
+            where telegram_id = %s order by id
             """, (update.effective_chat.id,))
     players_by_tlg_id[update.effective_chat.id] = []
     _ = set_locale(update)
     db.commit()
 
-    for id, platform_id, name, ext_id in cursor:
+    for id, platform_id, name, ext_id, avatar_url in cursor:
         for i in platforms:
             if i.id == platform_id:
-                player = Player(name=name, platform=i, ext_id=ext_id, id=id, telegram_id=chat_id)
+                player = Player(name=name, platform=i, ext_id=ext_id, id=id, telegram_id=chat_id, avatar_url=avatar_url)
                 players_by_tlg_id[chat_id].append(player)
                 user_games_offsets[chat_id] = 0
     reply_markup = InlineKeyboardMarkup(account_keyboard(chat_id))
@@ -901,11 +902,14 @@ def show_account_stats(update: Update, context: CallbackContext, console_id: Uni
         if not player.is_public:
             private_warning = chr(10)
             private_warning += _("Profile is private, available information is limited")
-        context.bot.send_message(chat_id=chat_id, text=_("Total games {0}, games with achievement support {1}, "
+        avatar_url = ""
+        if player.avatar_url is not None:
+            avatar_url = """<a href="{0}">&#8205;</a>""".format(player.avatar_url)
+        context.bot.send_message(chat_id=chat_id, text=_("{8}Total games {0}, games with achievement support {1}, "
                                                          "average completion percent {2}"
                                                          ", perfect games {3}, was updated at {4} {5}{7}{6}").
                                  format(total_games, achievement_games, avg_percent, perfect_games, player.dt_updated,
-                                        achievement_list, private_warning, new_achievement_list),
+                                        achievement_list, private_warning, new_achievement_list, avatar_url),
                                  parse_mode=ParseMode.HTML, disable_web_page_preview=False)
     else:
         start(update, context)

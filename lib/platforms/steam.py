@@ -173,7 +173,8 @@ def init_platform(config: Config) -> Platform:
                      get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,
                      incremental_update_interval=incremental_update_interval, get_last_games=get_player_last_games,
                      incremental_skip_chance=incremental_skip_chance, get_consoles=None,
-                     get_player_stats=get_player_stats_for_game, set_hardcoded=set_hardcoded)
+                     get_player_stats=get_player_stats_for_game, set_hardcoded=set_hardcoded,
+                     get_player_avatar=get_player_avatar)
     if is_password_encrypted(key_read):
         api_log.info("Steam key encrypted, do nothing")
         open_key = decrypt_password(key_read, config.server_name, config.db_port)
@@ -409,6 +410,28 @@ def get_player_stats(player_id):
         else:
             name = None
         return name
+
+
+def get_player_avatar(player_id):
+    params = {
+        "steamids": player_id,
+    }
+    r = _call_steam_api(url="http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/",
+                        method_name="GetPlayerSummaries",
+                        params=params)
+    res = r.json().get("response").get("players")
+    if len(res) == 0:
+        return None
+    else:
+        if "avatarmedium" in res[0]:
+            url = res[0]["avatarmedium"]
+        elif "avatarfull" in res[0]:
+            url = res[0]["avatarfull"]
+        elif "avatar" in res[0]:
+            url = res[0]["avatar"]
+        else:
+            url = None
+        return url
 
 
 def set_hardcoded(games_names_map: Dict):

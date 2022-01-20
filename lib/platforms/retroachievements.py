@@ -18,6 +18,7 @@ PLATFORM_RETRO = 2
 
 ACHIEVEMENT_ICON_URL_TEMPLATE = "https://s3-eu-west-1.amazonaws.com/i.retroachievements.org/Badge/{0}.png"
 GAME_ICON_URL_TEMPLATE = "https://retroachievements.org{0}"
+AVATAR_URL_TEMPLATE = "https://retroachievements.org{0}"
 
 global api_log
 global api_key
@@ -135,6 +136,10 @@ def get_name(player_name: str):
 
 def get_game_icon_url(icon_id: str):
     return GAME_ICON_URL_TEMPLATE.format(icon_id)
+
+
+def get_avatar_url(avatar_name: str):
+    return AVATAR_URL_TEMPLATE.format(avatar_name)
 
 
 def get_icon_url(badge_id: str):
@@ -274,6 +279,19 @@ def get_last_player_games(player_id):
     return res
 
 
+def get_player_avatar(player_id):
+    global api_log
+    params = {
+        "u": player_id,
+    }
+    r = _call_api(url="https://retroachievements.org/API/API_GetUserSummary.php",
+                  method_name="API_GetUserSummary",
+                  params=params,
+                  )
+    avatar_name = r.json().get("UserPic")
+    return get_avatar_url(avatar_name)
+
+
 def get_consoles():
     params = {}
     r = _call_api(url="https://retroachievements.org/API/API_GetConsoleIDs.php",
@@ -329,7 +347,8 @@ def init_platform(config: Config) -> Platform:
                      get_game=get_game, games=None, id=PLATFORM_RETRO, validate_player=get_name, get_player_id=get_name,
                      get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,
                      incremental_update_interval=incremental_update_interval, get_last_games=get_last_player_games,
-                     incremental_skip_chance=incremental_skip_chance, get_consoles=get_consoles)
+                     incremental_skip_chance=incremental_skip_chance, get_consoles=get_consoles,
+                     get_player_avatar=get_player_avatar)
     if is_password_encrypted(key_read):
         api_log.info("Retroachievements key encrypted, do nothing")
         open_key = decrypt_password(key_read, config.server_name, config.db_port)
