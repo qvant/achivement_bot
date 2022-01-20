@@ -464,7 +464,7 @@ class Player:
                     saved_game_names_by_ext = {}
                     for cg in self.games:
                         saved_games_by_ext[cg.ext_id] = cg
-                        saved_game_names_by_ext[cg.ext_id] =cg.name
+                        saved_game_names_by_ext[cg.ext_id] = cg.name
                     self.games, names, = self.platform.get_last_games(self.ext_id)
                     str_games = list(map(str, self.games))
                     for cg in range(len(owned_games)):
