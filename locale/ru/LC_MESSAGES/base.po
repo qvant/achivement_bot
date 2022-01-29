@@ -176,8 +176,8 @@ msgid "Profile is private, available information is limited"
 msgstr "Профиль приватный, доступная информация ограничена."
 
 #: ..\lib\telegram.py:651
-msgid "Total games {0}, games with achievement support {1}, average completion percent {2}, perfect games {3}, was updated at {4} {5}{7}{6}"
-msgstr "Всего игр {0}, игр с поддержкой достижений {1}, средний процент выполненных достижений {2}, идеальных игр {3}, последнее обновление {4} {5}{7}{6}"
+msgid "{8}Total games {0}, games with achievement support {1}, average completion percent {2}, perfect games {3}, was updated at {4} {5}{7}{6}"
+msgstr "{8}Всего игр {0}, игр с поддержкой достижений {1}, средний процент выполненных достижений {2}, идеальных игр {3}, последнее обновление {4} {5}{7}{6}"
 
 #: ..\lib\telegram.py:694 ..\lib\telegram.py:731
 msgid "Choose games (shown {0})"

@@ -162,26 +162,27 @@ def platform_choice(update: Update, context: CallbackContext):
 
 
 def main_keyboard(chat_id: int):
-    global db
     global platforms
     global config
     global telegram_logger
     _ = set_locale(chat_id=chat_id)
     players_by_tlg_id[chat_id] = []
     try:
+        db = Platform.get_connect()
         cursor = db.cursor()
         cursor.execute("""
-                    select id, platform_id, name, ext_id, dt_update, is_public
+                    select id, platform_id, name, ext_id, dt_update, is_public, avatar_url
                     from achievements_hunt.players
                     where telegram_id = %s
                     order by id
                     """, (chat_id,))
+        db.commit()
 
-        for id, platform_id, name, ext_id, dt_update, is_public in cursor:
+        for id, platform_id, name, ext_id, dt_update, is_public, avatar_url in cursor:
             for i in platforms:
                 if i.id == platform_id:
                     player = Player(name=name, platform=i, ext_id=ext_id, id=id, telegram_id=chat_id,
-                                    dt_updated=dt_update)
+                                    dt_updated=dt_update, avatar_url=avatar_url)
                     player.is_public = is_public
                     players_by_tlg_id[chat_id].append(player)
                     user_games_offsets[chat_id] = 0
@@ -202,8 +203,8 @@ def main_keyboard(chat_id: int):
         InlineKeyboardButton(_("List of games"), callback_data="main_LIST_OF_GAMES"),
         InlineKeyboardButton(_("Language choice"), callback_data="main_SET_LOCALE"),
         InlineKeyboardButton(_("About"), callback_data="main_ABOUT"),
-        # there's still not enough users to make it look interesting
-        # InlineKeyboardButton(_("Activity feed"), callback_data="main_ACTIVITY"),
+        # there's still not enough users to make it look interesting, but let's try
+        InlineKeyboardButton(_("Activity feed"), callback_data="main_ACTIVITY"),
     ]
     for i in players_by_tlg_id[chat_id]:
         keyboard.append(InlineKeyboardButton("{}({})".format(i.name, i.platform.name),
@@ -693,15 +694,17 @@ def list_of_games(update: Update, context: CallbackContext):
     _ = set_locale(chat_id=chat_id)
     cursor = db.cursor()
     cursor.execute("""
-            select id, platform_id, name, ext_id from achievements_hunt.players where telegram_id = %s order by id
+            select id, platform_id, name, ext_id, avatar_url from achievements_hunt.players
+            where telegram_id = %s order by id
             """, (update.effective_chat.id,))
     players_by_tlg_id[update.effective_chat.id] = []
     _ = set_locale(update)
+    db.commit()
 
-    for id, platform_id, name, ext_id in cursor:
+    for id, platform_id, name, ext_id, avatar_url in cursor:
         for i in platforms:
             if i.id == platform_id:
-                player = Player(name=name, platform=i, ext_id=ext_id, id=id, telegram_id=chat_id)
+                player = Player(name=name, platform=i, ext_id=ext_id, id=id, telegram_id=chat_id, avatar_url=avatar_url)
                 players_by_tlg_id[chat_id].append(player)
                 user_games_offsets[chat_id] = 0
     reply_markup = InlineKeyboardMarkup(account_keyboard(chat_id))
@@ -784,6 +787,7 @@ def show_account_stats(update: Update, context: CallbackContext, console_id: Uni
     locale = get_locale_name(update)
     player = get_player_by_chat_id(chat_id)
     if player is not None:
+        db = Platform.get_connect()
         cursor = db.cursor()
         cursor.execute("""
         select
@@ -893,14 +897,19 @@ def show_account_stats(update: Update, context: CallbackContext, console_id: Uni
         else:
             new_achievement_list = ""
         private_warning = ""
+        # close RO transaction
+        db.commit()
         if not player.is_public:
             private_warning = chr(10)
             private_warning += _("Profile is private, available information is limited")
-        context.bot.send_message(chat_id=chat_id, text=_("Total games {0}, games with achievement support {1}, "
+        avatar_url = ""
+        if player.avatar_url is not None:
+            avatar_url = """<a href="{0}">&#8205;</a>""".format(player.avatar_url)
+        context.bot.send_message(chat_id=chat_id, text=_("{8}Total games {0}, games with achievement support {1}, "
                                                          "average completion percent {2}"
                                                          ", perfect games {3}, was updated at {4} {5}{7}{6}").
                                  format(total_games, achievement_games, avg_percent, perfect_games, player.dt_updated,
-                                        achievement_list, private_warning, new_achievement_list),
+                                        achievement_list, private_warning, new_achievement_list, avatar_url),
                                  parse_mode=ParseMode.HTML, disable_web_page_preview=False)
     else:
         start(update, context)
@@ -1005,7 +1014,6 @@ def show_account_consoles(update: Update, context: CallbackContext):
     global user_games_offsets
     global user_active_accounts
     global user_games_modes
-    global db
     chat_id = update.effective_chat.id
     telegram_logger.info("Show games for  user {0} in menu show_account_consoles".
                          format(update.effective_chat.id))
@@ -1015,7 +1023,8 @@ def show_account_consoles(update: Update, context: CallbackContext):
 
     if chat_id in user_active_accounts and chat_id in user_games_modes:
         player = get_player_by_chat_id(chat_id)
-        cursor = db.cursor()
+        conn = Platform.get_connect()
+        cursor = conn.cursor()
         cursor.execute("""select c.id, c.name from achievements_hunt.consoles c
                             where exists (
                                 select null from achievements_hunt.games g
@@ -1031,6 +1040,7 @@ def show_account_consoles(update: Update, context: CallbackContext):
         consoles = {}
         for con_id, con_name in cursor:
             consoles[con_id] = con_name
+        conn.commit()
         reply_markup = InlineKeyboardMarkup(consoles_index_keyboard(chat_id, consoles))
         context.bot.send_message(chat_id=chat_id, text=_("Choose games (shown {0})").
                                  format(get_mode_name(user_games_modes[chat_id], chat_id)),
@@ -1102,6 +1112,7 @@ def show_account_achievements(update: Update, context: CallbackContext):
             if dt_last_perfected is not None:
                 dt_last_perfected = dt_last_perfected[0]
             cursor.close()
+            db.commit()
             if dt_last_perfected is not None:
                 msg += _("Last time was perfected: {0}").format(dt_last_perfected) + chr(10)
         prev_unlocked = False
@@ -1176,7 +1187,7 @@ def set_locale(update: Union[Update, None] = None, chat_id: Union[int, None] = N
                                                 values (%s, %s)
                                                 on conflict (telegram_id) do nothing
                                             """, (chat_id, locale))
-                db.commit()
+            db.commit()
             if len(locale) == 0:
                 locale = "en"
         except psycopg2.Error as err:
@@ -1233,7 +1244,7 @@ def get_locale_name(update: Union[Update, None], chat_id: Union[int, None] = Non
                                             values (%s, %s)
                                             on conflict (telegram_id) do nothing
                                         """, (chat_id, locale))
-            db.commit()
+        db.commit()
         if len(locale) == 0:
             locale = "en"
         user_locales[chat_id] = locale
@@ -1321,6 +1332,7 @@ def activity_feed(update: Update, context: CallbackContext):
                         order by dt_unlock desc, coalesce(tr.name, a.name) limit 25
                     """, (locale,))
     buf = cursor.fetchall()
+    db.commit()
     activity_list = ""
     if len(buf) > 0:
         activity_list = chr(10) + _("Last activity:") + chr(10)

@@ -18,6 +18,7 @@ PLATFORM_RETRO = 2
 
 ACHIEVEMENT_ICON_URL_TEMPLATE = "https://s3-eu-west-1.amazonaws.com/i.retroachievements.org/Badge/{0}.png"
 GAME_ICON_URL_TEMPLATE = "https://retroachievements.org{0}"
+AVATAR_URL_TEMPLATE = "https://retroachievements.org{0}"
 
 global api_log
 global api_key
@@ -137,6 +138,10 @@ def get_game_icon_url(icon_id: str):
     return GAME_ICON_URL_TEMPLATE.format(icon_id)
 
 
+def get_avatar_url(avatar_name: str):
+    return AVATAR_URL_TEMPLATE.format(avatar_name)
+
+
 def get_icon_url(badge_id: str):
     return ACHIEVEMENT_ICON_URL_TEMPLATE.format(badge_id)
 
@@ -157,6 +162,7 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     achievements = {}
     game_name = None
     obj = r.json()
+    genres = None
     if len(obj) > 0:
         console_ext_id = obj.get("ConsoleID")
         if "Achievements" in obj:
@@ -192,15 +198,19 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
             "For game {0}, found {1} achievements and console type {2}".format(
                 game_id, len(achievements), console_ext_id))
         game_name = obj.get("Title")
+        if game_name is None and game_id == "0":
+            game_name = "UNRECOGNISED"
         "For game {0}, found name {1}".format(
             game_id, game_name)
+        if obj.get("Genre") is not None:
+            genres = obj.get("Genre").replace("\\/", "\\").split(",")
     return Game(name=game_name, platform_id=PLATFORM_RETRO, ext_id=game_id, id=None, achievements=achievements,
                 console_ext_id=str(obj.get("ConsoleID")), console=None,
                 icon_url=get_game_icon_url(str(obj.get("ImageIcon"))),
                 release_date=str(obj.get("Released")),
                 publisher=obj.get("Publisher"),
                 developer=obj.get("Developer"),
-                genres=obj.get("Genre").replace("\\/", "\\").split(","),
+                genres=genres,
                 )
 
 
@@ -237,6 +247,7 @@ def get_player_games(player_id):
         "u": player_id,
         "c": 99999,
     }
+    # TODO: 50 gaems max and offset not working. sad :(
     r = _call_api(url="https://retroachievements.org/API/API_GetUserRecentlyPlayedGames.php",
                   method_name="API_GetUserRecentlyPlayedGames",
                   params=params,
@@ -266,6 +277,19 @@ def get_last_player_games(player_id):
             res[0].append(i.get("GameID"))
             res[1].append(i.get("Title"))
     return res
+
+
+def get_player_avatar(player_id):
+    global api_log
+    params = {
+        "u": player_id,
+    }
+    r = _call_api(url="https://retroachievements.org/API/API_GetUserSummary.php",
+                  method_name="API_GetUserSummary",
+                  params=params,
+                  )
+    avatar_name = r.json().get("UserPic")
+    return get_avatar_url(avatar_name)
 
 
 def get_consoles():
@@ -323,7 +347,8 @@ def init_platform(config: Config) -> Platform:
                      get_game=get_game, games=None, id=PLATFORM_RETRO, validate_player=get_name, get_player_id=get_name,
                      get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,
                      incremental_update_interval=incremental_update_interval, get_last_games=get_last_player_games,
-                     incremental_skip_chance=incremental_skip_chance, get_consoles=get_consoles)
+                     incremental_skip_chance=incremental_skip_chance, get_consoles=get_consoles,
+                     get_player_avatar=get_player_avatar)
     if is_password_encrypted(key_read):
         api_log.info("Retroachievements key encrypted, do nothing")
         open_key = decrypt_password(key_read, config.server_name, config.db_port)

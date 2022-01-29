@@ -9,11 +9,12 @@ from typing import Union, List
 
 class Platform:
     config = None
+    conn = None
 
     def __init__(self, name: str, get_games, get_game, get_achivements, games: [Game], id: int,
                  validate_player, get_player_id, get_stats, incremental_update_enabled: bool,
                  incremental_update_interval: int, get_last_games, incremental_skip_chance: int,
-                 get_consoles, get_player_stats=None, set_hardcoded=None):
+                 get_consoles, get_player_stats=None, set_hardcoded=None, get_player_avatar=None):
         self.id = id
         self._is_persist = False
         self.name = name
@@ -25,6 +26,7 @@ class Platform:
         self.get_player_id = get_player_id
         self.get_consoles = get_consoles
         self.get_player_stats = get_player_stats
+        self.get_player_avatar = get_player_avatar
         self.set_hardcoded = set_hardcoded
         self.games = {}
         self.games_by_id = {}
@@ -57,7 +59,7 @@ class Platform:
                 self._consoles_by_id[i.id] = i
             self._consoles_by_ext_id[str(i.ext_id)] = i
 
-    def get_console_by_id(self, id) -> Union[Console, None]:
+    def get_console_by_id(self, id: int) -> Union[Console, None]:
         return self._consoles_by_id.get(id)
 
     def get_console_by_ext(self, ext_id) -> Union[Console, None]:
@@ -86,9 +88,20 @@ class Platform:
     # Temp!
     @classmethod
     def get_connect(cls):
-        conn = psycopg2.connect(dbname=cls.config.db_name, user=cls.config.db_user,
-                                password=cls.config.db_password, host=cls.config.db_host, port=cls.config.db_port)
-        return conn
+        if cls.conn is None:
+            cls.conn = psycopg2.connect(dbname=cls.config.db_name, user=cls.config.db_user,
+                                        password=cls.config.db_password, host=cls.config.db_host,
+                                        port=cls.config.db_port)
+        elif cls.conn.closed != 0:
+            cls.conn = psycopg2.connect(dbname=cls.config.db_name, user=cls.config.db_user,
+                                        password=cls.config.db_password, host=cls.config.db_host,
+                                        port=cls.config.db_port)
+        return cls.conn
+
+    @classmethod
+    def reset_connect(cls):
+        cls.conn.close()
+        cls.conn = None
 
     def save(self):
         conn = self.get_connect()
@@ -217,11 +230,14 @@ class Platform:
                 publisher_id, publisher_name, genre_ids, genres, feature_ids, features in cursor:
             self.load_log.info("Loaded game {0} with id {1}, ext_id {2}, for platform {3} and console {4}".
                                format(name, id, ext_id, self.id, console_id))
-            if self.get_consoles is not None:
+            if self.get_consoles is not None and console_id is not None:
+                console = None
+                console_id = int(console_id)
                 if self.get_console_by_id(console_id) is None:
                     self.load_consoles(console_id)
+                    console = self.get_console_by_id(console_id)
                 games[str(ext_id)] = Game(name=name, platform_id=platform_id, id=id, ext_id=ext_id, achievements=None,
-                                          console_ext_id=None, console=self.get_console_by_id(console_id),
+                                          console_ext_id=None, console=console,
                                           icon_url=icon_url, release_date=release_date,
                                           publisher_id=publisher_id,
                                           publisher=publisher_name,
@@ -275,8 +291,6 @@ class Platform:
         if game_id is not None:
             self.games = {**self.games, **games}
         self.set_games(games=games)
-
-        conn.close()
 
     # TODO make fast
     @property

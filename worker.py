@@ -62,6 +62,7 @@ def main_worker(config: Config):
         i.reset_games()
         i.load_languages()
         i.set_next_language()
+    conn.commit()
 
     cur_players = []
     platform_players = []
@@ -72,6 +73,8 @@ def main_worker(config: Config):
     while is_running:
 
         try:
+            conn = Platform.get_connect()
+            cursor = conn.cursor()
 
             for i in range(len(platforms)):
                 if datetime.datetime.now().replace(tzinfo=timezone.utc) > \
@@ -122,6 +125,8 @@ def main_worker(config: Config):
                         platforms[i].mark_language_done()
                         renew_log.info("Update platform {0} finished, next_update {1}".format(platforms[i].name,
                                                                                               dt_next_update[i]))
+                        conn = Platform.get_connect()
+                        cursor = conn.cursor()
                         cursor.execute("""
                                 update achievements_hunt.update_history
                                     set dt_ended = current_timestamp,
@@ -129,11 +134,11 @@ def main_worker(config: Config):
                                     where id_platform = %s
                                     and dt_ended is null
                                 """, (dt_next_update[i], platforms[i].id))
-                        conn.commit()
                     else:
                         renew_log.info(
                             "Update platform {0} postponed, progress {1}/{2}".format(platforms[i].name, cur_players[i],
                                                                                      len(platform_players[i])))
+                    conn.commit()
                 else:
                     renew_log.debug("Skip update platform {0}, next update {1}".format(
                         platforms[i].name, dt_next_update[i]))
@@ -234,6 +239,7 @@ def main_worker(config: Config):
                         msg["players"] = {}
                         for cnt, platform_name in cursor:
                             msg["players"][platform_name] = cnt
+                        conn.commit()
                         msg["module"] = "Worker"
                         msg["platform_stats"] = {}
                         for i in platforms:

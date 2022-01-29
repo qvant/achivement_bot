@@ -94,6 +94,8 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
                       format(url, params, r.text),
                       exc_info=True,
                       )
+        if r.status_code == 400:
+            break
         cnt += 1
         time.sleep(api_call_pause_on_error)
     return r
@@ -171,7 +173,8 @@ def init_platform(config: Config) -> Platform:
                      get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,
                      incremental_update_interval=incremental_update_interval, get_last_games=get_player_last_games,
                      incremental_skip_chance=incremental_skip_chance, get_consoles=None,
-                     get_player_stats=get_player_stats_for_game, set_hardcoded=set_hardcoded)
+                     get_player_stats=get_player_stats_for_game, set_hardcoded=set_hardcoded,
+                     get_player_avatar=get_player_avatar)
     if is_password_encrypted(key_read):
         api_log.info("Steam key encrypted, do nothing")
         open_key = decrypt_password(key_read, config.server_name, config.db_port)
@@ -299,26 +302,28 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     genres = []
     features = []
     if r.status_code == 200:
-        obj = r.json().get(game_id)
+        obj = r.json()
         if obj is not None:
-            obj = obj.get("data")
+            obj = obj.get(game_id)
             if obj is not None:
-                icon_url = obj.get("header_image")
-                developers = obj.get("developers")
-                if developers is not None and len(developers) > 0:
-                    developer = developers[0]
-                publishers = obj.get("publishers")
-                if publishers is not None and len(publishers) > 0:
-                    publisher = publishers[0]
-                if "genres" in obj:
-                    for cur_gen in obj.get("genres"):
-                        genres.append(cur_gen.get("description"))
-                obj_release = obj.get("release_date")
-                if obj_release is not None:
-                    release_date = obj_release.get("date")
-                if "categories" in obj:
-                    for cur_feature in obj.get("categories"):
-                        features.append(cur_feature.get("description"))
+                obj = obj.get("data")
+                if obj is not None:
+                    icon_url = obj.get("header_image")
+                    developers = obj.get("developers")
+                    if developers is not None and len(developers) > 0:
+                        developer = developers[0]
+                    publishers = obj.get("publishers")
+                    if publishers is not None and len(publishers) > 0:
+                        publisher = publishers[0]
+                    if "genres" in obj:
+                        for cur_gen in obj.get("genres"):
+                            genres.append(cur_gen.get("description"))
+                    obj_release = obj.get("release_date")
+                    if obj_release is not None:
+                        release_date = obj_release.get("date")
+                    if "categories" in obj:
+                        for cur_feature in obj.get("categories"):
+                            features.append(cur_feature.get("description"))
     return Game(name=game_name, platform_id=PLATFORM_STEAM, ext_id=game_id, id=None, achievements=achievements,
                 console_ext_id=None, console=None, icon_url=icon_url, release_date=release_date, publisher=publisher,
                 developer=developer, genres=genres, features=features, stats=stats)
@@ -359,12 +364,13 @@ def get_player_stats_for_game(player_id, game_id):
                         params=params)
     player_stats = r.json().get("playerstats")
     stats = {}
-    player_stats = player_stats.get("stats")
     if player_stats is not None:
-        for i in player_stats:
-            ext_id = i.get("name")
-            val = i.get("value")
-            stats[ext_id] = str(val)
+        player_stats = player_stats.get("stats")
+        if player_stats is not None:
+            for i in player_stats:
+                ext_id = i.get("name")
+                val = i.get("value")
+                stats[ext_id] = str(val)
     return stats
 
 
@@ -404,6 +410,28 @@ def get_player_stats(player_id):
         else:
             name = None
         return name
+
+
+def get_player_avatar(player_id):
+    params = {
+        "steamids": player_id,
+    }
+    r = _call_steam_api(url="http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/",
+                        method_name="GetPlayerSummaries",
+                        params=params)
+    res = r.json().get("response").get("players")
+    if len(res) == 0:
+        return None
+    else:
+        if "avatarmedium" in res[0]:
+            url = res[0]["avatarmedium"]
+        elif "avatarfull" in res[0]:
+            url = res[0]["avatarfull"]
+        elif "avatar" in res[0]:
+            url = res[0]["avatar"]
+        else:
+            url = None
+        return url
 
 
 def set_hardcoded(games_names_map: Dict):

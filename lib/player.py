@@ -1,7 +1,7 @@
 import datetime
 import random
 from psycopg2 import Error as pg_error
-from typing import Union
+from typing import Union, Dict
 from .platform import Platform
 from datetime import timezone
 
@@ -15,7 +15,7 @@ GAMES_PERFECT = 3
 
 class Player:
     def __init__(self, name: str, ext_id: str, platform: Platform, id: Union[int, None], telegram_id: Union[int, None],
-                 dt_updated=None, dt_updated_full=None, dt_updated_inc=None):
+                 dt_updated=None, dt_updated_full=None, dt_updated_inc=None, avatar_url: Union[str, None] = None):
         self.id = id
         self.telegram_id = telegram_id
         self.ext_id = ext_id
@@ -31,6 +31,7 @@ class Player:
         self.stats = {}
         self.has_perfect_games = True
         self.is_public = True
+        self.avatar_url = avatar_url
 
     def set_ext_id(self, ext_id):
         self.ext_id = ext_id
@@ -75,6 +76,10 @@ class Player:
         self.name = name
         self.dt_updated = datetime.datetime.now()
 
+    def set_avatar(self, avatar):
+        self.avatar_url = avatar
+        self.dt_updated = datetime.datetime.now()
+
     def mark_valid(self):
         conn = self.platform.get_connect()
         cur = conn.cursor()
@@ -113,7 +118,7 @@ class Player:
                             """, (self.telegram_id,))
                 conn.commit()
                 self.platform.logger.info("Deleted player {0}".format(self.ext_id))
-        conn.close()
+        self.platform.reset_connect()
 
     def is_unique(self):
         conn = self.platform.get_connect()
@@ -187,10 +192,10 @@ class Player:
                     self.has_perfect_games = True
 
     @property
-    def cur_achievement_stats(self):
+    def cur_achievement_stats(self) -> Dict:
         for i in self.achievement_stats:
-            return self.achievement_stats[i]\
-
+            return self.achievement_stats[i]
+        return {}
 
     @property
     def cur_achievements_game(self):
@@ -267,11 +272,11 @@ class Player:
             self.platform.logger.info("Saving player {0}".format(self.ext_id))
             cur.execute("""
                 insert into achievements_hunt.players(platform_id, name, ext_id, telegram_id, status_id, dt_update,
-                                                      is_public)
+                                                      is_public, avatar_url)
                 values (%s, %s, %s, %s, %s, %s,
-                        %s) on conflict ON CONSTRAINT u_players_ext_key do nothing returning id
+                        %s, %s) on conflict ON CONSTRAINT u_players_ext_key do nothing returning id
             """, (self.platform.id, self.name, self.ext_id, self.telegram_id, STATUS_NEW, self.dt_updated,
-                  self.is_public))
+                  self.is_public, self.avatar_url))
             ret = cur.fetchone()
             if ret is not None:
                 self.id = ret[0]
@@ -288,9 +293,13 @@ class Player:
                 update achievements_hunt.players set dt_update = %s,
                                                      is_public = %s,
                                                      dt_update_full = coalesce(%s, dt_update_full),
-                                                     dt_update_inc = coalesce(%s, dt_update_inc)
+                                                     dt_update_inc = coalesce(%s, dt_update_inc),
+                                                     name = coalesce(%s, name),
+                                                     avatar_url = coalesce(%s, avatar_url)
                 where id = %s
-            """, (self.dt_updated, self.is_public, self.dt_updated_full, self.dt_updated_inc, self.id,))
+            """, (self.dt_updated, self.is_public, self.dt_updated_full, self.dt_updated_inc,
+                  self.name, self.avatar_url,
+                  self.id))
         self.platform.logger.info("Get saved games for player {0} ".format(self.ext_id))
         cur.execute("""
                             select game_id
@@ -391,8 +400,8 @@ class Player:
                     self.ext_id, len(self.stats)))
             for i in self.stats:
                 game = self.platform.get_game_by_ext_id(str(i))
-                self.platform.logger.info("Find stats for player {0} game{1}: {2}".format(
-                    self.ext_id, game.ext_id, len(self.stats[i])))
+                self.platform.logger.info("Find stats for player {0} game {1} ({3}): {2}".format(
+                    self.ext_id, game.ext_id, len(self.stats[i]), game.name))
                 saved_stats = {}
                 stats_to_save = {}
                 cur.execute("""
@@ -430,13 +439,42 @@ class Player:
         self.platform.logger.info("Saved player {0}".format(self.ext_id))
 
     def renew(self):
+        new_name = self.platform.validate_player(self.ext_id)
+        if new_name != self.name:
+            self.platform.logger.info("Found new name {1} for player {0}. ".
+                                      format(self.name, new_name))
+            self.set_name(new_name)
+        if self.platform.get_player_avatar is not None:
+            new_avatar = self.platform.get_player_avatar(self.ext_id)
+            if self.avatar_url != new_avatar:
+                self.platform.logger.info("Found new avatar {1} for player {0}. Old one: {2}".
+                                          format(self.name, new_avatar, self.avatar_url))
+                self.set_avatar(new_avatar)
         cur_time = datetime.datetime.now().replace(tzinfo=datetime.timezone.utc)
         if self.platform.incremental_update_enabled:
             delta = datetime.timedelta(days=self.platform.incremental_update_interval)
             if (self.dt_updated_inc is not None and (self.dt_updated_inc + delta) > cur_time) or \
                     (self.dt_updated_full is not None and (self.dt_updated_full + delta) > cur_time):
                 if random.random() >= self.platform.incremental_skip_chance:
+                    owned_games, owned_games_names = self.platform.get_games(self.ext_id)
+                    self.get_owned_games(force=True)
+                    new_games = []
+                    new_game_names = []
+                    saved_games_by_ext = {}
+                    saved_game_names_by_ext = {}
+                    for cg in self.games:
+                        saved_games_by_ext[cg.ext_id] = cg
+                        saved_game_names_by_ext[cg.ext_id] = cg.name
                     self.games, names, = self.platform.get_last_games(self.ext_id)
+                    str_games = list(map(str, self.games))
+                    for cg in range(len(owned_games)):
+                        if str(owned_games[cg]) not in saved_games_by_ext and str(owned_games[cg]) not in str_games:
+                            new_games.append(owned_games[cg])
+                            new_game_names.append(owned_games_names[cg])
+                            self.platform.logger.info("Found new owned, but unplayed game {1} for player {0}. ".
+                                                      format(self.name, owned_games[cg]))
+                    self.games = [*self.games, *new_games]
+                    names = [*names, *new_game_names]
                     self.platform.logger.info("Prepared incremental update for player {0}. "
                                               "Last inc update {1}, last full update {2}".
                                               format(self.name, self.dt_updated_inc, self.dt_updated_full))
