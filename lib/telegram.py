@@ -928,7 +928,7 @@ def show_account_games(update: Update, context: CallbackContext):
             if chat_id in user_games_offsets:
                 for j in range(user_games_offsets[chat_id], len(games_by_player_id[user_active_accounts[chat_id]])):
                     games.append(games_by_player_id[user_active_accounts[chat_id]][j])
-                    if len(games) >= GAME_MENU_LENGTH:
+                    if len(games) > GAME_MENU_LENGTH:
                         break
         player = get_player_by_chat_id(chat_id)
         if player is not None:
