@@ -156,6 +156,7 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                   )
     achievements = {}
     game_name = None
+    genres = None
     obj = r.json()
     if len(obj) > 0:
         console_ext_id = obj.get("ConsoleID")
@@ -194,13 +195,17 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
         game_name = obj.get("Title")
         "For game {0}, found name {1}".format(
             game_id, game_name)
+        genre = obj.get("Genre")
+        if genre is not None:
+            genres = genre.replace("\\/", "\\").split(",")
+
     return Game(name=game_name, platform_id=PLATFORM_RETRO, ext_id=game_id, id=None, achievements=achievements,
                 console_ext_id=str(obj.get("ConsoleID")), console=None,
                 icon_url=get_game_icon_url(str(obj.get("ImageIcon"))),
                 release_date=str(obj.get("Released")),
                 publisher=obj.get("Publisher"),
                 developer=obj.get("Developer"),
-                genres=obj.get("Genre").replace("\\/", "\\").split(","),
+                genres=genres,
                 )
 
 
