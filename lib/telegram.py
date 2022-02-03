@@ -606,9 +606,13 @@ def game_stats(update: Update, context: CallbackContext):
                 player = get_player_by_chat_id(chat_id)
     if player is not None:
         stats = player.get_game_stats(user_active_games[chat_id])
-        msg = _("Custom game stats:")
-        for i in range(len(stats)):
-            msg += chr(10) + "{}: {}".format(stats[i].get("name"), stats[i].get("value"))
+        if len(stats) > 0:
+            msg = _("Custom game stats:")
+            for i in range(len(stats)):
+                msg += chr(10) + "{}: {}".format(stats[i].get("name"), stats[i].get("value"))
+        else:
+            game = player.platform.get_game_by__id(int(user_active_games[chat_id]))
+            msg = _("Game {0} haven't custom stats".format(game.name))
         reply_markup = InlineKeyboardMarkup(achievements_keyboard(chat_id, []))
         context.bot.send_message(chat_id=chat_id, text=msg,
                                  reply_markup=reply_markup)
