@@ -250,8 +250,10 @@ def get_player_games(player_id):
     obj = r.json()
     if obj is not None and len(obj) > 0 and len(obj[0]) > 0:
         for i in obj:
-            res[0].append(i.get("GameID"))
-            res[1].append(i.get("Title"))
+            game_id = i.get("GameID")
+            if game_id != "0":
+                res[0].append(game_id)
+                res[1].append(i.get("Title"))
     return res
 
 
