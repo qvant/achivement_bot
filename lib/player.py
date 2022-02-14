@@ -350,7 +350,7 @@ class Player:
                         if ret is not None:
                             achievement.id = ret[0]
                         else:
-                            new_game = self.platform.get_game(game_id=game.id, name=game.name)
+                            new_game = self.platform.get_game(game_id=game.ext_id, name=game.name)
                             new_game.save(cursor=cur, active_locale='en')
                             conn.commit()
                             self.platform.logger.warn("Get id for achievement {} and game {} ({}) on platform {} after "
