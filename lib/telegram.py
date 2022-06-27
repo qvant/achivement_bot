@@ -1079,6 +1079,7 @@ def show_account_achievements(update: Update, context: CallbackContext):
                          format(chat_id))
     inc_command_counter("show_account_achievements")
     _ = set_locale(update)
+    db = Platform.get_connect()
 
     achievements = []
     player = get_player_by_chat_id(chat_id)
