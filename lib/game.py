@@ -289,7 +289,7 @@ class Game:
                         """, (self.platform_id, self.id, cur_g))
                 # TODO: remove duplicate code
                 cursor.execute("""
-                                    select genre_id from achievements_hunt.map_games_to_features f
+                                    select f.feature_id from achievements_hunt.map_games_to_features f
                                         where f.platform_id = %s
                                               and f.game_id = %s
                                 """, (self.platform_id, self.id))
