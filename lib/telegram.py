@@ -410,11 +410,12 @@ def locale_choice(update: Update, context: CallbackContext):
     telegram_logger.info("Received command {0} from user {1} in locale_choice menu".
                          format(cur_item, update.effective_chat.id))
     user_locales[chat_id] = cur_item
-    cursor = db.cursor()
+    conn = Platform.get_connect()
+    cursor = conn.cursor()
     cursor.execute("""
     update achievements_hunt.users set locale = %s, dt_last_update = current_timestamp where telegram_id = %s""",
                    (cur_item, chat_id))
-    db.commit()
+    conn.commit()
     reply_markup = InlineKeyboardMarkup(main_keyboard(chat_id))
     context.bot.send_message(chat_id=chat_id, text=_("Language chosen"),
                              reply_markup=reply_markup)
@@ -696,14 +697,15 @@ def list_of_games(update: Update, context: CallbackContext):
     global user_games_offsets
     chat_id = update.effective_chat.id
     _ = set_locale(chat_id=chat_id)
-    cursor = db.cursor()
+    conn = Platform.get_connect()
+    cursor = conn.cursor()
     cursor.execute("""
             select id, platform_id, name, ext_id, avatar_url from achievements_hunt.players
             where telegram_id = %s order by id
             """, (update.effective_chat.id,))
     players_by_tlg_id[update.effective_chat.id] = []
     _ = set_locale(update)
-    db.commit()
+    conn.commit()
 
     for id, platform_id, name, ext_id, avatar_url in cursor:
         for i in platforms:
@@ -791,8 +793,7 @@ def show_account_stats(update: Update, context: CallbackContext, console_id: Uni
     locale = get_locale_name(update)
     player = get_player_by_chat_id(chat_id)
     if player is not None:
-        db = Platform.get_connect()
-        cursor = db.cursor()
+        cursor = Platform.get_connect().cursor()
         cursor.execute("""
         select
             round(avg(case when g.has_achievements
@@ -926,7 +927,6 @@ def show_account_games(update: Update, context: CallbackContext):
     global user_games_offsets
     global user_active_accounts
     global user_games_modes
-    global db
     chat_id = update.effective_chat.id
     telegram_logger.info("Show games for user {0} in menu show_account_games".
                          format(update.effective_chat.id))
@@ -963,7 +963,7 @@ def show_account_games(update: Update, context: CallbackContext):
     else:
         dt_update_full = None
         if player is not None:
-            cursor = db.cursor()
+            cursor = Platform.get_connect().cursor()
             cursor.execute("select dt_update_full from achievements_hunt.players where id = %s", (player.id,))
             dt_update_full, = cursor.fetchone()
         if dt_update_full is not None:
@@ -1109,7 +1109,8 @@ def show_account_achievements(update: Update, context: CallbackContext):
                 msg += _("Genre: {0}").format(", ".join(cur_game.genres)) + chr(10)
             if len(cur_game.features) > 0:
                 msg += _("Features: {0}").format(", ".join(cur_game.features)) + chr(10)
-            cursor = db.cursor()
+            conn = Platform.get_connect()
+            cursor = conn.cursor()
             cursor.execute("""select dt_last_perfected from achievements_hunt.player_games where game_id = %s
             and platform_id = %s and player_id = %s""",
                            (cur_game.id, cur_game.platform_id, player.id))
@@ -1117,7 +1118,7 @@ def show_account_achievements(update: Update, context: CallbackContext):
             if dt_last_perfected is not None:
                 dt_last_perfected = dt_last_perfected[0]
             cursor.close()
-            db.commit()
+            conn.commit()
             if dt_last_perfected is not None:
                 msg += _("Last time was perfected: {0}").format(dt_last_perfected) + chr(10)
         prev_unlocked = False
@@ -1159,14 +1160,14 @@ def show_account_achievements(update: Update, context: CallbackContext):
 
 def set_locale(update: Union[Update, None] = None, chat_id: Union[int, None] = None):
     global user_locales
-    global db
     global telegram_logger
     if update is not None:
         chat_id = update.effective_chat.id
     user_id = None
     if chat_id not in user_locales:
         try:
-            cursor = db.cursor()
+            conn = Platform.get_connect()
+            cursor = conn.cursor()
             cursor.execute("""select locale, id from achievements_hunt.users where telegram_id = %s""",
                            (chat_id,))
             res = cursor.fetchone()
@@ -1192,7 +1193,7 @@ def set_locale(update: Union[Update, None] = None, chat_id: Union[int, None] = N
                                                 values (%s, %s)
                                                 on conflict (telegram_id) do nothing
                                             """, (chat_id, locale))
-            db.commit()
+            conn.commit()
             if len(locale) == 0:
                 locale = "en"
         except psycopg2.Error as err:
@@ -1218,12 +1219,12 @@ def set_locale(update: Union[Update, None] = None, chat_id: Union[int, None] = N
 
 def get_locale_name(update: Union[Update, None], chat_id: Union[int, None] = None):
     global user_locales
-    global db
     if update is not None:
         chat_id = update.effective_chat.id
     user_id = None
     if chat_id not in user_locales:
-        cursor = db.cursor()
+        conn = Platform.get_connect()
+        cursor = conn.cursor()
         cursor.execute("""select locale, id from achievements_hunt.users where telegram_id = %s""",
                        (chat_id,))
         res = cursor.fetchone()
@@ -1249,7 +1250,7 @@ def get_locale_name(update: Union[Update, None], chat_id: Union[int, None] = Non
                                             values (%s, %s)
                                             on conflict (telegram_id) do nothing
                                         """, (chat_id, locale))
-        db.commit()
+        conn.commit()
         if len(locale) == 0:
             locale = "en"
         user_locales[chat_id] = locale
@@ -1300,7 +1301,8 @@ def activity_feed(update: Update, context: CallbackContext):
     _ = set_locale(update)
     locale = get_locale_name(update)
 
-    cursor = db.cursor()
+    conn = Platform.get_connect()
+    cursor = conn.cursor()
 
     cursor.execute("""
                     select
@@ -1337,7 +1339,7 @@ def activity_feed(update: Update, context: CallbackContext):
                         order by dt_unlock desc, coalesce(tr.name, a.name) limit 25
                     """, (locale,))
     buf = cursor.fetchall()
-    db.commit()
+    conn.commit()
     activity_list = ""
     if len(buf) > 0:
         activity_list = chr(10) + _("Last activity:") + chr(10)
