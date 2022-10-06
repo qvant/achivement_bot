@@ -349,6 +349,11 @@ class Game:
                     to_save.append(ext_id)
             if not rows_found:
                 need_save = True
+            if not need_save:
+                for i in self.achievements:
+                    if self.achievements[i].id is None:
+                        need_save = True
+                        break
             if need_save:
                 for i in self.achievements:
                     if self.achievements[i].id is None or i in to_save:
