@@ -1299,44 +1299,57 @@ def activity_feed(update: Update, context: CallbackContext):
     _ = set_locale(update)
     locale = get_locale_name(update)
 
-    cursor = db.cursor()
+    try:
+        connect = Platform.get_connect()
+        cursor = connect.cursor()
 
-    cursor.execute("""
-                    select
-                            coalesce(tr.name, a.name),
-                            a.percent_owners,
-                            g.name || case when c.name is not null then ' (' || c.name || ')' else '' end,
-                            p.name,
-                            pr.name,
-                            ar.name
-                        from achievements_hunt.players p
-                        join achievements_hunt.platforms pr
-                        on pr.id = p.platform_id
-                        join achievements_hunt.player_achievements aa
-                        on p.id = aa.player_id
-                          and p.platform_id = aa.platform_id
-                        join achievements_hunt.achievements a
-                        on aa.achievement_id  = a.id
-                          and aa.game_id  = a.game_id
-                          and aa.platform_id = a.platform_id
-                        left join achievements_hunt.achievement_translations tr
-                        on tr.achievement_id  = a.id
-                          and tr.game_id = aa.game_id
-                          and tr.platform_id = aa.platform_id
-                          and tr.locale = %s
-                        join achievements_hunt.games g
-                        on aa.game_id = g.id
-                          and aa.platform_id = g.platform_id
-                        left join achievements_hunt.consoles c
-                        on c.id = g.console_id
-                          and c.platform_id = g.platform_id
-                        left join achievements_hunt.achievement_rarity ar
-                        on ar.n_bottom_border < a.percent_owners
-                          and ar.n_upper_border >= a.percent_owners
-                        order by dt_unlock desc, coalesce(tr.name, a.name) limit 25
-                    """, (locale,))
-    buf = cursor.fetchall()
-    db.commit()
+        cursor.execute("""
+                        select
+                                coalesce(tr.name, a.name),
+                                a.percent_owners,
+                                g.name || case when c.name is not null then ' (' || c.name || ')' else '' end,
+                                p.name,
+                                pr.name,
+                                ar.name
+                            from achievements_hunt.players p
+                            join achievements_hunt.platforms pr
+                            on pr.id = p.platform_id
+                            join achievements_hunt.player_achievements aa
+                            on p.id = aa.player_id
+                              and p.platform_id = aa.platform_id
+                            join achievements_hunt.achievements a
+                            on aa.achievement_id  = a.id
+                              and aa.game_id  = a.game_id
+                              and aa.platform_id = a.platform_id
+                            left join achievements_hunt.achievement_translations tr
+                            on tr.achievement_id  = a.id
+                              and tr.game_id = aa.game_id
+                              and tr.platform_id = aa.platform_id
+                              and tr.locale = %s
+                            join achievements_hunt.games g
+                            on aa.game_id = g.id
+                              and aa.platform_id = g.platform_id
+                            left join achievements_hunt.consoles c
+                            on c.id = g.console_id
+                              and c.platform_id = g.platform_id
+                            left join achievements_hunt.achievement_rarity ar
+                            on ar.n_bottom_border < a.percent_owners
+                              and ar.n_upper_border >= a.percent_owners
+                            order by dt_unlock desc, coalesce(tr.name, a.name) limit 25
+                        """, (locale,))
+        buf = cursor.fetchall()
+        db.commit()
+    except psycopg2.Error as err:
+        telegram_logger.exception(err)
+        if config.supress_errors:
+            try:
+                set_connect(Platform.get_connect())
+            except BaseException as err2:
+                telegram_logger.exception(err2)
+                pass
+        else:
+            raise
+    telegram_logger.info("activity_feed: data fetched")
     activity_list = ""
     if len(buf) > 0:
         activity_list = chr(10) + _("Last activity:") + chr(10)
@@ -1345,8 +1358,13 @@ def activity_feed(update: Update, context: CallbackContext):
             activity_list += " ({})".format(i[5])
             activity_list += chr(10)
 
-    context.bot.send_message(chat_id=update.effective_chat.id, text=activity_list,
-                             reply_markup=reply_markup)
+    telegram_logger.info("activity_feed: message prepared")
+    try:
+        context.bot.send_message(chat_id=update.effective_chat.id, text=activity_list,
+                                 reply_markup=reply_markup)
+        telegram_logger.info("activity_feed: message sent")
+    except BaseException as err:
+        telegram_logger.exception(err)
 
 
 def echo(update: Update, context: CallbackContext):
