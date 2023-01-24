@@ -71,8 +71,10 @@ def inc_call_cnt(method: str):
     if method not in call_counters[cur_dt]:
         call_counters[cur_dt][method] = int(0)
     call_counters[cur_dt][method] += 1
-    if len(call_counters) > call_counters_retain:
-        old_dt = str(datetime.date.today() - datetime.timedelta(days=call_counters_retain))
+    while len(call_counters) > call_counters_retain >= 0:
+        keys = [key for key in call_counters]
+        keys.sort()
+        old_dt = keys[0]
         call_counters.pop(old_dt, 'None')
 
 
