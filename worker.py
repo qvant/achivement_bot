@@ -123,6 +123,7 @@ def main_worker(config: Config):
                                             datetime.timedelta(seconds=platforms[i].config.update_interval)
                         platform_players[i] = []
                         platforms[i].mark_language_done()
+                        platforms[i].reset_games()
                         renew_log.info("Update platform {0} finished, next_update {1}".format(platforms[i].name,
                                                                                               dt_next_update[i]))
                         conn = Platform.get_connect()
