@@ -146,7 +146,10 @@ def main_worker(config: Config):
         except BaseException as err:
             queue_log.exception(err)
             if config.supress_errors:
-                pass
+                try:
+                    conn.rollback()
+                except BaseException as exc:
+                    queue_log.exception(exc)
             else:
                 raise
 

@@ -15,14 +15,14 @@ class Console:
                 insert into achievements_hunt.consoles(platform_id, name, ext_id)
                 values (%s, %s, %s)
                 on conflict ON CONSTRAINT u_consoles_ext_key
-                do nothing returning id""", (self.platform_id, self.name, self.ext_id,))
+                do nothing returning id""", (self.platform_id, self.name, str(self.ext_id,)))
             ret = cur.fetchone()
             if ret is not None:
                 self.id = ret[0]
             else:
                 cur.execute("""
                 select id from achievements_hunt.consoles c where c.platform_id = %s and c.ext_id = %s
-                """, (self.platform_id, self.ext_id))
+                """, (self.platform_id, str(self.ext_id)))
                 ret = cur.fetchone()
                 if ret is not None:
                     self.id = ret[0]

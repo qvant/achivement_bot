@@ -153,7 +153,7 @@ class Platform:
         cursor = conn.cursor()
         if console_id is None:
             cursor.execute("select id, name, ext_id from achievements_hunt.consoles c "
-                           "where c.platform_id = %s and id = %s", (self.id, console_id))
+                           "where c.platform_id = %s and id = %s", (self.id, str(console_id)))
         else:
             cursor.execute("select id, name, ext_id from achievements_hunt.consoles c "
                            "where c.platform_id = %s", (self.id,))

@@ -309,7 +309,7 @@ def get_consoles():
     obj = r.json()
     if obj is not None and len(obj) > 0:
         for i in obj:
-            res.append(Console(id=None, ext_id=i["ID"], name=i["Name"], platform_id=PLATFORM_RETRO))
+            res.append(Console(id=None, ext_id=str(i["ID"]), name=i["Name"], platform_id=PLATFORM_RETRO))
     return res
 
 
