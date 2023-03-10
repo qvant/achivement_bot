@@ -1354,7 +1354,7 @@ def activity_feed(update: Update, context: CallbackContext):
     if len(buf) > 0:
         activity_list = chr(10) + _("Last activity:") + chr(10)
         for i in buf:
-            activity_list += _(r"{}({}) unlocked {} (game {}) percent owners {}").format(i[3], i[4], i[0], i[2], i[1])
+            activity_list += _(r"{} ({}) unlocked {} (game {}) percent owners {}").format(i[3], i[4], i[0], i[2], i[1])
             activity_list += " ({})".format(i[5])
             activity_list += chr(10)
 
