@@ -5,6 +5,9 @@ import requests
 import time
 import datetime
 from typing import Dict
+
+from requests import ConnectTimeout
+
 from ..achievement import Achievement
 from ..config import Config
 from ..game import Game
@@ -85,19 +88,22 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
             inc_call_cnt(method_name)
         api_log.info("Request to {} for {}".
                      format(url, params))
-        r = requests.get(real_url)
-        api_log.info("Response from {} for {} is {}".
-                     format(url, params, r))
-        if r.status_code == 200 or cnt >= max_api_call_tries:
-            api_log.debug("Full response {} for {} is {}".
-                          format(url, params, r.text))
-            break
-        api_log.error("Full response from {} for {} is {}".
-                      format(url, params, r.text),
-                      exc_info=True,
-                      )
-        if r.status_code == 400:
-            break
+        try:
+            r = requests.get(real_url, {"timeout": 30})
+            api_log.info("Response from {} for {} is {}".
+                         format(url, params, r))
+            if r.status_code == 200 or cnt >= max_api_call_tries:
+                api_log.debug("Full response {} for {} is {}".
+                              format(url, params, r.text))
+                break
+            api_log.error("Full response from {} for {} is {}".
+                          format(url, params, r.text),
+                          exc_info=True,
+                          )
+            if r.status_code == 400:
+                break
+        except ConnectTimeout as exc:
+            api_log.error(exc)
         cnt += 1
         time.sleep(api_call_pause_on_error)
     return r
