@@ -7,6 +7,7 @@ from typing import Dict
 
 from requests import ConnectTimeout
 
+from ..ApiException import ApiException
 from ..achievement import Achievement
 from ..config import Config
 from ..console import Console
@@ -109,7 +110,7 @@ def _call_api(url: str, method_name: str, params: Dict) -> requests.Response:
         api_log.info("Request to {} for {}".
                      format(url, params))
         try:
-            r = requests.get(real_url, {"timeout": 30})
+            r = requests.get(real_url, timeout=30)
             api_log.info("Response from {} for {} is {}".
                          format(url, params, r))
             if r.status_code == 200 or cnt >= max_api_call_tries:
@@ -122,6 +123,8 @@ def _call_api(url: str, method_name: str, params: Dict) -> requests.Response:
                           )
         except ConnectTimeout as exc:
             api_log.error(exc)
+            if cnt >= max_api_call_tries:
+                raise ApiException("Retroachievements timeout")
         cnt += 1
         time.sleep(api_call_pause_on_error)
     return r
