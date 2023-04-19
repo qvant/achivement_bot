@@ -244,7 +244,7 @@ def get_player_achievements(player_id, game_id):
         achievement_dates = []
         for o in achievements_list:
             if achievements_list[o].get("DateEarned") is not None:
-                achievements.append(achievements_list[o].get("ID"))
+                achievements.append(str(achievements_list[o].get("ID")))
                 achievement_dates.append(datetime.datetime.strptime(achievements_list[o].get("DateEarned"),
                                                                     "%Y-%m-%d %H:%M:%S"))
             if achievements_list[o].get("DateEarnedHardcore") is not None:
