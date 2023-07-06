@@ -107,6 +107,6 @@ def main_core(config: Config):
             queue_log.critical(err)
             queue_log.exception(err)
             if config.supress_errors:
-                queue_log.info("Continue work because supress errors mode")
+                queue_log.info("Continue work because suppress errors mode")
             else:
                 raise
