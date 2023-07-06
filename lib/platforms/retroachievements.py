@@ -261,7 +261,7 @@ def get_player_games(player_id):
         "u": player_id,
         "c": 99999,
     }
-    # TODO: 50 gaems max and offset not working. sad :(
+    # TODO: 50 games max and offset not working. sad :(
     r = _call_api(url="https://retroachievements.org/API/API_GetUserRecentlyPlayedGames.php",
                   method_name="API_GetUserRecentlyPlayedGames",
                   params=params,

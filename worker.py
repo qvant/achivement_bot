@@ -8,6 +8,7 @@ import pika
 from lib.config import Config, MODE_BOT, MODE_UPDATER
 from lib.log import get_logger
 from lib.platform import Platform
+from lib.player import STATUS_VALID
 from lib.queue import set_config as set_queue_config, set_logger as set_queue_log, get_mq_connect, WORKER_QUEUE_NAME, \
     enqueue_command
 from lib.stats import get_stats
@@ -53,7 +54,7 @@ def main_worker(config: Config):
     for i in platforms:
         cursor.execute("""
         select max(dt_next_update) from achievements_hunt.update_history where id_platform = %s and dt_ended is not null
-        """, (i.id, ))
+        """, (i.id,))
         ret = cursor.fetchone()
         if ret is not None and ret[0] is not None:
             dt_next_update.append(ret[0])
@@ -177,7 +178,8 @@ def main_worker(config: Config):
                         for i in platforms:
                             queue_log.debug("Check platform {0} {1}".format(i.name, i.id))
                             if int(i.id) == int(platform_id):
-                                players = load_players(platform=i, config=config, player_id=player_id)
+                                players = load_players(platform=i, config=config, player_id=player_id,
+                                                       status_id=STATUS_VALID)
                                 if len(players) > 0:
                                     player = players[0]
                                     if player.dt_updated is None or player.dt_updated.replace(tzinfo=timezone.utc) < \

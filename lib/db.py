@@ -29,7 +29,7 @@ def load(config: Config, load_games: bool = True, load_achievements: bool = True
     return platforms
 
 
-def load_players(platform: Platform, config: Config, player_id: Union[int, None] = None):
+def load_players(platform: Platform, config: Config, player_id: Union[int, None] = None, status_id: [int, None] = None):
     global load_log
     conn = psycopg2.connect(dbname=config.db_name, user=config.db_user,
                             password=config.db_password, host=config.db_host, port=config.db_port)
@@ -50,8 +50,9 @@ def load_players(platform: Platform, config: Config, player_id: Union[int, None]
             from achievements_hunt.players
             where platform_id = %s
                 and id = %s
+                and (status_id = %s or %s is null)  
             order by id
-            """, (platform.id, player_id))
+            """, (platform.id, player_id, status_id, status_id))
     players = []
     for id, platform_id, name, ext_id, telegram_id, dt_updated, dt_update_full, dt_update_inc,\
             avatar_url in cursor:
