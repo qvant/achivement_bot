@@ -111,8 +111,13 @@ def main_worker(config: Config):
                         renew_log.info("Update platform {0} for player {1}/{2}".format(platforms[i].name,
                                                                                        platform_players[i][j].ext_id,
                                                                                        len(platform_players[i])))
-                        platform_players[i][j].renew()
-                        platform_players[i][j].save()
+                        try:
+                            platform_players[i][j].renew()
+                            platform_players[i][j].save()
+                        except BaseException as exc:
+                            renew_log.exception(exc)
+                            time.sleep(5)
+                            raise
                         start_pos += 1
                         if start_pos >= 100:
                             renew_log.info(
@@ -151,6 +156,7 @@ def main_worker(config: Config):
                     conn.rollback()
                 except BaseException as exc:
                     queue_log.exception(exc)
+                time.sleep(5)
             else:
                 raise
 

@@ -440,6 +440,8 @@ class Player:
 
     def renew(self):
         new_name = self.platform.validate_player(self.ext_id)
+        if new_name is None:
+            raise ValueError("Name is empty")
         if new_name != self.name:
             self.platform.logger.info("Found new name {1} for player {0}. ".
                                       format(self.name, new_name))
