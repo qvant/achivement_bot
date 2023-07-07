@@ -116,8 +116,10 @@ def main_worker(config: Config):
                             platform_players[i][j].save()
                         except BaseException as exc:
                             renew_log.exception(exc)
-                            time.sleep(5)
-                            raise
+                            try:
+                                conn.rollback()
+                            except BaseException as err:
+                                queue_log.exception(err)
                         start_pos += 1
                         if start_pos >= 100:
                             renew_log.info(

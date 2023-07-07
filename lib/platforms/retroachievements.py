@@ -139,9 +139,12 @@ def get_name(player_name: str):
                   method_name="API_GetUserSummary",
                   params=params
                   )
-    buf = r.json().get("MemberSince")
-    if buf is not None:
-        player_id = player_name
+    try:
+        buf = r.json().get("MemberSince")
+        if buf is not None:
+            player_id = player_name
+    except BaseException as exc:
+        api_log.exception(exc)
     return player_id
 
 
