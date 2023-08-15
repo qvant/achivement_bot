@@ -83,8 +83,30 @@ def main_worker(config: Config):
                     renew_log.info("Update platform {0}, next update {1}".format(platforms[i].name, dt_next_update[i]))
                     platforms[i].set_next_language()
                     if platforms[i].get_consoles is not None:
-                        platforms[i].set_consoles(platforms[i].get_consoles())
-                        platforms[i].save()
+                        try:
+                            platforms[i].set_consoles(platforms[i].get_consoles())
+                            platforms[i].save()
+                        except BaseException as exc:
+                            renew_log.exception(exc)
+                            try:
+                                conn.rollback()
+                            except BaseException as err:
+                                queue_log.exception(err)
+                            dt_next_update[i] = datetime.datetime.now() + \
+                                                datetime.timedelta(seconds=platforms[i].config.update_interval)
+                            conn = Platform.get_connect()
+                            cursor = conn.cursor()
+                            cursor.execute("""
+                                                            update achievements_hunt.update_history
+                                                                set dt_ended = current_timestamp,
+                                                                dt_next_update = %s
+                                                                where id_platform = %s
+                                                                and dt_ended is null
+                                                            """, (dt_next_update[i], platforms[i].id))
+                            conn.commit()
+                            renew_log.info(
+                                "Update platform {0} skipped because of consoles not available".format(platforms[i].name))
+                            continue
                     cursor.execute("""
                     select count(1) from achievements_hunt.update_history where id_platform = %s
                     and dt_ended is null
