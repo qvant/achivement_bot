@@ -8,6 +8,7 @@ import pika
 from lib.config import Config, MODE_BOT, MODE_UPDATER
 from lib.log import get_logger
 from lib.platform import Platform
+from lib.platforms.steam import set_skip_extra_info
 from lib.player import STATUS_VALID
 from lib.queue import set_config as set_queue_config, set_logger as set_queue_log, get_mq_connect, WORKER_QUEUE_NAME, \
     enqueue_command
@@ -30,6 +31,7 @@ def main_worker(config: Config):
     platforms = load(config)
     set_platforms(platforms)
     set_connect(Platform.get_connect())
+    set_skip_extra_info(True)
 
     m_queue = get_mq_connect(config)
     m_channel = m_queue.channel()
@@ -54,13 +56,13 @@ def main_worker(config: Config):
     for i in platforms:
         cursor.execute("""
         select max(dt_next_update) from achievements_hunt.update_history where id_platform = %s and dt_ended is not null
+        and id_process = 1
         """, (i.id,))
         ret = cursor.fetchone()
         if ret is not None and ret[0] is not None:
             dt_next_update.append(ret[0])
         else:
             dt_next_update.append(datetime.datetime.now())
-        i.reset_games()
         i.load_languages()
         i.set_next_language()
     conn.commit()
@@ -82,33 +84,9 @@ def main_worker(config: Config):
                         dt_next_update[i].replace(tzinfo=timezone.utc):
                     renew_log.info("Update platform {0}, next update {1}".format(platforms[i].name, dt_next_update[i]))
                     platforms[i].set_next_language()
-                    if platforms[i].get_consoles is not None:
-                        try:
-                            platforms[i].set_consoles(platforms[i].get_consoles())
-                            platforms[i].save()
-                        except BaseException as exc:
-                            renew_log.exception(exc)
-                            try:
-                                conn.rollback()
-                            except BaseException as err:
-                                queue_log.exception(err)
-                            dt_next_update[i] = datetime.datetime.now() + \
-                                                datetime.timedelta(seconds=platforms[i].config.update_interval)
-                            conn = Platform.get_connect()
-                            cursor = conn.cursor()
-                            cursor.execute("""
-                                                            update achievements_hunt.update_history
-                                                                set dt_ended = current_timestamp,
-                                                                dt_next_update = %s
-                                                                where id_platform = %s
-                                                                and dt_ended is null
-                                                            """, (dt_next_update[i], platforms[i].id))
-                            conn.commit()
-                            renew_log.info(
-                                "Update platform {0} skipped because of consoles not available".format(platforms[i].name))
-                            continue
                     cursor.execute("""
                     select count(1) from achievements_hunt.update_history where id_platform = %s
+                    and id_process = 1
                     and dt_ended is null
                     """, (platforms[i].id,))
                     cnt, = cursor.fetchone()

@@ -1,7 +1,7 @@
 import gettext
 import psycopg2
 
-from .config import Config, MODE_CORE, MODE_WORKER, MODE_UPDATER, MODE_BOT
+from .config import Config, MODE_CORE, MODE_WORKER, MODE_UPDATER, MODE_BOT, MODE_GAME_UPDATER
 from .platform import Platform
 from .player import Player, GAMES_ALL, GAMES_PERFECT, GAMES_WITH_ACHIEVEMENTS
 from .log import get_logger
@@ -66,11 +66,13 @@ SHUTDOWN_CORE = "shutdown_core"
 SHUTDOWN_BOT = "shutdown_bot"
 SHUTDOWN_UPDATER = "shutdown_updater"
 SHUTDOWN_WORKER = "shutdown_worker"
+SHUTDOWN_GAME_UPDATER = "shutdown_game_updater"
 
 STATS_CORE = "stats_core"
 STATS_BOT = "stats_bot"
 STATS_UPDATER = "stats_updater"
 STATS_WORKER = "stats_worker"
+STATS_GAME_UPDATER = "stats_game_updater"
 
 LOCALE_DYNAMIC = "LOCALE_DYNAMIC"
 LOCALE_RU = "LOCALE_RU"
@@ -241,6 +243,7 @@ def shutdown_keyboard(chat_id: int):
         InlineKeyboardButton(_("Shutdown bot"), callback_data=SHUTDOWN_BOT),
         InlineKeyboardButton(_("Shutdown worker"), callback_data=SHUTDOWN_WORKER),
         InlineKeyboardButton(_("Shutdown updater"), callback_data=SHUTDOWN_UPDATER),
+        InlineKeyboardButton(_("Shutdown game updater"), callback_data=SHUTDOWN_GAME_UPDATER),
     ]
     return pretty_menu(keyboard)
 
@@ -252,6 +255,7 @@ def stats_keyboard(chat_id: int):
         InlineKeyboardButton(_("Stats bot"), callback_data=STATS_BOT),
         InlineKeyboardButton(_("Stats worker"), callback_data=STATS_WORKER),
         InlineKeyboardButton(_("Stats updater"), callback_data=STATS_UPDATER),
+        InlineKeyboardButton(_("Stats game updater"), callback_data=STATS_GAME_UPDATER),
     ]
     return pretty_menu(keyboard)
 
@@ -458,6 +462,8 @@ def shutdown_choice(update: Update, context: CallbackContext):
             enqueue_command(cmd, MODE_WORKER)
         elif cur_item == SHUTDOWN_UPDATER:
             enqueue_command(cmd, MODE_UPDATER)
+        elif cur_item == SHUTDOWN_GAME_UPDATER:
+            enqueue_command(cmd, MODE_GAME_UPDATER)
         context.bot.send_message(chat_id=chat_id, text=_("Command sent: {0}").format(cmd))
     else:
         telegram_logger.critical("Received illegal cmd {1} from user {0} in shutdown_choice menu".format(
@@ -493,6 +499,8 @@ def stats_choice(update: Update, context: CallbackContext):
                 enqueue_command(cmd, MODE_UPDATER)
             elif cur_item == STATS_WORKER:
                 enqueue_command(cmd, MODE_WORKER)
+            elif cur_item == STATS_GAME_UPDATER:
+                enqueue_command(cmd, MODE_GAME_UPDATER)
             context.bot.send_message(chat_id=chat_id, text=str("Command sent"),
                                      reply_markup=reply_markup)
     else:

@@ -78,6 +78,8 @@ class Platform:
                     self.games[str(i)] = games[i]
 
     def get_game_by_ext_id(self, ext_id: str) -> Game:
+        if ext_id == "1716740":
+            pass
         return self.games[ext_id]
 
     def get_game_by__id(self, id: int, load_if_not_found: bool = False) -> Game:
@@ -140,8 +142,8 @@ class Platform:
         conn.commit()
         self.logger.info("Finish saving to db")
 
-    def update_games(self, game_id: str, game_name: str):
-        if str(game_id) not in self.games:
+    def update_games(self, game_id: str, game_name: str, force: bool = False):
+        if str(game_id) not in self.games or force:
             self.logger.info("Ask server for game {0} {1}".format(game_id, game_name))
             self.games[str(game_id)] = self.get_game(game_id, game_name, self.active_language)
             self.save()

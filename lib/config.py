@@ -31,6 +31,9 @@ MODE_CORE = "core"
 MODE_BOT = "bot"
 MODE_WORKER = "worker"
 MODE_UPDATER = "updater"
+MODE_GAME_UPDATER = "game_updater"
+
+ALLOWED_MODES = [MODE_CORE, MODE_BOT, MODE_WORKER, MODE_GAME_UPDATER, MODE_UPDATER]
 
 
 class Config:

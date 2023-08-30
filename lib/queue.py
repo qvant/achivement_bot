@@ -9,6 +9,7 @@ MAIN_QUEUE_NAME = "AchievementQueue"
 UPDATER_QUEUE_NAME = "AchievementQueueUpdater"
 BOT_QUEUE_NAME = "AchievementQueueBot"
 WORKER_QUEUE_NAME = "AchievementQueueWorker"
+GAME_UPDATER_QUEUE_NAME = "AchievementQueueGameUpdater"
 
 global queue_logger
 global config

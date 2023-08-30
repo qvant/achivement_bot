@@ -29,6 +29,7 @@ global app_details_sleep_time
 global app_details_sleep_chance
 global call_counters_retain
 global hardcoded_games
+global skip_extra_info
 
 
 def get_key():
@@ -39,6 +40,11 @@ def get_key():
 def set_key(key):
     global api_key
     api_key = key
+
+
+def set_skip_extra_info(val: bool = False):
+    global skip_extra_info
+    skip_extra_info = val
 
 
 def _save_api_key(password: str, path: str):
@@ -242,6 +248,7 @@ def get_player_games(player_id):
 def get_game(game_id: str, name: str, language: str = "English") -> Game:
     global api_log
     global hardcoded_games
+    global skip_extra_info
     params = {
         "appid": game_id,
         "l": language,
@@ -298,21 +305,22 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     params = {
         "appids": game_id,
     }
-    if random.random() > app_details_sleep_chance:
-        api_log.info("Sleep before https://store.steampowered.com/api/appdetails/ because random")
-        time.sleep(app_details_sleep_time)
-        api_log.info("Waked up")
-    r = _call_steam_api(url="https://store.steampowered.com/api/appdetails/",
-                        method_name="appdetails",
-                        params=params,
-                        require_auth=False)
+    if not skip_extra_info:
+        if random.random() > app_details_sleep_chance:
+            api_log.info("Sleep before https://store.steampowered.com/api/appdetails/ because random")
+            time.sleep(app_details_sleep_time)
+            api_log.info("Waked up")
+        r = _call_steam_api(url="https://store.steampowered.com/api/appdetails/",
+                            method_name="appdetails",
+                            params=params,
+                            require_auth=False)
     icon_url = None
     release_date = None
     developer = None
     publisher = None
     genres = []
     features = []
-    if r.status_code == 200:
+    if skip_extra_info or r.status_code == 200:
         obj = r.json()
         if obj is not None:
             obj = obj.get(game_id)

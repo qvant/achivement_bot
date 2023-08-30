@@ -502,13 +502,8 @@ class Player:
         games_num = len(self.games)
         self.is_public = True
         for i in range(games_num):
-            self.platform.logger.info("Update game with id {1} and name {2} for player {0} {3}. Progress {4}/{5}".
-                                      format(self.ext_id, self.games[i], names[i], self.name, i, games_num))
-            self.platform.update_games(str(self.games[i]), names[i])
-            self.platform.logger.info(
-                "Get achievements for game with id {1} and name {2} for player {0} {3}. Progress {4}/{5}".format(
-                    self.ext_id, self.games[i], names[i], self.name, i+1, games_num))
             if self.platform.get_game_by_ext_id(str(self.games[i])).has_achievements:
+                # TODO: optimize
                 if self.is_public:
                     try:
                         self.achievements[self.games[i]], self.achievement_dates[self.games[i]] = \
