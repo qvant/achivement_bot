@@ -502,6 +502,7 @@ class Player:
         games_num = len(self.games)
         self.is_public = True
         for i in range(games_num):
+            # if new game, not discovered by game updater yet
             if not self.platform.is_game_known(str(self.games[i])):
                 self.platform.logger.info("Request new game ext id: {}, name: {} for player: {}. ".
                                           format(self.games[i], names[i], self.name))

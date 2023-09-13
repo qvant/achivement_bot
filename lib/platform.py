@@ -85,8 +85,6 @@ class Platform:
         return ext_id in self.games
 
     def get_game_by_ext_id(self, ext_id: str) -> Game:
-        if ext_id == "1716740":
-            pass
         return self.games[ext_id]
 
     def get_game_by__id(self, id: int, load_if_not_found: bool = False) -> Game:
