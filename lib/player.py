@@ -516,24 +516,21 @@ class Player:
                 self.platform.logger.info("Saved new game ext id: {}, name: {} for player: {}. ".
                                           format(self.games[i], names[i], self.name))
             if self.platform.get_game_by_ext_id(str(self.games[i])).has_achievements:
-                # TODO: optimize
-                if self.is_public:
-                    try:
-                        self.achievements[self.games[i]], self.achievement_dates[self.games[i]] = \
-                            self.platform.get_achievements(self.ext_id, self.games[i])
-                    except ValueError as err:
-                        if str(err) == "Profile is not public":
-                            self.is_public = False
-                            self.dt_updated_inc = None
-                            self.dt_updated_full = None
-                    if self.platform.get_player_stats is not None and \
-                            len(self.platform.get_game_by_ext_id(str(self.games[i])).stats) > 0:
-                        self.stats[self.games[i]] = self.platform.get_player_stats(self.ext_id, self.games[i])
-                else:
-                    self.platform.logger.info(
-                        "Skip checking achievements for game with id {1} and name {2} for player {0} {3}, "
-                        "because profile is private. Progress {4}/{5}".format(
-                            self.ext_id, self.games[i], names[i], self.name, i + 1, games_num))
+                try:
+                    self.achievements[self.games[i]], self.achievement_dates[self.games[i]] = \
+                        self.platform.get_achievements(self.ext_id, self.games[i])
+                except ValueError as err:
+                    if str(err) == "Profile is not public":
+                        self.is_public = False
+                        self.dt_updated_inc = None
+                        self.dt_updated_full = None
+                        self.platform.logger.info(
+                            "Skip checking achievements for player {} {}, because profile is private.".format(
+                                self.ext_id, self.name))
+                        break
+                if self.platform.get_player_stats is not None and \
+                        len(self.platform.get_game_by_ext_id(str(self.games[i])).stats) > 0:
+                    self.stats[self.games[i]] = self.platform.get_player_stats(self.ext_id, self.games[i])
             else:
                 self.platform.logger.info(
                     "Skip checking achievements for game with id {1} and name {2} for player {0} {3}, "
