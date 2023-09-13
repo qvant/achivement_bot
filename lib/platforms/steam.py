@@ -184,7 +184,7 @@ def init_platform(config: Config) -> Platform:
         call_counters_retain = 7
     else:
         call_counters_retain = int(call_counters_retain)
-    steam = Platform(name='Steam', get_games=get_player_games, get_achivements=get_player_achievements,
+    steam = Platform(name='Steam', get_games=get_player_games, get_achievements=get_player_achievements,
                      get_game=get_game, games=None, id=PLATFORM_STEAM, validate_player=get_player_stats,
                      get_player_id=get_name,
                      get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,

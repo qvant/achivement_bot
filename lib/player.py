@@ -520,7 +520,7 @@ class Player:
                 if self.is_public:
                     try:
                         self.achievements[self.games[i]], self.achievement_dates[self.games[i]] = \
-                            self.platform.get_achivements(self.ext_id, self.games[i])
+                            self.platform.get_achievements(self.ext_id, self.games[i])
                     except ValueError as err:
                         if str(err) == "Profile is not public":
                             self.is_public = False
