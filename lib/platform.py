@@ -77,6 +77,13 @@ class Platform:
                 if not isinstance(i, str):
                     self.games[str(i)] = games[i]
 
+    def add_game(self, game: Game):
+        self.games_by_id[game.id] = game
+        self.games[str(game.ext_id)] = game
+
+    def is_game_known(self, ext_id: str) -> bool:
+        return ext_id in self.games
+
     def get_game_by_ext_id(self, ext_id: str) -> Game:
         if ext_id == "1716740":
             pass

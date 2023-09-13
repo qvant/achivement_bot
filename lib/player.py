@@ -502,6 +502,18 @@ class Player:
         games_num = len(self.games)
         self.is_public = True
         for i in range(games_num):
+            if not self.platform.is_game_known(str(self.games[i])):
+                self.platform.logger.info("Request new game ext id: {}, name: {} for player: {}. ".
+                                          format(self.games[i], names[i], self.name))
+                new_game = self.platform.get_game(str(self.games[i]), names[i])
+                self.platform.add_game(new_game)
+
+                conn = self.platform.get_connect()
+                cur = conn.cursor()
+                new_game.save(cur, "en")
+                conn.commit()
+                self.platform.logger.info("Saved new game ext id: {}, name: {} for player: {}. ".
+                                          format(self.games[i], names[i], self.name))
             if self.platform.get_game_by_ext_id(str(self.games[i])).has_achievements:
                 # TODO: optimize
                 if self.is_public:
