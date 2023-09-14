@@ -30,6 +30,7 @@ global app_details_sleep_chance
 global call_counters_retain
 global hardcoded_games
 global skip_extra_info
+global session
 
 
 def get_key():
@@ -79,6 +80,7 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
     global max_api_call_tries
     global api_call_pause_on_error
     global api_log
+    global session
     cnt = 0
     if require_auth:
         real_url = "{}?key={}&".format(url, get_key())
@@ -90,13 +92,14 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
         real_url += "{}={}&".format(i, params[i])
     if len(params) > 0:
         real_url = real_url[:len(real_url) - 1]
+    headers = {'Accept-Encoding': 'gzip'}
     while True:
         if require_auth:
             inc_call_cnt(method_name)
         api_log.info("Request to {} for {}".
                      format(url, params))
         try:
-            r = requests.get(real_url, timeout=30)
+            r = session.get(real_url, timeout=30, headers=headers)
             api_log.info("Response from {} for {} is {}".
                          format(url, params, r))
             if r.status_code == 200 or cnt >= max_api_call_tries:
@@ -110,6 +113,12 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
             if r.status_code == 400:
                 break
         except ConnectTimeout as exc:
+            session = requests.Session()
+            api_log.error(exc)
+            if cnt >= max_api_call_tries:
+                raise ApiException("Steam timeout")
+        except requests.exceptions.ReadTimeout as exc:
+            session = requests.Session()
             api_log.error(exc)
             if cnt >= max_api_call_tries:
                 raise ApiException("Steam timeout")
@@ -144,6 +153,8 @@ def init_platform(config: Config) -> Platform:
     global app_details_sleep_chance
     global call_counters_retain
     global hardcoded_games
+    global session
+    session = requests.Session()
     call_counters = {}
     hardcoded_games = {}
     api_log = get_logger("LOG_API_steam_" + str(config.mode), config.log_level, True)
@@ -227,12 +238,14 @@ def get_player_last_games(player_id):
 
 
 def get_player_games(player_id):
+    global session
     params = {
         "steamid": player_id,
         "include_played_free_games": True,
         "include_appinfo": True,
         "skip_unvetted_apps": False,
     }
+    session = requests.Session()
     r = _call_steam_api(url="http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/",
                         method_name="GetOwnedGames",
                         params=params)
@@ -307,13 +320,13 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     }
     if not skip_extra_info:
         if random.random() > app_details_sleep_chance:
-            api_log.info("Sleep before https://store.steampowered.com/api/appdetails/ because random")
-            time.sleep(app_details_sleep_time)
-            api_log.info("Waked up")
-        r = _call_steam_api(url="https://store.steampowered.com/api/appdetails/",
-                            method_name="appdetails",
-                            params=params,
-                            require_auth=False)
+            skip_extra_info = True
+            api_log.info("Skip https://store.steampowered.com/api/appdetails/ because random")
+        if not skip_extra_info:
+            r = _call_steam_api(url="https://store.steampowered.com/api/appdetails/",
+                                method_name="appdetails",
+                                params=params,
+                                require_auth=False)
     icon_url = None
     release_date = None
     developer = None
@@ -412,9 +425,11 @@ def get_name(player_name: str):
 
 
 def get_player_stats(player_id):
+    global session
     params = {
         "steamids": player_id,
     }
+    session = requests.Session()
     r = _call_steam_api(url="http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/",
                         method_name="GetPlayerSummaries",
                         params=params)

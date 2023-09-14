@@ -136,7 +136,7 @@ def main_game_updater(config: Config):
                             "Get achievements for game with id {} and name {}. Progress {}/{}".format(
                                game.ext_id, game.name, j + 1, games_num))
                     platforms[i].save()
-                    dt_next_update[j] = datetime.datetime.now() + \
+                    dt_next_update[i] = datetime.datetime.now() + \
                                         datetime.timedelta(seconds=platforms[i].config.update_interval)
                     platforms[i].mark_language_done()
                     platforms[i].reset_games()

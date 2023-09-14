@@ -1,7 +1,6 @@
 import datetime
 import json
 import time
-# import cProfile as profile
 from datetime import timezone
 
 import pika
@@ -22,8 +21,6 @@ from lib.message_types import MT_ACCOUNT_UPDATED
 def main_worker(config: Config):
     queue_log = get_logger("Rabbit_worker", config.log_level, True)
     renew_log = get_logger("renew_worker", config.log_level, True)
-    # pr = profile.Profile()
-    # pr.disable()
 
     set_load_logger(config)
     set_logger(config)
@@ -77,8 +74,6 @@ def main_worker(config: Config):
         platform_players.append([])
 
     while is_running:
-
-        # pr.enable()
 
         try:
             conn = Platform.get_connect()
@@ -166,10 +161,6 @@ def main_worker(config: Config):
                 time.sleep(5)
             else:
                 raise
-        # pr.disable()
-        # pr.dump_stats('profile.pstat')
-        # is_running = False
-        # exit(0)
 
         try:
 
