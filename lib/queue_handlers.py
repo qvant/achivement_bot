@@ -9,6 +9,7 @@ _ = gettext.gettext
 
 global bot
 
+
 def set_telegram(tlg):
     global bot
     bot = tlg
