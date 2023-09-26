@@ -7,6 +7,7 @@ from .message_types import MT_VALIDATION_OK, MT_VALIDATION_FAILED, MT_ACCOUNT_DE
 
 _ = gettext.gettext
 
+global bot
 
 def set_telegram(tlg):
     global bot

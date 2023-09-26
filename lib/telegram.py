@@ -515,6 +515,7 @@ def consoles_navigation(update: Update, context: CallbackContext):
     inc_command_counter("consoles_navigation")
     _ = set_locale(update)
     if chat_id in user_active_accounts:
+        console_id = None
         for i in players_by_tlg_id[chat_id]:
             if str(i.id) == str(user_active_accounts[chat_id]):
                 user_active_accounts[chat_id] = i.id
@@ -1202,8 +1203,10 @@ def set_locale(update: Union[Update, None] = None, chat_id: Union[int, None] = N
             db.commit()
             if len(locale) == 0:
                 locale = "en"
+            user_locales[chat_id] = locale
         except psycopg2.Error as err:
             telegram_logger.exception(err)
+            user_locales[chat_id] = "en"
             if config.supress_errors:
                 try:
                     set_connect(Platform.get_connect())
@@ -1212,7 +1215,6 @@ def set_locale(update: Union[Update, None] = None, chat_id: Union[int, None] = N
                     pass
             else:
                 raise
-        user_locales[chat_id] = locale
     locale = user_locales[chat_id]
     if locale == 'ru':
         _ = ru.gettext
@@ -1306,6 +1308,7 @@ def activity_feed(update: Update, context: CallbackContext):
     reply_markup = InlineKeyboardMarkup(main_keyboard(update.effective_chat.id))
     _ = set_locale(update)
     locale = get_locale_name(update)
+    activity_list = ""
 
     try:
         connect = Platform.get_connect()
@@ -1347,6 +1350,14 @@ def activity_feed(update: Update, context: CallbackContext):
                         """, (locale,))
         buf = cursor.fetchall()
         db.commit()
+        telegram_logger.info("activity_feed: data fetched")
+        if len(buf) > 0:
+            activity_list = chr(10) + _("Last activity:") + chr(10)
+            for i in buf:
+                activity_list += _(r"{} ({}) unlocked {} (game {}) percent owners {}").\
+                    format(i[3], i[4], i[0], i[2], i[1])
+                activity_list += " ({})".format(i[5])
+                activity_list += chr(10)
     except psycopg2.Error as err:
         telegram_logger.exception(err)
         if config.supress_errors:
@@ -1357,14 +1368,6 @@ def activity_feed(update: Update, context: CallbackContext):
                 pass
         else:
             raise
-    telegram_logger.info("activity_feed: data fetched")
-    activity_list = ""
-    if len(buf) > 0:
-        activity_list = chr(10) + _("Last activity:") + chr(10)
-        for i in buf:
-            activity_list += _(r"{} ({}) unlocked {} (game {}) percent owners {}").format(i[3], i[4], i[0], i[2], i[1])
-            activity_list += " ({})".format(i[5])
-            activity_list += chr(10)
 
     telegram_logger.info("activity_feed: message prepared")
     try:

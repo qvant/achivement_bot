@@ -35,7 +35,7 @@ class Achievement:
 
     def save(self, cursor, active_locale: str):
         en_name = ""
-        en_descr = ""
+        en_description = ""
         if self.id is None:
             if active_locale == 'en':
                 cursor.execute(
@@ -69,7 +69,7 @@ class Achievement:
             if ret is not None:
                 self.id = ret[0]
                 en_name = ret[1]
-                en_descr = ret[2]
+                en_description = ret[2]
         if self.id is None:
             cursor.execute("""
                                 select id, name, description from achievements_hunt.achievements
@@ -80,8 +80,8 @@ class Achievement:
             if ret is not None:
                 self.id = ret[0]
                 en_name = ret[1]
-                en_descr = ret[2]
-        if (en_name != self.name or en_descr != self.description) and active_locale != 'en':
+                en_description = ret[2]
+        if (en_name != self.name or en_description != self.description) and active_locale != 'en':
             cursor.execute("""insert into achievements_hunt.achievement_translations as l
                             (platform_id, game_id, achievement_id, locale, name, description )
                             values(%s, %s, %s, %s, %s, %s)
