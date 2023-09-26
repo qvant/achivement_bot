@@ -17,6 +17,8 @@ from lib.telegram import set_logger, set_platforms, set_connect
 from lib.db import load, load_players, set_load_logger
 from lib.message_types import MT_ACCOUNT_UPDATED
 
+ID_PROCESS_GAME_UPDATER = 2
+
 
 def main_game_updater(config: Config):
     queue_log = get_logger("Rabbit_game_updater", config.log_level, True)
@@ -56,8 +58,8 @@ def main_game_updater(config: Config):
     for j in platforms:
         cursor.execute("""
         select max(dt_next_update) from achievements_hunt.update_history where id_platform = %s and dt_ended is not null
-        and id_process = 2
-        """, (j.id,))
+        and id_process = %s
+        """, (j.id, ID_PROCESS_GAME_UPDATER))
         ret = cursor.fetchone()
         if ret is not None and ret[0] is not None:
             dt_next_update.append(ret[0])
@@ -88,8 +90,8 @@ def main_game_updater(config: Config):
                     cursor.execute("""
                                         select count(1) from achievements_hunt.update_history where id_platform = %s
                                         and dt_ended is null
-                                        and id_process = 2
-                                        """, (platforms[i].id,))
+                                        and id_process = %s
+                                        """, (platforms[i].id, ID_PROCESS_GAME_UPDATER))
                     cnt, = cursor.fetchone()
                     if cnt == 0:
                         cursor.execute("""
@@ -117,8 +119,8 @@ def main_game_updater(config: Config):
                                                                 dt_next_update = %s
                                                                 where id_platform = %s
                                                                 and dt_ended is null
-                                                                and id_process = 2
-                                                            """, (dt_next_update[i],platforms[i].id))
+                                                                and id_process = %s
+                                                            """, (dt_next_update[i], platforms[i].id, ID_PROCESS_GAME_UPDATER))
                             conn.commit()
                             renew_log.info(
                                 "Update platform {0} skipped because of consoles not available".format(platforms[i].name))
@@ -150,8 +152,8 @@ def main_game_updater(config: Config):
                                 dt_next_update = %s
                                 where id_platform = %s
                                 and dt_ended is null
-                                and id_process = 2
-                            """, (dt_next_update[i],platforms[i].id))
+                                and id_process = %s
+                            """, (dt_next_update[i], platforms[i].id, ID_PROCESS_GAME_UPDATER))
                     conn.commit()
                 else:
                     renew_log.debug("Skip update platform {0}, next update {1}".format(

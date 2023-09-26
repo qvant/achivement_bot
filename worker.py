@@ -17,6 +17,8 @@ from lib.telegram import set_logger, set_platforms, set_connect
 from lib.db import load, load_players, set_load_logger
 from lib.message_types import MT_ACCOUNT_UPDATED
 
+ID_PROCESS_WORKER = 1
+
 
 def main_worker(config: Config):
     queue_log = get_logger("Rabbit_worker", config.log_level, True)
@@ -56,8 +58,8 @@ def main_worker(config: Config):
     for i in platforms:
         cursor.execute("""
         select max(dt_next_update) from achievements_hunt.update_history where id_platform = %s and dt_ended is not null
-        and id_process = 1
-        """, (i.id,))
+        and id_process = %s
+        """, (i.id, ID_PROCESS_WORKER))
         ret = cursor.fetchone()
         if ret is not None and ret[0] is not None:
             dt_next_update.append(ret[0])
@@ -86,9 +88,9 @@ def main_worker(config: Config):
                     platforms[i].set_next_language()
                     cursor.execute("""
                     select count(1) from achievements_hunt.update_history where id_platform = %s
-                    and id_process = 1
+                    and id_process = %s
                     and dt_ended is null
-                    """, (platforms[i].id,))
+                    """, (platforms[i].id, ID_PROCESS_WORKER))
                     cnt, = cursor.fetchone()
                     if cnt == 0:
                         cursor.execute("""
@@ -141,8 +143,9 @@ def main_worker(config: Config):
                                     set dt_ended = current_timestamp,
                                     dt_next_update = %s
                                     where id_platform = %s
+                                    and id_process = %s
                                     and dt_ended is null
-                                """, (dt_next_update[i], platforms[i].id))
+                                """, (dt_next_update[i], platforms[i].id, ID_PROCESS_WORKER))
                     else:
                         renew_log.info(
                             "Update platform {0} postponed, progress {1}/{2}".format(platforms[i].name, cur_players[i],
