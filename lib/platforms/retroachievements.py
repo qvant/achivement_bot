@@ -5,8 +5,6 @@ import time
 import datetime
 from typing import Dict
 
-from requests import ConnectTimeout
-
 from ..ApiException import ApiException
 from ..achievement import Achievement
 from ..config import Config
@@ -121,7 +119,7 @@ def _call_api(url: str, method_name: str, params: Dict) -> requests.Response:
                           format(url, params, r.text),
                           exc_info=True,
                           )
-        except ConnectTimeout as exc:
+        except requests.exceptions.ConnectTimeout as exc:
             api_log.error(exc)
             if cnt >= max_api_call_tries:
                 raise ApiException("Retroachievements timeout")

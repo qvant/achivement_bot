@@ -170,15 +170,15 @@ def main_keyboard(chat_id: int):
     _ = set_locale(chat_id=chat_id)
     players_by_tlg_id[chat_id] = []
     try:
-        db = Platform.get_connect()
-        cursor = db.cursor()
+        connect = Platform.get_connect()
+        cursor = connect.cursor()
         cursor.execute("""
                     select id, platform_id, name, ext_id, dt_update, is_public, avatar_url
                     from achievements_hunt.players
                     where telegram_id = %s
                     order by id
                     """, (chat_id,))
-        db.commit()
+        connect.commit()
 
         for id, platform_id, name, ext_id, dt_update, is_public, avatar_url in cursor:
             for i in platforms:
@@ -799,8 +799,8 @@ def show_account_stats(update: Update, context: CallbackContext, console_id: Uni
     locale = get_locale_name(update)
     player = get_player_by_chat_id(chat_id)
     if player is not None:
-        db = Platform.get_connect()
-        cursor = db.cursor()
+        connect = Platform.get_connect()
+        cursor = connect.cursor()
         cursor.execute("""
         select
             round(avg(case when g.has_achievements
@@ -910,7 +910,7 @@ def show_account_stats(update: Update, context: CallbackContext, console_id: Uni
             new_achievement_list = ""
         private_warning = ""
         # close RO transaction
-        db.commit()
+        connect.commit()
         if not player.is_public:
             private_warning = chr(10)
             private_warning += _("Profile is private, available information is limited")

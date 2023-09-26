@@ -1,6 +1,6 @@
 import datetime
 import random
-from psycopg2 import Error as pg_error
+from psycopg2 import Error as PgError
 from typing import Union, Dict
 from .platform import Platform
 from datetime import timezone
@@ -42,7 +42,7 @@ class Player:
             cur.execute("""
                             update achievements_hunt.players set ext_id = %s, dt_update = %s where id = %s
                         """, (self.ext_id, self.dt_updated, self.id,))
-        except pg_error as err:
+        except PgError as err:
             if err.pgcode == "23505":
                 conn.rollback()
                 cur.execute("""

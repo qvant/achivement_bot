@@ -6,8 +6,6 @@ import time
 import datetime
 from typing import Dict
 
-from requests import ConnectTimeout
-
 from ..ApiException import ApiException
 from ..achievement import Achievement
 from ..config import Config
@@ -112,7 +110,7 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
                           )
             if r.status_code == 400:
                 break
-        except ConnectTimeout as exc:
+        except requests.exceptions.ConnectTimeout as exc:
             session = requests.Session()
             api_log.error(exc)
             if cnt >= max_api_call_tries:
