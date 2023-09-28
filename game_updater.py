@@ -13,7 +13,7 @@ from lib.queue import set_config as set_queue_config, set_logger as set_queue_lo
     GAME_UPDATER_QUEUE_NAME, enqueue_command
 from lib.stats import get_stats
 from lib.telegram import set_logger, set_platforms, set_connect
-from lib.db import load, set_load_logger
+from lib.db import load, set_load_logger, get_next_update_date, mark_update_done, start_update
 
 ID_PROCESS_GAME_UPDATER = 2
 
@@ -51,66 +51,31 @@ def main_game_updater(config: Config):
     enqueue_command(cmd, MODE_BOT)
 
     dt_next_update = []
-    conn = Platform.get_connect()
-    cursor = conn.cursor()
     for j in platforms:
-        cursor.execute("""
-        select max(dt_next_update) from achievements_hunt.update_history where id_platform = %s and dt_ended is not null
-        and id_process = %s
-        """, (j.id, ID_PROCESS_GAME_UPDATER))
-        ret = cursor.fetchone()
-        if ret is not None and ret[0] is not None:
-            dt_next_update.append(ret[0])
-        else:
-            dt_next_update.append(datetime.datetime.now())
+        dt_next_update.append(get_next_update_date(j, ID_PROCESS_GAME_UPDATER))
         j.reset_games()
         j.load_languages()
         j.set_next_language()
-    conn.commit()
 
     while is_running:
 
         try:
-            conn = Platform.get_connect()
-            cursor = conn.cursor()
 
             for i in range(len(platforms)):
                 if datetime.datetime.now().replace(tzinfo=timezone.utc) > \
                         dt_next_update[i].replace(tzinfo=timezone.utc):
                     renew_log.info("Update platform {0}, next update {1}".format(platforms[i].name, dt_next_update[i]))
                     platforms[i].set_next_language()
-                    cursor.execute("""
-                                        select count(1) from achievements_hunt.update_history where id_platform = %s
-                                        and dt_ended is null
-                                        and id_process = %s
-                                        """, (platforms[i].id, ID_PROCESS_GAME_UPDATER))
-                    cnt, = cursor.fetchone()
-                    if cnt == 0:
-                        cursor.execute("""insert into achievements_hunt.update_history(id_platform, id_process)
-                                          values (%s, %s)""", (platforms[i].id, ID_PROCESS_GAME_UPDATER))
-                        conn.commit()
+                    start_update(platforms[i], ID_PROCESS_GAME_UPDATER)
                     if platforms[i].get_consoles is not None:
                         try:
                             platforms[i].set_consoles(platforms[i].get_consoles())
                             platforms[i].save()
                         except BaseException as exc:
                             renew_log.exception(exc)
-                            try:
-                                conn.rollback()
-                            except BaseException as err:
-                                queue_log.exception(err)
                             dt_next_update[i] = datetime.datetime.now() + datetime.timedelta(
                                 seconds=platforms[i].config.update_interval)
-                            conn = Platform.get_connect()
-                            cursor = conn.cursor()
-                            cursor.execute("""update achievements_hunt.update_history
-                                                set dt_ended = current_timestamp,
-                                                dt_next_update = %s
-                                                where id_platform = %s
-                                                and dt_ended is null
-                                                and id_process = %s
-                                                """, (dt_next_update[i], platforms[i].id, ID_PROCESS_GAME_UPDATER))
-                            conn.commit()
+                            mark_update_done(platforms[i], ID_PROCESS_GAME_UPDATER, dt_next_update[i])
                             renew_log.info(
                                 "Update platform {0} skipped, because consoles not available".format(platforms[i].name))
                             continue
@@ -133,27 +98,13 @@ def main_game_updater(config: Config):
                     platforms[i].reset_games()
                     renew_log.info("Update platform {0} finished, next_update {1}".format(platforms[i].name,
                                                                                           dt_next_update[i]))
-                    conn = Platform.get_connect()
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                            update achievements_hunt.update_history
-                                set dt_ended = current_timestamp,
-                                dt_next_update = %s
-                                where id_platform = %s
-                                and dt_ended is null
-                                and id_process = %s
-                            """, (dt_next_update[i], platforms[i].id, ID_PROCESS_GAME_UPDATER))
-                    conn.commit()
+                    mark_update_done(platforms[i], ID_PROCESS_GAME_UPDATER, dt_next_update[i])
                 else:
                     renew_log.debug("Skip update platform {0}, next update {1}".format(
                        platforms[i].name, dt_next_update[i]))
         except BaseException as err:
             queue_log.exception(err)
             if config.supress_errors:
-                try:
-                    conn.rollback()
-                except BaseException as exc:
-                    queue_log.exception(exc)
                 time.sleep(5)
             else:
                 raise
@@ -176,19 +127,7 @@ def main_game_updater(config: Config):
                         enqueue_command(cmd, MODE_BOT)
                     elif cmd_type == "get_stats":
                         msg = get_stats()
-                        # TODO less expensive way
-                        cursor.execute("""
-                                select count(1), p.name
-                                from achievements_hunt.players pl
-                                join achievements_hunt.platforms p
-                                  on p.id = pl.platform_id
-                                group by p.name
-                                """)
-                        msg["players"] = {}
-                        for cnt, platform_name in cursor:
-                            msg["players"][platform_name] = cnt
-                        conn.commit()
-                        msg["module"] = "Worker"
+                        msg["module"] = "Game updater"
                         msg["platform_stats"] = {}
                         for j in platforms:
                             msg["platform_stats"][j.name] = str(j.get_stats())
@@ -217,10 +156,6 @@ def main_game_updater(config: Config):
         except BaseException as err:
             queue_log.exception(err)
             if config.supress_errors:
-                try:
-                    conn.rollback()
-                except BaseException as exc:
-                    queue_log.exception(exc)
                 pass
             else:
                 raise

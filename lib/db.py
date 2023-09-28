@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from typing import Union
 
 import psycopg2
@@ -64,3 +66,65 @@ def load_players(platform: Platform, config: Config, player_id: Union[int, None]
         players.append(test)
     conn.close()
     return players
+
+
+def get_next_update_date(platform: Platform, id_process: int):
+    conn = Platform.get_connect()
+    cursor = conn.cursor()
+    cursor.execute("""
+            select max(dt_next_update) from achievements_hunt.update_history
+                where id_platform = %s 
+                    and dt_ended is not null
+                    and id_process = %s
+            """, (platform.id, id_process))
+    ret = cursor.fetchone()
+    conn.commit()
+    if ret is not None and ret[0] is not None:
+        return ret[0]
+    else:
+        return datetime.now()
+
+
+def mark_update_done(platform: Platform, id_process: int, dt_next_update: datetime):
+    conn = Platform.get_connect()
+    cursor = conn.cursor()
+    cursor.execute("""
+                    update achievements_hunt.update_history
+                        set dt_ended = current_timestamp,
+                        dt_next_update = %s
+                        where id_platform = %s
+                        and id_process = %s
+                        and dt_ended is null
+                    """, (dt_next_update, platform.id, id_process))
+    conn.commit()
+
+
+def start_update(platform: Platform, id_process: int):
+    conn = Platform.get_connect()
+    cursor = conn.cursor()
+    cursor.execute("""
+                        select count(1) from achievements_hunt.update_history where id_platform = %s
+                        and id_process = %s
+                        and dt_ended is null
+                        """, (platform.id, id_process))
+    cnt, = cursor.fetchone()
+    if cnt == 0:
+        cursor.execute("""insert into achievements_hunt.update_history(id_platform) values (%s)""", (platform.id,))
+    conn.commit()
+
+
+def get_players_count():
+    conn = Platform.get_connect()
+    cursor = conn.cursor()
+    res = {}
+    # TODO less expensive way
+    cursor.execute("""
+                    select count(1), p.name
+                      from achievements_hunt.players pl
+                      join achievements_hunt.platforms p
+                        on p.id = pl.platform_id
+                      group by p.name""")
+    for cnt, platform_name in cursor:
+        res[platform_name] = cnt
+    conn.commit()
+    return res
