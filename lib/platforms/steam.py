@@ -1,6 +1,5 @@
 import json
 import codecs
-import random
 import requests
 import time
 import datetime
@@ -12,6 +11,7 @@ from ..config import Config
 from ..game import Game
 from ..log import get_logger
 from ..platform import Platform
+from ..rates import do_with_limit, set_limit, get_limit_counter, get_limit_interval_end
 from ..security import is_password_encrypted, encrypt_password, decrypt_password
 from ..config import MODE_CORE
 
@@ -23,8 +23,6 @@ global call_counters
 global api_calls_daily_limit
 global max_api_call_tries
 global api_call_pause_on_error
-global app_details_sleep_time
-global app_details_sleep_chance
 global call_counters_retain
 global hardcoded_games
 global skip_extra_info
@@ -104,8 +102,8 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
                 api_log.debug("Full response {} for {} is {}".
                               format(url, params, r.text))
                 break
-            api_log.error("Full response from {} for {} is {}".
-                          format(url, params, r.text),
+            api_log.error("Full response from {} for {} is {}, Limit used: {}, ends {}".
+                          format(url, params, r.text, get_limit_counter(url), get_limit_interval_end(url)),
                           exc_info=True,
                           )
             if r.status_code == 400:
@@ -147,8 +145,6 @@ def init_platform(config: Config) -> Platform:
     global api_calls_daily_limit
     global max_api_call_tries
     global api_call_pause_on_error
-    global app_details_sleep_time
-    global app_details_sleep_chance
     global call_counters_retain
     global hardcoded_games
     global session
@@ -178,16 +174,6 @@ def init_platform(config: Config) -> Platform:
         api_call_pause_on_error = 5
     else:
         api_call_pause_on_error = int(api_call_pause_on_error)
-    app_details_sleep_chance = steam_config.get("APP_DETAILS_SLEEP_CHANCE")
-    if app_details_sleep_chance is None:
-        app_details_sleep_chance = 0.4
-    else:
-        app_details_sleep_chance = float(app_details_sleep_chance)
-    app_details_sleep_time = steam_config.get("APP_DETAILS_SLEEP_TIME")
-    if app_details_sleep_time is None:
-        app_details_sleep_time = 1
-    else:
-        app_details_sleep_time = int(app_details_sleep_time)
     call_counters_retain = steam_config.get("CALL_COUNTERS_RETAIN")
     if call_counters_retain is None:
         call_counters_retain = 7
@@ -214,6 +200,8 @@ def init_platform(config: Config) -> Platform:
         api_log.info("Steam key in plain text, but work in not core")
         open_key = key_read
     set_key(open_key)
+    # actual limit 200 requests per 300 seconds
+    set_limit("https://store.steampowered.com/api/appdetails/", 305, 150)
     return steam
 
 
@@ -317,14 +305,13 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
         "appids": game_id,
     }
     if not skip_extra_info:
-        if random.random() > app_details_sleep_chance:
-            skip_extra_info = True
-            api_log.info("Skip https://store.steampowered.com/api/appdetails/ because random")
-        if not skip_extra_info:
-            r = _call_steam_api(url="https://store.steampowered.com/api/appdetails/",
-                                method_name="appdetails",
-                                params=params,
-                                require_auth=False)
+        r = do_with_limit("https://store.steampowered.com/api/appdetails/",
+                          _call_steam_api,
+                          dict(url="https://store.steampowered.com/api/appdetails/",
+                               method_name="appdetails",
+                               params=params,
+                               require_auth=False)
+                          )
     icon_url = None
     release_date = None
     developer = None
