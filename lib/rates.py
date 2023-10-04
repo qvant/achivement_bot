@@ -43,7 +43,7 @@ def do_with_limit(resource: str, func, args):
     global counters
     if resource not in interval_end_times or interval_end_times[resource] < datetime.datetime.now():
         reset_limit(resource)
-    while interval_end_times[resource] <= datetime.datetime.now() and counters[resource] >= interval_limits[resource]:
+    while interval_end_times[resource] >= datetime.datetime.now() and counters[resource] >= interval_limits[resource]:
         time.sleep(1)
     if interval_end_times[resource] <= datetime.datetime.now():
         reset_limit(resource)
