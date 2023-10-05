@@ -201,7 +201,7 @@ def init_platform(config: Config) -> Platform:
         open_key = key_read
     set_key(open_key)
     # actual limit 200 requests per 300 seconds
-    set_limit("https://store.steampowered.com/api/appdetails/", 305, 198)
+    set_limit("https://store.steampowered.com/api/appdetails/", 305, 198, api_log)
     return steam
 
 
