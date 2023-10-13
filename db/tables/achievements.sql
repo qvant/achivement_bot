@@ -3,7 +3,7 @@ create table  achievements_hunt.achievements
 	id 			    serial primary key,
 	platform_id     integer not null,
 	game_id         integer not null,
-	name		    varchar(1024) not null,
+	name		    varchar(4096) not null,
 	ext_id		    varchar(1024) not null,
 	description     varchar(1024),
 	dt_create	    timestamp with time zone default current_timestamp not null,

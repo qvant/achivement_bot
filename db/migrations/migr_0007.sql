@@ -9,5 +9,7 @@ insert into achievements_hunt.processes(id, name) values (2, 'game_updater');
 
 alter table achievements_hunt.update_history add id_process      integer default 1 not null;
 
+alter table achievements_hunt.achievements alter column name type varchar(4096);
+
 update achievements_hunt.version set n_version=7, dt_update=current_timestamp  where v_name = 'Achievement hunt bot';
 commit;
