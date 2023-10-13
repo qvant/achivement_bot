@@ -175,7 +175,6 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     game_name = None
     genres = None
     obj = r.json()
-    genres = None
     if len(obj) > 0:
         console_ext_id = obj.get("ConsoleID")
         if "Achievements" in obj:
