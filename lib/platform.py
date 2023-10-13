@@ -126,6 +126,7 @@ class Platform:
             if ret is not None:
                 self.id = [0]
                 self._is_persist = True
+            self.logger.info("Platform \"{}\" ({}) saved.", self.name, self.id)
         for i in self._consoles_by_ext_id:
             if self._consoles_by_ext_id[i].id is None:
                 self.logger.info("Saving console {0}".format(self._consoles_by_ext_id[i].name))
