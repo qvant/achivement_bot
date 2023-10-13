@@ -295,12 +295,12 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                                                        locked_icon_url=i.get("icongray"),
                                                        is_hidden=is_hidden,
                                                        )
-        api_log.info(
-            "For game {0}, found {1} achievements".format(
-                game_id, len(achievements)))
         if len(game_name) == 0:
             game_name = obj.get("gameName")
             api_log.warn("For game {0}, found name {1} instead of empty one".format(game_id, game_name))
+        api_log.info(
+            "For game \"{2}\" ( ext_id {0}), found {1} achievements".format(
+                game_id, len(achievements), game_name))
     params = {
         "appids": game_id,
     }

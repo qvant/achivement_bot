@@ -138,11 +138,11 @@ class Platform:
                                       format(self._consoles_by_ext_id[i].name, i))
         for i in self.games:
             if self.games[i].console_ext_id is not None and self.games[i].console is None:
-                self.logger.info("Set console {0} for game {1}".format(self.games[i].console_ext_id,
-                                                                       self.games[i].name))
+                self.logger.info("Set console {0} for game \"{1}\"".format(self.games[i].console_ext_id,
+                                                                           self.games[i].name))
                 self.games[i].set_console(self.get_console_by_ext(self.games[i].console_ext_id))
-                self.logger.info("New console {0} for game {1}".format(self.games[i].console_name,
-                                                                       self.games[i].name))
+                self.logger.info("New console {0} for game \"{1\"".format(self.games[i].console_name,
+                                                                          self.games[i].name))
             self.games[i].save(cursor, self.active_locale)
         conn.commit()
         self.logger.info("Finish saving to db")

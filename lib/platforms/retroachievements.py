@@ -207,7 +207,7 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                                                                               get("BadgeName"))
                                                                           )
         api_log.info(
-            "For game {0}, found {1} achievements and console type {2}".format(
+            "For game with ext_id {0}, found {1} achievements and console type {2}".format(
                 game_id, len(achievements), console_ext_id))
         game_name = obj.get("Title")
         if game_name is None and game_id == "0":
