@@ -64,7 +64,9 @@ def main_game_updater(config: Config):
             for i in range(len(platforms)):
                 if datetime.datetime.now().replace(tzinfo=timezone.utc) > \
                         dt_next_update[i].replace(tzinfo=timezone.utc):
-                    renew_log.info("Update platform {0}, next update {1}".format(platforms[i].name, dt_next_update[i]))
+                    renew_log.info("Update platform {0} ({2}), next update {1}".format(platforms[i].name,
+                                                                                       dt_next_update[i],
+                                                                                       platforms[i].id))
                     platforms[i].set_next_language()
                     start_update(platforms[i], ID_PROCESS_GAME_UPDATER)
                     if platforms[i].get_consoles is not None:
@@ -77,7 +79,10 @@ def main_game_updater(config: Config):
                                 seconds=platforms[i].config.update_interval)
                             mark_update_done(platforms[i], ID_PROCESS_GAME_UPDATER, dt_next_update[i])
                             renew_log.info(
-                                "Update platform {0} skipped, because consoles not available".format(platforms[i].name))
+                                "Update platform {} ({}) skipped, because consoles not available".format(
+                                    platforms[i].name,
+                                    platforms[i].id
+                                ))
                             continue
                     platforms[i].load_games()
                     games_num = len(platforms[i].games)
@@ -85,12 +90,12 @@ def main_game_updater(config: Config):
                     for j in range(len(games_ext_ids)):
                         game = platforms[i].games[games_ext_ids[j]]
                         platforms[i].logger.info(
-                            "Update game with id {} and name {}. Progress {}/{}".
-                            format(game.ext_id, game.name, j, games_num))
+                            "Update game \"{}\" (ext_id: {}). Progress {}/{}".
+                            format(game.name, game.ext_id, j, games_num))
                         platforms[i].update_games(game.ext_id, game.name, True)
                         platforms[i].logger.info(
-                            "Get achievements for game with id {} and name {}. Progress {}/{}".format(
-                               game.ext_id, game.name, j + 1, games_num))
+                            "Get achievements for game \"{}\" (ext_id: {}). Progress {}/{}".format(
+                               game.name, game.ext_id, j + 1, games_num))
                     platforms[i].save()
                     dt_next_update[i] = datetime.datetime.now() + datetime.timedelta(
                         seconds=platforms[i].config.update_interval)

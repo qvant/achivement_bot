@@ -149,11 +149,12 @@ class Platform:
 
     def update_games(self, game_id: str, game_name: str, force: bool = False):
         if str(game_id) not in self.games or force:
-            self.logger.info("Ask server for game {0} {1}".format(game_id, game_name))
+            self.logger.info("Ask server for game \"{1}\" (ext_id: {0})".format(game_id, game_name))
             self.games[str(game_id)] = self.get_game(game_id, game_name, self.active_language)
             self.save()
             self.games_by_id[self.games[str(game_id)].id] = self.games[game_id]
-            self.logger.info("Added game {0} {1} with id {2}".format(game_id, game_name, self.games[str(game_id)].id))
+            self.logger.info("Added game \"{1}\" (ext_id: {0}, id {2})".format(game_id, game_name,
+                                                                               self.games[str(game_id)].id))
 
     def load_consoles(self, console_id: Union[int, None] = None):
         conn = self.get_connect()
@@ -235,8 +236,8 @@ class Platform:
         games = {}
         for id, platform_id, name, ext_id, console_id, icon_url, release_date, developer_id, developer_name,\
                 publisher_id, publisher_name, genre_ids, genres, feature_ids, features in cursor:
-            self.load_log.info("Loaded game {0} with id {1}, ext_id {2}, for platform {3} and console {4}".
-                               format(name, id, ext_id, self.id, console_id))
+            self.load_log.info("Loaded game \"{0}\" with id {1}, ext_id {2}, for platform {5} ({3}) and console {4}".
+                               format(name, id, ext_id, self.id, console_id, self.name))
             if self.get_consoles is not None and console_id is not None:
                 console = None
                 console_id = int(console_id)
