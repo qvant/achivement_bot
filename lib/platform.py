@@ -237,14 +237,11 @@ class Platform:
         games = {}
         for id, platform_id, name, ext_id, console_id, icon_url, release_date, developer_id, developer_name,\
                 publisher_id, publisher_name, genre_ids, genres, feature_ids, features in cursor:
-            self.load_log.info("Loaded game \"{0}\" with id {1}, ext_id {2} for platform {5} and console {4}".
-                               format(name, id, ext_id, self.id, console_id, self.name))
             if self.get_consoles is not None and console_id is not None:
-                console = None
                 console_id = int(console_id)
                 if self.get_console_by_id(console_id) is None:
                     self.load_consoles(console_id)
-                    console = self.get_console_by_id(console_id)
+                console = self.get_console_by_id(console_id)
                 games[str(ext_id)] = Game(name=name, platform_id=platform_id, id=id, ext_id=ext_id, achievements=None,
                                           console_ext_id=None, console=console,
                                           icon_url=icon_url, release_date=release_date,
@@ -257,6 +254,8 @@ class Platform:
                                           features=features,
                                           feature_ids=feature_ids,
                                           )
+                self.load_log.info("Loaded game \"{0}\" (id: {1}, ext_id: {2}, console {6} (id: {4})) for platform {5}".
+                                   format(name, id, ext_id, self.id, console_id, self.name, console.name))
             else:
                 games[str(ext_id)] = Game(name=name, platform_id=platform_id, id=id, ext_id=ext_id, achievements=None,
                                           console_ext_id=None, console=None,
@@ -270,6 +269,8 @@ class Platform:
                                           features=features,
                                           feature_ids=feature_ids,
                                           )
+                self.load_log.info("Loaded game \"{0}\" (id: {1}, ext_id {2}) for platform {4}.".
+                                   format(name, id, ext_id, self.id, self.name))
         if load_achievements:
             if game_id is None:
                 cursor.execute("""
