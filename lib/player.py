@@ -150,7 +150,8 @@ class Player:
         if len(self.games) == 0 or force:
             if force:
                 self.games = []
-            self.platform.logger.info("Load games for player {0}, mode {1} force mode {2}".format(self.id, mode, force))
+            self.platform.logger.info("Load games for player {} (ext_id: {}, id: ), mode {} force mode {}".
+                                      format(self.name, self.ext_id, self.id, mode, force))
             conn = self.platform.get_connect()
             cur = conn.cursor()
             if mode == GAMES_ALL:
@@ -300,7 +301,7 @@ class Player:
             """, (self.dt_updated, self.is_public, self.dt_updated_full, self.dt_updated_inc,
                   self.name, self.avatar_url,
                   self.id))
-        self.platform.logger.info("Get saved games for player {0} ".format(self.ext_id))
+        self.platform.logger.info("Get saved games for player {} ({}) ".format(self.name, self.ext_id))
         cur.execute("""
                             select game_id
                                 from achievements_hunt.player_games t
@@ -323,8 +324,8 @@ class Player:
                 if len(self.achievements[self.games[i]]) == 0:
                     continue
 
-                self.platform.logger.info("Get saved achievements for player {0} and game {1}".
-                                          format(self.ext_id, game.ext_id))
+                self.platform.logger.info("Get saved achievements for player {} ({}) and game \"{}\" ({})".
+                                          format(self.name, self.ext_id, game.name, game.ext_id))
                 cur.execute("""
                     select achievement_id
                         from achievements_hunt.player_achievements t
@@ -388,8 +389,14 @@ class Player:
                                 """, (self.platform.id, game.id, achievement.id, self.id, achievement_date))
                     saved_cnt += 1
                     self.platform.logger.info(
-                        "Saved into db achievement {2} for player {0} and game {1}.".format(self.ext_id, game.ext_id,
-                                                                                            achievement.id))
+                        "Saved into db achievement {5} ({2}) for player {3}({0}) and game \"{4}\"{1}.".
+                            format(self.ext_id,
+                                   game.ext_id,
+                                   achievement.id,
+                                   self.name,
+                                   game.name,
+                                   achievement.name
+                                   ))
                 self.platform.logger.info(
                     "Saved achievements for player {0} and game {1}: {2}".format(self.ext_id, game.name, saved_cnt))
         self.platform.logger.info("Saved achievements for player {0}".format(self.ext_id))
@@ -436,7 +443,7 @@ class Player:
 
         conn.commit()
         conn.close()
-        self.platform.logger.info("Saved player {0}".format(self.ext_id))
+        self.platform.logger.info("Saved player {} ({})".format(self.name, self.ext_id))
 
     def renew(self):
         new_name = self.platform.validate_player(self.ext_id)
@@ -473,8 +480,8 @@ class Player:
                         if str(owned_games[cg]) not in saved_games_by_ext and str(owned_games[cg]) not in str_games:
                             new_games.append(owned_games[cg])
                             new_game_names.append(owned_games_names[cg])
-                            self.platform.logger.info("Found new owned, but unplayed game {1} for player {0}. ".
-                                                      format(self.name, owned_games[cg]))
+                            self.platform.logger.info("Found new owned, but unplayed game {2} ({1}) for player {0}.".
+                                                      format(self.name, owned_games[cg], owned_games_names[cg]))
                     self.games = [*self.games, *new_games]
                     names = [*names, *new_game_names]
                     self.platform.logger.info("Prepared incremental update for player {0}. "

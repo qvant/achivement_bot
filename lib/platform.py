@@ -126,7 +126,7 @@ class Platform:
             if ret is not None:
                 self.id = [0]
                 self._is_persist = True
-            self.logger.info("Platform \"{}\" ({}) saved.", self.name, self.id)
+            self.logger.info("Platform \"{}\" (id: {}) saved.".format(self.name, self.id))
         for i in self._consoles_by_ext_id:
             if self._consoles_by_ext_id[i].id is None:
                 self.logger.info("Saving console {0}".format(self._consoles_by_ext_id[i].name))
@@ -237,7 +237,7 @@ class Platform:
         games = {}
         for id, platform_id, name, ext_id, console_id, icon_url, release_date, developer_id, developer_name,\
                 publisher_id, publisher_name, genre_ids, genres, feature_ids, features in cursor:
-            self.load_log.info("Loaded game \"{0}\" with id {1}, ext_id {2}, for platform {5} ({3}) and console {4}".
+            self.load_log.info("Loaded game \"{0}\" with id {1}, ext_id {2} for platform {5} and console {4}".
                                format(name, id, ext_id, self.id, console_id, self.name))
             if self.get_consoles is not None and console_id is not None:
                 console = None

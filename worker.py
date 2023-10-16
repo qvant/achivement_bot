@@ -87,9 +87,11 @@ def main_worker(config: Config):
                     start_pos = 0
                     for j in range(cur_players[i], len(platform_players[i])):
                         cur_players[i] = j
-                        renew_log.info("Update platform {0} for player {1}/{2}".format(platforms[i].name,
-                                                                                       platform_players[i][j].ext_id,
-                                                                                       len(platform_players[i])))
+                        renew_log.info("Update platform {} for player {} {{}}. Total players {}".
+                                       format(platforms[i].name,
+                                              platform_players[i][j].name,
+                                              platform_players[i][j].ext_id,
+                                              len(platform_players[i])))
                         try:
                             platform_players[i][j].renew()
                             platform_players[i][j].save()
