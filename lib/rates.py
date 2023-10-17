@@ -67,7 +67,3 @@ def do_with_limit(resource: str, func, args):
         reset_limit(resource)
     counters[resource] += 1
     return func(**args)
-
-
-
-

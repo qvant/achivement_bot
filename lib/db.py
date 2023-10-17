@@ -52,12 +52,11 @@ def load_players(platform: Platform, config: Config, player_id: Union[int, None]
             from achievements_hunt.players
             where platform_id = %s
                 and id = %s
-                and (status_id = %s or %s is null)  
+                and (status_id = %s or %s is null)
             order by id
             """, (platform.id, player_id, status_id, status_id))
     players = []
-    for id, platform_id, name, ext_id, telegram_id, dt_updated, dt_update_full, dt_update_inc,\
-            avatar_url in cursor:
+    for id, platform_id, name, ext_id, telegram_id, dt_updated, dt_update_full, dt_update_inc, avatar_url in cursor:
         load_log.info("Loaded player {0} with id {1}, ext_id: {2}, for platform: {3}".
                       format(name, ext_id, id, platform.name))
         test = Player(name=name, platform=platform, ext_id=ext_id, id=id, telegram_id=telegram_id,
@@ -73,7 +72,7 @@ def get_next_update_date(platform: Platform, id_process: int):
     cursor = conn.cursor()
     cursor.execute("""
             select max(dt_next_update) from achievements_hunt.update_history
-                where id_platform = %s 
+                where id_platform = %s
                     and dt_ended is not null
                     and id_process = %s
             """, (platform.id, id_process))

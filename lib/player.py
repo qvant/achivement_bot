@@ -150,7 +150,7 @@ class Player:
         if len(self.games) == 0 or force:
             if force:
                 self.games = []
-            self.platform.logger.info("Load games for player {} (ext_id: {}, id: ), mode {} force mode {}".
+            self.platform.logger.info("Load games for player {} (ext_id: {}, id: {}), mode {} force mode {}".
                                       format(self.name, self.ext_id, self.id, mode, force))
             conn = self.platform.get_connect()
             cur = conn.cursor()
@@ -390,13 +390,13 @@ class Player:
                     saved_cnt += 1
                     self.platform.logger.info(
                         "Saved into db achievement {5} ({2}) for player {3}({0}) and game \"{4}\"{1}.".
-                            format(self.ext_id,
-                                   game.ext_id,
-                                   achievement.id,
-                                   self.name,
-                                   game.name,
-                                   achievement.name
-                                   ))
+                        format(self.ext_id,
+                               game.ext_id,
+                               achievement.id,
+                               self.name,
+                               game.name,
+                               achievement.name
+                               ))
                 self.platform.logger.info(
                     "Saved achievements for player {0} and game {1}: {2}".format(self.ext_id, game.name, saved_cnt))
         self.platform.logger.info("Saved achievements for player {0}".format(self.ext_id))
