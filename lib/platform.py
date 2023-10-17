@@ -269,7 +269,7 @@ class Platform:
                                           features=features,
                                           feature_ids=feature_ids,
                                           )
-                self.load_log.info("Loaded game \"{0}\" (id: {1}, ext_id {2}) for platform {4}.".
+                self.load_log.info("Loaded game \"{0}\" (id: {1}, ext_id: {2}) for platform {4}.".
                                    format(name, id, ext_id, self.id, self.name))
         if load_achievements:
             if game_id is None:
@@ -290,7 +290,7 @@ class Platform:
                                                     """, (self.id, game_id))
             for id, platform_id, name, ext_id, game_ext_id, description, game_id, icon_url, locked_icon_url, \
                     is_hidden in cursor:
-                self.load_log.debug("Loaded achievement {0} with id {1}, ext_id {2}, for game {3} "
+                self.load_log.debug("Loaded achievement {0} with id: {1}, ext_id: {2}, for game \"{3}\" "
                                     "on platform {4}".format(name, id, ext_id, game_ext_id, self.id))
                 games[str(game_ext_id)].add_achievement(achievement=Achievement(id=id, game_id=game_id, name=name,
                                                                                 platform_id=platform_id, ext_id=ext_id,

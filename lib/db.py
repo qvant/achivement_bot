@@ -58,7 +58,7 @@ def load_players(platform: Platform, config: Config, player_id: Union[int, None]
     players = []
     for id, platform_id, name, ext_id, telegram_id, dt_updated, dt_update_full, dt_update_inc,\
             avatar_url in cursor:
-        load_log.info("Loaded player {0} with id {1}, ext_id {2}, for platform {3} on platform".
+        load_log.info("Loaded player {0} with id {1}, ext_id: {2}, for platform: {3}".
                       format(name, ext_id, id, platform.name))
         test = Player(name=name, platform=platform, ext_id=ext_id, id=id, telegram_id=telegram_id,
                       dt_updated=dt_updated, dt_updated_full=dt_update_full, dt_updated_inc=dt_update_inc,
