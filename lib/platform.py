@@ -143,7 +143,7 @@ class Platform:
                                                                            self.games[i].name))
                 self.games[i].set_console(self.get_console_by_ext(self.games[i].console_ext_id))
                 self.logger.info("New console {0} for game \"{1}\"".format(self.games[i].console_name,
-                                                                          self.games[i].name))
+                                                                           self.games[i].name))
             self.games[i].save(cursor, self.active_locale)
         conn.commit()
         self.logger.info("Finish saving to db")
@@ -154,8 +154,9 @@ class Platform:
             self.games[str(game_id)] = self.get_game(game_id, game_name, self.active_language)
             self.save()
             self.games_by_id[self.games[str(game_id)].id] = self.games[game_id]
-            self.logger.info("Added game \"{1}\" (ext_id: {0}, id: {2})".format(game_id, game_name,
-                                                                               self.games[str(game_id)].id))
+            self.logger.info("Added game \"{1}\" (ext_id: {0}, id: {2})".format(game_id,
+                                                                                game_name,
+                                                                                self.games[str(game_id)].id))
 
     def load_consoles(self, console_id: Union[int, None] = None):
         conn = self.get_connect()
