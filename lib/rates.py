@@ -57,8 +57,12 @@ def do_with_limit(resource: str, func, args):
         reset_limit(resource)
     while interval_end_times[resource] >= datetime.datetime.now() and counters[resource] >= interval_limits[resource]:
         if loggers[resource] is not None:
-            loggers[resource].info("Wait to {}, because rate on {} is reached ".format(interval_end_times[resource], resource))
-        time.sleep(1)
+            loggers[resource].info("Wait to {}, because rate on {} is reached ".format(interval_end_times[resource],
+                                                                                       resource))
+        if interval_end_times[resource] - datetime.datetime.now() > datetime.timedelta(seconds=5):
+            time.sleep(5)
+        else:
+            time.sleep(1)
     if interval_end_times[resource] <= datetime.datetime.now():
         reset_limit(resource)
     counters[resource] += 1

@@ -299,7 +299,7 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
             game_name = obj.get("gameName")
             api_log.warn("For game {0}, found name {1} instead of empty one".format(game_id, game_name))
         api_log.info(
-            "For game \"{2}\" ( ext_id {0}), found {1} achievements".format(
+            "For game \"{2}\" ( ext_id: {0}), found {1} achievements".format(
                 game_id, len(achievements), game_name))
     params = {
         "appids": game_id,

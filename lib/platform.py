@@ -125,7 +125,7 @@ class Platform:
             ret = cursor.fetchone()
             if ret is not None:
                 self.id = [0]
-                self._is_persist = True
+            self._is_persist = True
             self.logger.info("Platform \"{}\" (id: {}) saved.".format(self.name, self.id))
         for i in self._consoles_by_ext_id:
             if self._consoles_by_ext_id[i].id is None:
@@ -154,7 +154,7 @@ class Platform:
             self.games[str(game_id)] = self.get_game(game_id, game_name, self.active_language)
             self.save()
             self.games_by_id[self.games[str(game_id)].id] = self.games[game_id]
-            self.logger.info("Added game \"{1}\" (ext_id: {0}, id {2})".format(game_id, game_name,
+            self.logger.info("Added game \"{1}\" (ext_id: {0}, id: {2})".format(game_id, game_name,
                                                                                self.games[str(game_id)].id))
 
     def load_consoles(self, console_id: Union[int, None] = None):
