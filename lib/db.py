@@ -10,6 +10,7 @@ from lib.platforms.steam import init_platform as init_steam
 from lib.platforms.retroachievements import init_platform as init_retro
 from lib.player import STATUS_VALID, Player
 from .log import get_logger
+from .query_holder import get_query, GET_NEXT_UPDATE_DATE, MARK_UPDATE_DONE
 
 global load_log
 
@@ -70,12 +71,7 @@ def load_players(platform: Platform, config: Config, player_id: Union[int, None]
 def get_next_update_date(platform: Platform, id_process: int):
     conn = Platform.get_connect()
     cursor = conn.cursor()
-    cursor.execute("""
-            select max(dt_next_update) from achievements_hunt.update_history
-                where id_platform = %s
-                    and dt_ended is not null
-                    and id_process = %s
-            """, (platform.id, id_process))
+    cursor.execute(get_query(GET_NEXT_UPDATE_DATE), (platform.id, id_process))
     ret = cursor.fetchone()
     conn.commit()
     if ret is not None and ret[0] is not None:
@@ -87,14 +83,7 @@ def get_next_update_date(platform: Platform, id_process: int):
 def mark_update_done(platform: Platform, id_process: int, dt_next_update: datetime):
     conn = Platform.get_connect()
     cursor = conn.cursor()
-    cursor.execute("""
-                    update achievements_hunt.update_history
-                        set dt_ended = current_timestamp,
-                        dt_next_update = %s
-                        where id_platform = %s
-                        and id_process = %s
-                        and dt_ended is null
-                    """, (dt_next_update, platform.id, id_process))
+    cursor.execute(get_query(MARK_UPDATE_DONE), (dt_next_update, platform.id, id_process))
     conn.commit()
 
 
