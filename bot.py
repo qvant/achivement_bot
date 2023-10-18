@@ -2,6 +2,7 @@ import datetime
 import json
 import time
 
+import telegram
 from telegram import InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
 
@@ -114,7 +115,10 @@ def main_bot(config: Config):
                             queue_log.error("Nothing to respond in msg {0}".format(body))
                         if len(msg) > 0:
                             reply_markup = InlineKeyboardMarkup(main_keyboard(chat_id))
-                            updater.dispatcher.bot.send_message(chat_id=chat_id, text=msg, reply_markup=reply_markup)
+                            try:
+                                updater.dispatcher.bot.send_message(chat_id=chat_id, text=msg, reply_markup=reply_markup)
+                            except telegram.error.Unauthorized:
+                                queue_log.info("Bot banned by user {}, can\'t send message".format(chat_id))
                     elif cmd_type == 'stop_server':
                         is_running = False
                         queue_log.info("Stop smd received")
