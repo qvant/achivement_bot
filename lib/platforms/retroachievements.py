@@ -5,8 +5,6 @@ import time
 import datetime
 from typing import Dict
 
-from requests import ConnectTimeout
-
 from ..ApiException import ApiException
 from ..achievement import Achievement
 from ..config import Config
@@ -121,7 +119,7 @@ def _call_api(url: str, method_name: str, params: Dict) -> requests.Response:
                           format(url, params, r.text),
                           exc_info=True,
                           )
-        except ConnectTimeout as exc:
+        except requests.exceptions.ConnectTimeout as exc:
             api_log.error(exc)
             if cnt >= max_api_call_tries:
                 raise ApiException("Retroachievements timeout")
@@ -177,7 +175,6 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     game_name = None
     genres = None
     obj = r.json()
-    genres = None
     if len(obj) > 0:
         console_ext_id = obj.get("ConsoleID")
         if "Achievements" in obj:
@@ -210,7 +207,7 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                                                                               get("BadgeName"))
                                                                           )
         api_log.info(
-            "For game {0}, found {1} achievements and console type {2}".format(
+            "For game with ext_id {0}, found {1} achievements and console type {2}".format(
                 game_id, len(achievements), console_ext_id))
         game_name = obj.get("Title")
         if game_name is None and game_id == "0":
@@ -362,7 +359,7 @@ def init_platform(config: Config) -> Platform:
         call_counters_retain = 7
     else:
         call_counters_retain = int(call_counters_retain)
-    retro = Platform(name='Retroachievements', get_games=get_player_games, get_achivements=get_player_achievements,
+    retro = Platform(name='Retroachievements', get_games=get_player_games, get_achievements=get_player_achievements,
                      get_game=get_game, games=None, id=PLATFORM_RETRO, validate_player=get_name, get_player_id=get_name,
                      get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,
                      incremental_update_interval=incremental_update_interval, get_last_games=get_last_player_games,

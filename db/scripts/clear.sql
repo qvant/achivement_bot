@@ -21,5 +21,6 @@ drop table achievements_hunt.games_hardcoded;
 drop table achievements_hunt.platforms;
 drop table achievements_hunt.statuses;
 drop table achievements_hunt.achievement_rarity;
+drop table achievements_hunt.processes;
 drop table achievements_hunt.update_history;
 drop table achievements_hunt.version;

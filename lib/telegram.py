@@ -1,7 +1,7 @@
 import gettext
 import psycopg2
 
-from .config import Config, MODE_CORE, MODE_WORKER, MODE_UPDATER, MODE_BOT
+from .config import Config, MODE_CORE, MODE_WORKER, MODE_UPDATER, MODE_BOT, MODE_GAME_UPDATER
 from .platform import Platform
 from .player import Player, GAMES_ALL, GAMES_PERFECT, GAMES_WITH_ACHIEVEMENTS
 from .log import get_logger
@@ -66,11 +66,13 @@ SHUTDOWN_CORE = "shutdown_core"
 SHUTDOWN_BOT = "shutdown_bot"
 SHUTDOWN_UPDATER = "shutdown_updater"
 SHUTDOWN_WORKER = "shutdown_worker"
+SHUTDOWN_GAME_UPDATER = "shutdown_game_updater"
 
 STATS_CORE = "stats_core"
 STATS_BOT = "stats_bot"
 STATS_UPDATER = "stats_updater"
 STATS_WORKER = "stats_worker"
+STATS_GAME_UPDATER = "stats_game_updater"
 
 LOCALE_DYNAMIC = "LOCALE_DYNAMIC"
 LOCALE_RU = "LOCALE_RU"
@@ -168,15 +170,15 @@ def main_keyboard(chat_id: int):
     _ = set_locale(chat_id=chat_id)
     players_by_tlg_id[chat_id] = []
     try:
-        db = Platform.get_connect()
-        cursor = db.cursor()
+        connect = Platform.get_connect()
+        cursor = connect.cursor()
         cursor.execute("""
                     select id, platform_id, name, ext_id, dt_update, is_public, avatar_url
                     from achievements_hunt.players
                     where telegram_id = %s
                     order by id
                     """, (chat_id,))
-        db.commit()
+        connect.commit()
 
         for id, platform_id, name, ext_id, dt_update, is_public, avatar_url in cursor:
             for i in platforms:
@@ -241,6 +243,7 @@ def shutdown_keyboard(chat_id: int):
         InlineKeyboardButton(_("Shutdown bot"), callback_data=SHUTDOWN_BOT),
         InlineKeyboardButton(_("Shutdown worker"), callback_data=SHUTDOWN_WORKER),
         InlineKeyboardButton(_("Shutdown updater"), callback_data=SHUTDOWN_UPDATER),
+        InlineKeyboardButton(_("Shutdown game updater"), callback_data=SHUTDOWN_GAME_UPDATER),
     ]
     return pretty_menu(keyboard)
 
@@ -252,6 +255,7 @@ def stats_keyboard(chat_id: int):
         InlineKeyboardButton(_("Stats bot"), callback_data=STATS_BOT),
         InlineKeyboardButton(_("Stats worker"), callback_data=STATS_WORKER),
         InlineKeyboardButton(_("Stats updater"), callback_data=STATS_UPDATER),
+        InlineKeyboardButton(_("Stats game updater"), callback_data=STATS_GAME_UPDATER),
     ]
     return pretty_menu(keyboard)
 
@@ -458,6 +462,8 @@ def shutdown_choice(update: Update, context: CallbackContext):
             enqueue_command(cmd, MODE_WORKER)
         elif cur_item == SHUTDOWN_UPDATER:
             enqueue_command(cmd, MODE_UPDATER)
+        elif cur_item == SHUTDOWN_GAME_UPDATER:
+            enqueue_command(cmd, MODE_GAME_UPDATER)
         context.bot.send_message(chat_id=chat_id, text=_("Command sent: {0}").format(cmd))
     else:
         telegram_logger.critical("Received illegal cmd {1} from user {0} in shutdown_choice menu".format(
@@ -493,6 +499,8 @@ def stats_choice(update: Update, context: CallbackContext):
                 enqueue_command(cmd, MODE_UPDATER)
             elif cur_item == STATS_WORKER:
                 enqueue_command(cmd, MODE_WORKER)
+            elif cur_item == STATS_GAME_UPDATER:
+                enqueue_command(cmd, MODE_GAME_UPDATER)
             context.bot.send_message(chat_id=chat_id, text=str("Command sent"),
                                      reply_markup=reply_markup)
     else:
@@ -507,6 +515,7 @@ def consoles_navigation(update: Update, context: CallbackContext):
     inc_command_counter("consoles_navigation")
     _ = set_locale(update)
     if chat_id in user_active_accounts:
+        console_id = None
         for i in players_by_tlg_id[chat_id]:
             if str(i.id) == str(user_active_accounts[chat_id]):
                 user_active_accounts[chat_id] = i.id
@@ -791,8 +800,8 @@ def show_account_stats(update: Update, context: CallbackContext, console_id: Uni
     locale = get_locale_name(update)
     player = get_player_by_chat_id(chat_id)
     if player is not None:
-        db = Platform.get_connect()
-        cursor = db.cursor()
+        connect = Platform.get_connect()
+        cursor = connect.cursor()
         cursor.execute("""
         select
             round(avg(case when g.has_achievements
@@ -902,7 +911,7 @@ def show_account_stats(update: Update, context: CallbackContext, console_id: Uni
             new_achievement_list = ""
         private_warning = ""
         # close RO transaction
-        db.commit()
+        connect.commit()
         if not player.is_public:
             private_warning = chr(10)
             private_warning += _("Profile is private, available information is limited")
@@ -1194,8 +1203,10 @@ def set_locale(update: Union[Update, None] = None, chat_id: Union[int, None] = N
             db.commit()
             if len(locale) == 0:
                 locale = "en"
+            user_locales[chat_id] = locale
         except psycopg2.Error as err:
             telegram_logger.exception(err)
+            user_locales[chat_id] = "en"
             if config.supress_errors:
                 try:
                     set_connect(Platform.get_connect())
@@ -1204,7 +1215,6 @@ def set_locale(update: Union[Update, None] = None, chat_id: Union[int, None] = N
                     pass
             else:
                 raise
-        user_locales[chat_id] = locale
     locale = user_locales[chat_id]
     if locale == 'ru':
         _ = ru.gettext
@@ -1298,6 +1308,7 @@ def activity_feed(update: Update, context: CallbackContext):
     reply_markup = InlineKeyboardMarkup(main_keyboard(update.effective_chat.id))
     _ = set_locale(update)
     locale = get_locale_name(update)
+    activity_list = ""
 
     try:
         connect = Platform.get_connect()
@@ -1339,6 +1350,14 @@ def activity_feed(update: Update, context: CallbackContext):
                         """, (locale,))
         buf = cursor.fetchall()
         db.commit()
+        telegram_logger.info("activity_feed: data fetched")
+        if len(buf) > 0:
+            activity_list = chr(10) + _("Last activity:") + chr(10)
+            for i in buf:
+                activity_list += _(r"{} ({}) unlocked {} (game {}) percent owners {}").\
+                    format(i[3], i[4], i[0], i[2], i[1])
+                activity_list += " ({})".format(i[5])
+                activity_list += chr(10)
     except psycopg2.Error as err:
         telegram_logger.exception(err)
         if config.supress_errors:
@@ -1349,14 +1368,6 @@ def activity_feed(update: Update, context: CallbackContext):
                 pass
         else:
             raise
-    telegram_logger.info("activity_feed: data fetched")
-    activity_list = ""
-    if len(buf) > 0:
-        activity_list = chr(10) + _("Last activity:") + chr(10)
-        for i in buf:
-            activity_list += _(r"{} ({}) unlocked {} (game {}) percent owners {}").format(i[3], i[4], i[0], i[2], i[1])
-            activity_list += " ({})".format(i[5])
-            activity_list += chr(10)
 
     telegram_logger.info("activity_feed: message prepared")
     try:

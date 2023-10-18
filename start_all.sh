@@ -4,6 +4,8 @@ cd $APP_HOME
 sleep 45
 python3 $APP_HOME/main.py --mode=bot & disown
 sleep 5
+python3 $APP_HOME/main.py --mode=game_updater & disown
+sleep 5
 python3 $APP_HOME/main.py --mode=updater & disown
 sleep 5
 python3 $APP_HOME/main.py --mode=worker & disown

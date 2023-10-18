@@ -168,6 +168,7 @@ class Game:
         publisher_id = self.get_publisher_id(self.publisher, cursor)
         genres = []
         features = []
+        # TODO: remove call on init
         if self.genres is not None:
             for i in self.genres:
                 genre_id = self.get_genre_id(i, cursor)

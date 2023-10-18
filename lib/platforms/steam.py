@@ -1,12 +1,9 @@
 import json
 import codecs
-import random
 import requests
 import time
 import datetime
 from typing import Dict
-
-from requests import ConnectTimeout
 
 from ..ApiException import ApiException
 from ..achievement import Achievement
@@ -14,6 +11,7 @@ from ..config import Config
 from ..game import Game
 from ..log import get_logger
 from ..platform import Platform
+from ..rates import do_with_limit, set_limit, get_limit_counter, get_limit_interval_end
 from ..security import is_password_encrypted, encrypt_password, decrypt_password
 from ..config import MODE_CORE
 
@@ -25,10 +23,10 @@ global call_counters
 global api_calls_daily_limit
 global max_api_call_tries
 global api_call_pause_on_error
-global app_details_sleep_time
-global app_details_sleep_chance
 global call_counters_retain
 global hardcoded_games
+global skip_extra_info
+global session
 
 
 def get_key():
@@ -39,6 +37,11 @@ def get_key():
 def set_key(key):
     global api_key
     api_key = key
+
+
+def set_skip_extra_info(val: bool = False):
+    global skip_extra_info
+    skip_extra_info = val
 
 
 def _save_api_key(password: str, path: str):
@@ -73,6 +76,7 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
     global max_api_call_tries
     global api_call_pause_on_error
     global api_log
+    global session
     cnt = 0
     if require_auth:
         real_url = "{}?key={}&".format(url, get_key())
@@ -84,26 +88,33 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
         real_url += "{}={}&".format(i, params[i])
     if len(params) > 0:
         real_url = real_url[:len(real_url) - 1]
+    headers = {'Accept-Encoding': 'gzip'}
     while True:
         if require_auth:
             inc_call_cnt(method_name)
         api_log.info("Request to {} for {}".
                      format(url, params))
         try:
-            r = requests.get(real_url, timeout=30)
+            r = session.get(real_url, timeout=30, headers=headers)
             api_log.info("Response from {} for {} is {}".
                          format(url, params, r))
             if r.status_code == 200 or cnt >= max_api_call_tries:
                 api_log.debug("Full response {} for {} is {}".
                               format(url, params, r.text))
                 break
-            api_log.error("Full response from {} for {} is {}".
-                          format(url, params, r.text),
+            api_log.error("Full response from {} for {} is {}, Limit used: {}, ends {}".
+                          format(url, params, r.text, get_limit_counter(url), get_limit_interval_end(url)),
                           exc_info=True,
                           )
             if r.status_code == 400:
                 break
-        except ConnectTimeout as exc:
+        except requests.exceptions.ConnectTimeout as exc:
+            session = requests.Session()
+            api_log.error(exc)
+            if cnt >= max_api_call_tries:
+                raise ApiException("Steam timeout")
+        except requests.exceptions.ReadTimeout as exc:
+            session = requests.Session()
             api_log.error(exc)
             if cnt >= max_api_call_tries:
                 raise ApiException("Steam timeout")
@@ -134,10 +145,10 @@ def init_platform(config: Config) -> Platform:
     global api_calls_daily_limit
     global max_api_call_tries
     global api_call_pause_on_error
-    global app_details_sleep_time
-    global app_details_sleep_chance
     global call_counters_retain
     global hardcoded_games
+    global session
+    session = requests.Session()
     call_counters = {}
     hardcoded_games = {}
     api_log = get_logger("LOG_API_steam_" + str(config.mode), config.log_level, True)
@@ -163,22 +174,12 @@ def init_platform(config: Config) -> Platform:
         api_call_pause_on_error = 5
     else:
         api_call_pause_on_error = int(api_call_pause_on_error)
-    app_details_sleep_chance = steam_config.get("APP_DETAILS_SLEEP_CHANCE")
-    if app_details_sleep_chance is None:
-        app_details_sleep_chance = 0.4
-    else:
-        app_details_sleep_chance = float(app_details_sleep_chance)
-    app_details_sleep_time = steam_config.get("APP_DETAILS_SLEEP_TIME")
-    if app_details_sleep_time is None:
-        app_details_sleep_time = 1
-    else:
-        app_details_sleep_time = int(app_details_sleep_time)
     call_counters_retain = steam_config.get("CALL_COUNTERS_RETAIN")
     if call_counters_retain is None:
         call_counters_retain = 7
     else:
         call_counters_retain = int(call_counters_retain)
-    steam = Platform(name='Steam', get_games=get_player_games, get_achivements=get_player_achievements,
+    steam = Platform(name='Steam', get_games=get_player_games, get_achievements=get_player_achievements,
                      get_game=get_game, games=None, id=PLATFORM_STEAM, validate_player=get_player_stats,
                      get_player_id=get_name,
                      get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,
@@ -199,6 +200,8 @@ def init_platform(config: Config) -> Platform:
         api_log.info("Steam key in plain text, but work in not core")
         open_key = key_read
     set_key(open_key)
+    # actual limit 200 requests per 300 seconds
+    set_limit("https://store.steampowered.com/api/appdetails/", 305, 198, api_log)
     return steam
 
 
@@ -221,12 +224,14 @@ def get_player_last_games(player_id):
 
 
 def get_player_games(player_id):
+    global session
     params = {
         "steamid": player_id,
         "include_played_free_games": True,
         "include_appinfo": True,
         "skip_unvetted_apps": False,
     }
+    session = requests.Session()
     r = _call_steam_api(url="http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/",
                         method_name="GetOwnedGames",
                         params=params)
@@ -242,6 +247,7 @@ def get_player_games(player_id):
 def get_game(game_id: str, name: str, language: str = "English") -> Game:
     global api_log
     global hardcoded_games
+    global skip_extra_info
     params = {
         "appid": game_id,
         "l": language,
@@ -289,30 +295,30 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                                                        locked_icon_url=i.get("icongray"),
                                                        is_hidden=is_hidden,
                                                        )
-        api_log.info(
-            "For game {0}, found {1} achievements".format(
-                game_id, len(achievements)))
         if len(game_name) == 0:
             game_name = obj.get("gameName")
             api_log.warn("For game {0}, found name {1} instead of empty one".format(game_id, game_name))
+        api_log.info(
+            "For game \"{2}\" ( ext_id: {0}), found {1} achievements".format(
+                game_id, len(achievements), game_name))
     params = {
         "appids": game_id,
     }
-    if random.random() > app_details_sleep_chance:
-        api_log.info("Sleep before https://store.steampowered.com/api/appdetails/ because random")
-        time.sleep(app_details_sleep_time)
-        api_log.info("Waked up")
-    r = _call_steam_api(url="https://store.steampowered.com/api/appdetails/",
-                        method_name="appdetails",
-                        params=params,
-                        require_auth=False)
+    if not skip_extra_info:
+        r = do_with_limit("https://store.steampowered.com/api/appdetails/",
+                          _call_steam_api,
+                          dict(url="https://store.steampowered.com/api/appdetails/",
+                               method_name="appdetails",
+                               params=params,
+                               require_auth=False)
+                          )
     icon_url = None
     release_date = None
     developer = None
     publisher = None
     genres = []
     features = []
-    if r.status_code == 200:
+    if skip_extra_info or r.status_code == 200:
         obj = r.json()
         if obj is not None:
             obj = obj.get(game_id)
@@ -404,9 +410,11 @@ def get_name(player_name: str):
 
 
 def get_player_stats(player_id):
+    global session
     params = {
         "steamids": player_id,
     }
+    session = requests.Session()
     r = _call_steam_api(url="http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/",
                         method_name="GetPlayerSummaries",
                         params=params)

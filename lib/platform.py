@@ -11,7 +11,7 @@ class Platform:
     config = None
     conn = None
 
-    def __init__(self, name: str, get_games, get_game, get_achivements, games: [Game], id: int,
+    def __init__(self, name: str, get_games, get_game, get_achievements, games: [Game], id: int,
                  validate_player, get_player_id, get_stats, incremental_update_enabled: bool,
                  incremental_update_interval: int, get_last_games, incremental_skip_chance: int,
                  get_consoles, get_player_stats=None, set_hardcoded=None, get_player_avatar=None):
@@ -21,7 +21,7 @@ class Platform:
         self.get_games = get_games
         self.get_last_games = get_last_games
         self.get_game = get_game
-        self.get_achivements = get_achivements
+        self.get_achievements = get_achievements
         self.validate_player = validate_player
         self.get_player_id = get_player_id
         self.get_consoles = get_consoles
@@ -77,6 +77,13 @@ class Platform:
                 if not isinstance(i, str):
                     self.games[str(i)] = games[i]
 
+    def add_game(self, game: Game):
+        self.games_by_id[game.id] = game
+        self.games[str(game.ext_id)] = game
+
+    def is_game_known(self, ext_id: str) -> bool:
+        return ext_id in self.games
+
     def get_game_by_ext_id(self, ext_id: str) -> Game:
         return self.games[ext_id]
 
@@ -118,7 +125,8 @@ class Platform:
             ret = cursor.fetchone()
             if ret is not None:
                 self.id = [0]
-                self._is_persist = True
+            self._is_persist = True
+            self.logger.info("Platform \"{}\" (id: {}) saved.".format(self.name, self.id))
         for i in self._consoles_by_ext_id:
             if self._consoles_by_ext_id[i].id is None:
                 self.logger.info("Saving console {0}".format(self._consoles_by_ext_id[i].name))
@@ -131,22 +139,24 @@ class Platform:
                                       format(self._consoles_by_ext_id[i].name, i))
         for i in self.games:
             if self.games[i].console_ext_id is not None and self.games[i].console is None:
-                self.logger.info("Set console {0} for game {1}".format(self.games[i].console_ext_id,
-                                                                       self.games[i].name))
+                self.logger.info("Set console {0} for game \"{1}\"".format(self.games[i].console_ext_id,
+                                                                           self.games[i].name))
                 self.games[i].set_console(self.get_console_by_ext(self.games[i].console_ext_id))
-                self.logger.info("New console {0} for game {1}".format(self.games[i].console_name,
-                                                                       self.games[i].name))
+                self.logger.info("New console {0} for game \"{1}\"".format(self.games[i].console_name,
+                                                                           self.games[i].name))
             self.games[i].save(cursor, self.active_locale)
         conn.commit()
         self.logger.info("Finish saving to db")
 
-    def update_games(self, game_id: str, game_name: str):
-        if str(game_id) not in self.games:
-            self.logger.info("Ask server for game {0} {1}".format(game_id, game_name))
+    def update_games(self, game_id: str, game_name: str, force: bool = False):
+        if str(game_id) not in self.games or force:
+            self.logger.info("Ask server for game \"{1}\" (ext_id: {0})".format(game_id, game_name))
             self.games[str(game_id)] = self.get_game(game_id, game_name, self.active_language)
             self.save()
             self.games_by_id[self.games[str(game_id)].id] = self.games[game_id]
-            self.logger.info("Added game {0} {1} with id {2}".format(game_id, game_name, self.games[str(game_id)].id))
+            self.logger.info("Added game \"{1}\" (ext_id: {0}, id: {2})".format(game_id,
+                                                                                game_name,
+                                                                                self.games[str(game_id)].id))
 
     def load_consoles(self, console_id: Union[int, None] = None):
         conn = self.get_connect()
@@ -226,16 +236,13 @@ class Platform:
                                 order by g.id
                                 """, (self.id, game_id))
         games = {}
-        for id, platform_id, name, ext_id, console_id, icon_url, release_date, developer_id, developer_name,\
+        for id, platform_id, name, ext_id, console_id, icon_url, release_date, developer_id, developer_name, \
                 publisher_id, publisher_name, genre_ids, genres, feature_ids, features in cursor:
-            self.load_log.info("Loaded game {0} with id {1}, ext_id {2}, for platform {3} and console {4}".
-                               format(name, id, ext_id, self.id, console_id))
             if self.get_consoles is not None and console_id is not None:
-                console = None
                 console_id = int(console_id)
                 if self.get_console_by_id(console_id) is None:
                     self.load_consoles(console_id)
-                    console = self.get_console_by_id(console_id)
+                console = self.get_console_by_id(console_id)
                 games[str(ext_id)] = Game(name=name, platform_id=platform_id, id=id, ext_id=ext_id, achievements=None,
                                           console_ext_id=None, console=console,
                                           icon_url=icon_url, release_date=release_date,
@@ -248,6 +255,8 @@ class Platform:
                                           features=features,
                                           feature_ids=feature_ids,
                                           )
+                self.load_log.info("Loaded game \"{0}\" (id: {1}, ext_id: {2}, console {5} (id: {3})) for platform {4}".
+                                   format(name, id, ext_id, console_id, self.name, console.name))
             else:
                 games[str(ext_id)] = Game(name=name, platform_id=platform_id, id=id, ext_id=ext_id, achievements=None,
                                           console_ext_id=None, console=None,
@@ -261,6 +270,8 @@ class Platform:
                                           features=features,
                                           feature_ids=feature_ids,
                                           )
+                self.load_log.info("Loaded game \"{0}\" (id: {1}, ext_id: {2}) for platform {3}.".
+                                   format(name, id, ext_id, self.name))
         if load_achievements:
             if game_id is None:
                 cursor.execute("""
@@ -280,7 +291,7 @@ class Platform:
                                                     """, (self.id, game_id))
             for id, platform_id, name, ext_id, game_ext_id, description, game_id, icon_url, locked_icon_url, \
                     is_hidden in cursor:
-                self.load_log.debug("Loaded achievement {0} with id {1}, ext_id {2}, for game {3} "
+                self.load_log.debug("Loaded achievement {0} with id: {1}, ext_id: {2}, for game \"{3}\" "
                                     "on platform {4}".format(name, id, ext_id, game_ext_id, self.id))
                 games[str(game_ext_id)].add_achievement(achievement=Achievement(id=id, game_id=game_id, name=name,
                                                                                 platform_id=platform_id, ext_id=ext_id,

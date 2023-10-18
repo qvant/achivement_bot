@@ -1,6 +1,6 @@
 import datetime
 import random
-from psycopg2 import Error as pg_error
+from psycopg2 import Error as PgError
 from typing import Union, Dict
 from .platform import Platform
 from datetime import timezone
@@ -42,7 +42,7 @@ class Player:
             cur.execute("""
                             update achievements_hunt.players set ext_id = %s, dt_update = %s where id = %s
                         """, (self.ext_id, self.dt_updated, self.id,))
-        except pg_error as err:
+        except PgError as err:
             if err.pgcode == "23505":
                 conn.rollback()
                 cur.execute("""
@@ -150,7 +150,8 @@ class Player:
         if len(self.games) == 0 or force:
             if force:
                 self.games = []
-            self.platform.logger.info("Load games for player {0}, mode {1} force mode {2}".format(self.id, mode, force))
+            self.platform.logger.info("Load games for player {} (ext_id: {}, id: {}), mode {} force mode {}".
+                                      format(self.name, self.ext_id, self.id, mode, force))
             conn = self.platform.get_connect()
             cur = conn.cursor()
             if mode == GAMES_ALL:
@@ -300,7 +301,7 @@ class Player:
             """, (self.dt_updated, self.is_public, self.dt_updated_full, self.dt_updated_inc,
                   self.name, self.avatar_url,
                   self.id))
-        self.platform.logger.info("Get saved games for player {0} ".format(self.ext_id))
+        self.platform.logger.info("Get saved games for player {} ({}) ".format(self.name, self.ext_id))
         cur.execute("""
                             select game_id
                                 from achievements_hunt.player_games t
@@ -323,8 +324,8 @@ class Player:
                 if len(self.achievements[self.games[i]]) == 0:
                     continue
 
-                self.platform.logger.info("Get saved achievements for player {0} and game {1}".
-                                          format(self.ext_id, game.ext_id))
+                self.platform.logger.info("Get saved achievements for player {} ({}) and game \"{}\" ({})".
+                                          format(self.name, self.ext_id, game.name, game.ext_id))
                 cur.execute("""
                     select achievement_id
                         from achievements_hunt.player_achievements t
@@ -388,8 +389,14 @@ class Player:
                                 """, (self.platform.id, game.id, achievement.id, self.id, achievement_date))
                     saved_cnt += 1
                     self.platform.logger.info(
-                        "Saved into db achievement {2} for player {0} and game {1}.".format(self.ext_id, game.ext_id,
-                                                                                            achievement.id))
+                        "Saved into db achievement {5} ({2}) for player {3}({0}) and game \"{4}\"{1}.".
+                        format(self.ext_id,
+                               game.ext_id,
+                               achievement.id,
+                               self.name,
+                               game.name,
+                               achievement.name
+                               ))
                 self.platform.logger.info(
                     "Saved achievements for player {0} and game {1}: {2}".format(self.ext_id, game.name, saved_cnt))
         self.platform.logger.info("Saved achievements for player {0}".format(self.ext_id))
@@ -436,7 +443,7 @@ class Player:
 
         conn.commit()
         conn.close()
-        self.platform.logger.info("Saved player {0}".format(self.ext_id))
+        self.platform.logger.info("Saved player {} ({})".format(self.name, self.ext_id))
 
     def renew(self):
         new_name = self.platform.validate_player(self.ext_id)
@@ -473,8 +480,8 @@ class Player:
                         if str(owned_games[cg]) not in saved_games_by_ext and str(owned_games[cg]) not in str_games:
                             new_games.append(owned_games[cg])
                             new_game_names.append(owned_games_names[cg])
-                            self.platform.logger.info("Found new owned, but unplayed game {1} for player {0}. ".
-                                                      format(self.name, owned_games[cg]))
+                            self.platform.logger.info("Found new owned, but unplayed game {2} ({1}) for player {0}.".
+                                                      format(self.name, owned_games[cg], owned_games_names[cg]))
                     self.games = [*self.games, *new_games]
                     names = [*names, *new_game_names]
                     self.platform.logger.info("Prepared incremental update for player {0}. "
@@ -502,30 +509,35 @@ class Player:
         games_num = len(self.games)
         self.is_public = True
         for i in range(games_num):
-            self.platform.logger.info("Update game with id {1} and name {2} for player {0} {3}. Progress {4}/{5}".
-                                      format(self.ext_id, self.games[i], names[i], self.name, i, games_num))
-            self.platform.update_games(str(self.games[i]), names[i])
-            self.platform.logger.info(
-                "Get achievements for game with id {1} and name {2} for player {0} {3}. Progress {4}/{5}".format(
-                    self.ext_id, self.games[i], names[i], self.name, i+1, games_num))
+            # if new game, not discovered by game updater yet
+            if not self.platform.is_game_known(str(self.games[i])):
+                self.platform.logger.info("Request new game ext id: {}, name: {} for player: {}. ".
+                                          format(self.games[i], names[i], self.name))
+                new_game = self.platform.get_game(str(self.games[i]), names[i])
+                self.platform.add_game(new_game)
+
+                conn = self.platform.get_connect()
+                cur = conn.cursor()
+                new_game.save(cur, "en")
+                conn.commit()
+                self.platform.logger.info("Saved new game ext id: {}, name: {} for player: {}. ".
+                                          format(self.games[i], names[i], self.name))
             if self.platform.get_game_by_ext_id(str(self.games[i])).has_achievements:
-                if self.is_public:
-                    try:
-                        self.achievements[self.games[i]], self.achievement_dates[self.games[i]] = \
-                            self.platform.get_achivements(self.ext_id, self.games[i])
-                    except ValueError as err:
-                        if str(err) == "Profile is not public":
-                            self.is_public = False
-                            self.dt_updated_inc = None
-                            self.dt_updated_full = None
-                    if self.platform.get_player_stats is not None and \
-                            len(self.platform.get_game_by_ext_id(str(self.games[i])).stats) > 0:
-                        self.stats[self.games[i]] = self.platform.get_player_stats(self.ext_id, self.games[i])
-                else:
-                    self.platform.logger.info(
-                        "Skip checking achievements for game with id {1} and name {2} for player {0} {3}, "
-                        "because profile is private. Progress {4}/{5}".format(
-                            self.ext_id, self.games[i], names[i], self.name, i + 1, games_num))
+                try:
+                    self.achievements[self.games[i]], self.achievement_dates[self.games[i]] = \
+                        self.platform.get_achievements(self.ext_id, self.games[i])
+                except ValueError as err:
+                    if str(err) == "Profile is not public":
+                        self.is_public = False
+                        self.dt_updated_inc = None
+                        self.dt_updated_full = None
+                        self.platform.logger.info(
+                            "Skip checking achievements for player {} {}, because profile is private.".format(
+                                self.ext_id, self.name))
+                        break
+                if self.platform.get_player_stats is not None and \
+                        len(self.platform.get_game_by_ext_id(str(self.games[i])).stats) > 0:
+                    self.stats[self.games[i]] = self.platform.get_player_stats(self.ext_id, self.games[i])
             else:
                 self.platform.logger.info(
                     "Skip checking achievements for game with id {1} and name {2} for player {0} {3}, "
