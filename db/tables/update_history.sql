@@ -8,4 +8,5 @@ create table achievements_hunt.update_history
     id_process      integer default 1 not null
 );
 create index idx_update_history_dt_next_update on achievements_hunt.update_history(id_platform, dt_next_update, dt_ended);
+create index idx_update_history_active on achievements_hunt.update_history(id_platform, id_process, ) where dt_ended is null;
 alter table  achievements_hunt.update_history owner to achievements_hunt_bot;
