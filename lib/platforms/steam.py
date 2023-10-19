@@ -64,7 +64,7 @@ def inc_call_cnt(method: str):
         call_counters[cur_dt] = {}
     if method not in call_counters[cur_dt]:
         call_counters[cur_dt][method] = int(0)
-    call_counters[cur_dt][method] += 1
+    call_counters[cur_dt][method] += int(1)
     while len(call_counters) > call_counters_retain >= 0:
         keys = [key for key in call_counters]
         keys.sort()
@@ -130,7 +130,7 @@ def get_call_cnt():
             total = int(0)
             for j in call_counters[i]:
                 if j != "Total":
-                    total += call_counters[i][j]
+                    total += int(call_counters[i][j])
             call_counters[i]["Total"] = total
             call_counters[i]["Used calls %"] = 0
             if total > 0:
