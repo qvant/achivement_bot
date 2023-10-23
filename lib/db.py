@@ -10,7 +10,7 @@ from lib.platforms.steam import init_platform as init_steam
 from lib.platforms.retroachievements import init_platform as init_retro
 from lib.player import STATUS_VALID, Player
 from .log import get_logger
-from .query_holder import get_query, GET_NEXT_UPDATE_DATE, MARK_UPDATE_DONE
+from .query_holder import get_query, GET_NEXT_UPDATE_DATE, MARK_UPDATE_DONE, CHECK_UPDATE_ACTIVE, START_UPDATE
 
 global load_log
 
@@ -90,14 +90,10 @@ def mark_update_done(platform: Platform, id_process: int, dt_next_update: dateti
 def start_update(platform: Platform, id_process: int):
     conn = Platform.get_connect()
     cursor = conn.cursor()
-    cursor.execute("""
-                        select count(1) from achievements_hunt.update_history where id_platform = %s
-                        and id_process = %s
-                        and dt_ended is null
-                        """, (platform.id, id_process))
+    cursor.execute(get_query(CHECK_UPDATE_ACTIVE), (platform.id, id_process))
     cnt, = cursor.fetchone()
     if cnt == 0:
-        cursor.execute("""insert into achievements_hunt.update_history(id_platform) values (%s)""", (platform.id,))
+        cursor.execute(get_query(START_UPDATE), (platform.id, id_process))
     conn.commit()
 
 

@@ -1,0 +1,1 @@
+insert into achievements_hunt.update_history(id_platform, id_process) values (%s, %s)
