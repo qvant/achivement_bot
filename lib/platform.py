@@ -41,6 +41,8 @@ class Platform:
         self.logger = get_logger(self.name + "_" + self.config.mode, self.config.log_level)
         self.active_language = "english"
         self.languages = []
+        self.games_pack_size = 100
+        self.players_pack_size = 100
         self._consoles_by_id = {}
         self._consoles_by_ext_id = {}
         self._hardcoded_games = {}
@@ -255,8 +257,8 @@ class Platform:
                                           features=features,
                                           feature_ids=feature_ids,
                                           )
-                self.load_log.info("Loaded game \"{0}\" (id: {1}, ext_id: {2}, console {5} (id: {3})) for platform {4}".
-                                   format(name, id, ext_id, console_id, self.name, console.name))
+                self.load_log.info("Loaded game \"{0}\" (id: {1}, ext_id: {2}, console {5} (id: {3})) for platform: {4}"
+                                   .format(name, id, ext_id, console_id, self.name, console.name))
             else:
                 games[str(ext_id)] = Game(name=name, platform_id=platform_id, id=id, ext_id=ext_id, achievements=None,
                                           console_ext_id=None, console=None,
