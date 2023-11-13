@@ -37,6 +37,6 @@ def uptime() -> datetime.timedelta:
 
 
 def get_stats() -> Dict:
-    stats = {"memory_usage": get_memory_usage(), "memory_parcent": get_cpu_percent(), "cpu_times": get_cpu_times(),
+    stats = {"memory_usage": get_memory_usage(), "memory_percent": get_cpu_percent(), "cpu_times": get_cpu_times(),
              "cpu_percent": get_cpu_percent(), "uptime": uptime()}
     return stats
