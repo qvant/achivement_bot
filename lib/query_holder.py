@@ -8,6 +8,10 @@ START_UPDATE = "start_update"
 GET_PLAYER_COUNT = "get_player_count"
 GET_PLAYER = "get_player"
 GET_PLAYERS = "get_players"
+GET_PLAYERS_BY_TELEGRAM_ID = "get_players_by_telegram_id"
+SET_USER_LOCALE = "set_user_locale"
+GET_PLAYER_GAMES = "get_player_games"
+GET_PLAYER_STATS = "get_player_stats"
 
 queries = {GET_NEXT_UPDATE_DATE: r"db\queries\get_next_update_date.sql",
            MARK_UPDATE_DONE: r"db\queries\mark_update_done.sql",
@@ -16,6 +20,10 @@ queries = {GET_NEXT_UPDATE_DATE: r"db\queries\get_next_update_date.sql",
            GET_PLAYER_COUNT: r"db\queries\get_player_count.sql",
            GET_PLAYER: r"db\queries\get_player.sql",
            GET_PLAYERS: r"db\queries\get_players.sql",
+           GET_PLAYERS_BY_TELEGRAM_ID: r"db\queries\get_players_by_telegram_id.sql",
+           SET_USER_LOCALE: r"db\queries\set_user_locale.sql",
+           GET_PLAYER_GAMES: r"db\queries\get_player_games.sql",
+           GET_PLAYER_STATS: r"db\queries\get_player_stats.sql",
            }
 query_texts = {}
 

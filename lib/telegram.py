@@ -5,6 +5,7 @@ from .config import Config, MODE_CORE, MODE_WORKER, MODE_UPDATER, MODE_BOT, MODE
 from .platform import Platform
 from .player import Player, GAMES_ALL, GAMES_PERFECT, GAMES_WITH_ACHIEVEMENTS
 from .log import get_logger
+from .query_holder import get_query, GET_PLAYERS_BY_TELEGRAM_ID, SET_USER_LOCALE, GET_PLAYER_GAMES, GET_PLAYER_STATS
 from .queue import enqueue_command
 from .stats import get_stats
 from typing import Union, List, Dict
@@ -172,12 +173,7 @@ def main_keyboard(chat_id: int):
     try:
         connect = Platform.get_connect()
         cursor = connect.cursor()
-        cursor.execute("""
-                    select id, platform_id, name, ext_id, dt_update, is_public, avatar_url
-                    from achievements_hunt.players
-                    where telegram_id = %s
-                    order by id
-                    """, (chat_id,))
+        cursor.execute(get_query(GET_PLAYERS_BY_TELEGRAM_ID), (chat_id,))
         connect.commit()
 
         for id, platform_id, name, ext_id, dt_update, is_public, avatar_url in cursor:
@@ -415,9 +411,7 @@ def locale_choice(update: Update, context: CallbackContext):
                          format(cur_item, update.effective_chat.id))
     user_locales[chat_id] = cur_item
     cursor = db.cursor()
-    cursor.execute("""
-    update achievements_hunt.users set locale = %s, dt_last_update = current_timestamp where telegram_id = %s""",
-                   (cur_item, chat_id))
+    cursor.execute(get_query(SET_USER_LOCALE), (cur_item, chat_id))
     db.commit()
     reply_markup = InlineKeyboardMarkup(main_keyboard(chat_id))
     context.bot.send_message(chat_id=chat_id, text=_("Language chosen"),
@@ -706,10 +700,7 @@ def list_of_games(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     _ = set_locale(chat_id=chat_id)
     cursor = db.cursor()
-    cursor.execute("""
-            select id, platform_id, name, ext_id, avatar_url from achievements_hunt.players
-            where telegram_id = %s order by id
-            """, (update.effective_chat.id,))
+    cursor.execute(get_query(GET_PLAYER_GAMES), (update.effective_chat.id,))
     players_by_tlg_id[update.effective_chat.id] = []
     _ = set_locale(update)
     db.commit()
@@ -802,21 +793,7 @@ def show_account_stats(update: Update, context: CallbackContext, console_id: Uni
     if player is not None:
         connect = Platform.get_connect()
         cursor = connect.cursor()
-        cursor.execute("""
-        select
-            round(avg(case when g.has_achievements
-                then pg.percent_complete else null
-                end)::numeric, 2),
-            count(case when pg.is_perfect then 1 end),
-            count(1),
-            count(case when g.has_achievements then 1 end)
-        from achievements_hunt.player_games pg
-        join achievements_hunt.games g
-            on pg.game_id = g.id
-            and pg.platform_id = g.platform_id
-        where pg.player_id = %s
-             """,
-                       (player.id,))
+        cursor.execute(get_query(GET_PLAYER_STATS), (player.id,))
         res = cursor.fetchone()
         avg_percent = 0
         perfect_games = 0

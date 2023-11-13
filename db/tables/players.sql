@@ -14,7 +14,7 @@ create table achievements_hunt.players
 	avatar_url  varchar(1024)
 );
 create unique index u_players_ext_key on achievements_hunt.players(platform_id, ext_id);
-create unique index u_players_telegram on achievements_hunt.players(platform_id, telegram_id);
+create unique index u_players_telegram on achievements_hunt.players(telegram_id, platform_id);
 create index idx_players_name on achievements_hunt.players(name);
 alter table achievements_hunt.players ADD CONSTRAINT u_players_ext_key unique using index u_players_ext_key;
 alter table achievements_hunt.players ADD CONSTRAINT fk_players_to_platforms foreign key (platform_id) references  achievements_hunt.platforms(id);
