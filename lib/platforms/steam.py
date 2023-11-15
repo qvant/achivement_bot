@@ -27,6 +27,10 @@ global call_counters_retain
 global hardcoded_games
 global skip_extra_info
 global session
+global summary_cache
+global summary_cache_key
+
+summary_cache_key = None
 
 
 def get_key():
@@ -64,7 +68,7 @@ def inc_call_cnt(method: str):
         call_counters[cur_dt] = {}
     if method not in call_counters[cur_dt]:
         call_counters[cur_dt][method] = int(0)
-    call_counters[cur_dt][method] += 1
+    call_counters[cur_dt][method] += int(1)
     while len(call_counters) > call_counters_retain >= 0:
         keys = [key for key in call_counters]
         keys.sort()
@@ -130,7 +134,7 @@ def get_call_cnt():
             total = int(0)
             for j in call_counters[i]:
                 if j != "Total":
-                    total += call_counters[i][j]
+                    total += int(call_counters[i][j])
             call_counters[i]["Total"] = total
             call_counters[i]["Used calls %"] = 0
             if total > 0:
@@ -411,17 +415,25 @@ def get_name(player_name: str):
 
 def get_player_stats(player_id):
     global session
+    global summary_cache
+    global summary_cache_key
     params = {
         "steamids": player_id,
     }
     session = requests.Session()
-    r = _call_steam_api(url="http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/",
-                        method_name="GetPlayerSummaries",
-                        params=params)
+    if summary_cache_key is not None and summary_cache_key == player_id:
+        r = summary_cache
+        summary_cache_key = None
+    else:
+        r = _call_steam_api(url="http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/",
+                            method_name="GetPlayerSummaries",
+                            params=params)
     res = r.json().get("response").get("players")
     if len(res) == 0:
         return None
     else:
+        summary_cache_key = player_id
+        summary_cache = r
         if "personaname" in res[0]:
             name = res[0]["personaname"]
         elif "realname" in res[0]:
@@ -432,16 +444,23 @@ def get_player_stats(player_id):
 
 
 def get_player_avatar(player_id):
-    params = {
-        "steamids": player_id,
-    }
-    r = _call_steam_api(url="http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/",
-                        method_name="GetPlayerSummaries",
-                        params=params)
+    global summary_cache
+    global summary_cache_key
+    if summary_cache_key is not None and summary_cache_key == player_id:
+        r = summary_cache
+    else:
+        params = {
+            "steamids": player_id,
+        }
+        r = _call_steam_api(url="http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/",
+                            method_name="GetPlayerSummaries",
+                            params=params)
     res = r.json().get("response").get("players")
     if len(res) == 0:
         return None
     else:
+        summary_cache_key = player_id
+        summary_cache = r
         if "avatarmedium" in res[0]:
             url = res[0]["avatarmedium"]
         elif "avatarfull" in res[0]:

@@ -72,7 +72,8 @@ def main_worker(config: Config):
             for i in range(len(platforms)):
                 if datetime.datetime.now().replace(tzinfo=timezone.utc) > \
                         dt_next_update[i].replace(tzinfo=timezone.utc):
-                    renew_log.info("Update platform {0}, next update {1}".format(platforms[i].name, dt_next_update[i]))
+                    renew_log.info("Begin update players on platform {0}, next update {1}".format(platforms[i].name,
+                                                                                                  dt_next_update[i]))
                     platforms[i].set_next_language()
                     start_update(platforms[i], ID_PROCESS_WORKER)
                     if len(platform_players[i]) == 0:
@@ -84,7 +85,7 @@ def main_worker(config: Config):
                     else:
                         renew_log.info(
                             "Update platform {0} resumed from position {1}".format(platforms[i].name, cur_players[i]))
-                    start_pos = 0
+                    players_processed = 0
                     for j in range(cur_players[i], len(platform_players[i])):
                         cur_players[i] = j
                         renew_log.info("Update platform {} for player {} ({}). Total players {}".
@@ -97,8 +98,8 @@ def main_worker(config: Config):
                             platform_players[i][j].save()
                         except BaseException as exc:
                             renew_log.exception(exc)
-                        start_pos += 1
-                        if start_pos >= 100:
+                        players_processed += 1
+                        if players_processed >= platforms[i].players_pack_size:
                             renew_log.info(
                                 "Update platform {0} paused in position {1}".format(platforms[i].name, cur_players[i]))
                             break

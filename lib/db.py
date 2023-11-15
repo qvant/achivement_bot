@@ -10,6 +10,8 @@ from lib.platforms.steam import init_platform as init_steam
 from lib.platforms.retroachievements import init_platform as init_retro
 from lib.player import STATUS_VALID, Player
 from .log import get_logger
+from .query_holder import get_query, GET_NEXT_UPDATE_DATE, MARK_UPDATE_DONE, CHECK_UPDATE_ACTIVE, START_UPDATE, \
+    GET_PLAYER_COUNT, GET_PLAYERS, GET_PLAYER
 
 global load_log
 
@@ -38,23 +40,9 @@ def load_players(platform: Platform, config: Config, player_id: Union[int, None]
     cursor = conn.cursor()
 
     if player_id is None:
-        cursor.execute("""
-        select id, platform_id, name, ext_id, telegram_id, dt_update, dt_update_full, dt_update_inc, avatar_url
-        from achievements_hunt.players
-        where platform_id = %s
-            and status_id = %s
-        order by id
-        """, (platform.id, STATUS_VALID))
+        cursor.execute(get_query(GET_PLAYERS), (platform.id, STATUS_VALID))
     else:
-        cursor.execute("""
-            select id, platform_id, name, ext_id, telegram_id, dt_update, dt_update_full, dt_update_inc,
-                avatar_url
-            from achievements_hunt.players
-            where platform_id = %s
-                and id = %s
-                and (status_id = %s or %s is null)
-            order by id
-            """, (platform.id, player_id, status_id, status_id))
+        cursor.execute(get_query(GET_PLAYER), (platform.id, player_id, status_id, status_id))
     players = []
     for id, platform_id, name, ext_id, telegram_id, dt_updated, dt_update_full, dt_update_inc, avatar_url in cursor:
         load_log.info("Loaded player {0} with id {1}, ext_id: {2}, for platform: {3}".
@@ -70,12 +58,7 @@ def load_players(platform: Platform, config: Config, player_id: Union[int, None]
 def get_next_update_date(platform: Platform, id_process: int):
     conn = Platform.get_connect()
     cursor = conn.cursor()
-    cursor.execute("""
-            select max(dt_next_update) from achievements_hunt.update_history
-                where id_platform = %s
-                    and dt_ended is not null
-                    and id_process = %s
-            """, (platform.id, id_process))
+    cursor.execute(get_query(GET_NEXT_UPDATE_DATE), (platform.id, id_process))
     ret = cursor.fetchone()
     conn.commit()
     if ret is not None and ret[0] is not None:
@@ -87,28 +70,17 @@ def get_next_update_date(platform: Platform, id_process: int):
 def mark_update_done(platform: Platform, id_process: int, dt_next_update: datetime):
     conn = Platform.get_connect()
     cursor = conn.cursor()
-    cursor.execute("""
-                    update achievements_hunt.update_history
-                        set dt_ended = current_timestamp,
-                        dt_next_update = %s
-                        where id_platform = %s
-                        and id_process = %s
-                        and dt_ended is null
-                    """, (dt_next_update, platform.id, id_process))
+    cursor.execute(get_query(MARK_UPDATE_DONE), (dt_next_update, platform.id, id_process))
     conn.commit()
 
 
 def start_update(platform: Platform, id_process: int):
     conn = Platform.get_connect()
     cursor = conn.cursor()
-    cursor.execute("""
-                        select count(1) from achievements_hunt.update_history where id_platform = %s
-                        and id_process = %s
-                        and dt_ended is null
-                        """, (platform.id, id_process))
+    cursor.execute(get_query(CHECK_UPDATE_ACTIVE), (platform.id, id_process))
     cnt, = cursor.fetchone()
     if cnt == 0:
-        cursor.execute("""insert into achievements_hunt.update_history(id_platform) values (%s)""", (platform.id,))
+        cursor.execute(get_query(START_UPDATE), (platform.id, id_process))
     conn.commit()
 
 
@@ -117,12 +89,7 @@ def get_players_count():
     cursor = conn.cursor()
     res = {}
     # TODO less expensive way
-    cursor.execute("""
-                    select count(1), p.name
-                      from achievements_hunt.players pl
-                      join achievements_hunt.platforms p
-                        on p.id = pl.platform_id
-                      group by p.name""")
+    cursor.execute(get_query(GET_PLAYER_COUNT))
     for cnt, platform_name in cursor:
         res[platform_name] = cnt
     conn.commit()

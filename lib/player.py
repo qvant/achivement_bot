@@ -339,8 +339,8 @@ class Player:
                 for j in ret:
                     saved_achievements.append(j[0])
                 self.platform.logger.info(
-                    "Saved achievements for player {0} and game {1}: {2}".format(
-                        self.ext_id, game.ext_id, len(saved_achievements)))
+                    "Found in db achievements for player {} and game \"{}\" ({}): {}".format(
+                        self.ext_id, game.name, game.ext_id, len(saved_achievements)))
                 for j in range(len(self.achievements[self.games[i]])):
                     achievement = game.get_achievement_by_ext_id(self.achievements[self.games[i]][j])
                     achievement_date = self.achievement_dates[self.games[i]][j]
@@ -389,7 +389,7 @@ class Player:
                                 """, (self.platform.id, game.id, achievement.id, self.id, achievement_date))
                     saved_cnt += 1
                     self.platform.logger.info(
-                        "Saved into db achievement {5} ({2}) for player {3}({0}) and game \"{4}\"{1}.".
+                        "Saved into db achievement \"{5}\" ({2}) for player {3} ({0}) and game \"{4}\" ({1}).".
                         format(self.ext_id,
                                game.ext_id,
                                achievement.id,
@@ -398,7 +398,11 @@ class Player:
                                achievement.name
                                ))
                 self.platform.logger.info(
-                    "Saved achievements for player {0} and game {1}: {2}".format(self.ext_id, game.name, saved_cnt))
+                    "Achievements for player {} and game \"{}\" ({}) was saved: {}".format(
+                        self.ext_id,
+                        game.name,
+                        game.ext_id,
+                        saved_cnt))
         self.platform.logger.info("Saved achievements for player {0}".format(self.ext_id))
 
         if len(self.stats) > 0:

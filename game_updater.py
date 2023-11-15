@@ -51,11 +51,13 @@ def main_game_updater(config: Config):
     enqueue_command(cmd, MODE_BOT)
 
     dt_next_update = []
+    platform_games_indexes = []
     for j in platforms:
         dt_next_update.append(get_next_update_date(j, ID_PROCESS_GAME_UPDATER))
         j.reset_games()
         j.load_languages()
         j.set_next_language()
+        platform_games_indexes.append(0)
 
     while is_running:
 
@@ -64,9 +66,9 @@ def main_game_updater(config: Config):
             for i in range(len(platforms)):
                 if datetime.datetime.now().replace(tzinfo=timezone.utc) > \
                         dt_next_update[i].replace(tzinfo=timezone.utc):
-                    renew_log.info("Update platform {0} ({2}), next update {1}".format(platforms[i].name,
-                                                                                       dt_next_update[i],
-                                                                                       platforms[i].id))
+                    renew_log.info("Begin update games on platform {0} ({2}), next update {1}".format(platforms[i].name,
+                                                                                                      dt_next_update[i],
+                                                                                                      platforms[i].id))
                     platforms[i].set_next_language()
                     start_update(platforms[i], ID_PROCESS_GAME_UPDATER)
                     if platforms[i].get_consoles is not None:
@@ -84,10 +86,12 @@ def main_game_updater(config: Config):
                                     platforms[i].id
                                 ))
                             continue
-                    platforms[i].load_games()
+                    if platform_games_indexes[i] == 0:
+                        platforms[i].load_games()
                     games_num = len(platforms[i].games)
                     games_ext_ids = list(platforms[i].games.keys())
-                    for j in range(len(games_ext_ids)):
+                    games_processed = 0
+                    for j in range(platform_games_indexes[i], len(games_ext_ids)):
                         game = platforms[i].games[games_ext_ids[j]]
                         platforms[i].logger.info(
                             "Update game \"{}\" (ext_id: {}). Progress {}/{}".
@@ -96,19 +100,29 @@ def main_game_updater(config: Config):
                         platforms[i].logger.info(
                             "Get achievements for game \"{}\" (ext_id: {}). Progress {}/{}".format(
                                game.name, game.ext_id, j + 1, games_num))
+                        games_processed += 1
+                        if games_processed >= platforms[i].games_pack_size:
+                            break
                     platforms[i].save()
-                    dt_next_update[i] = datetime.datetime.now() + datetime.timedelta(
-                        seconds=platforms[i].config.update_interval)
-                    platforms[i].mark_language_done()
-                    platforms[i].reset_games()
-                    renew_log.info("Update platform {0} finished, next_update {1}".format(platforms[i].name,
-                                                                                          dt_next_update[i]))
-                    mark_update_done(platforms[i], ID_PROCESS_GAME_UPDATER, dt_next_update[i])
+                    if platform_games_indexes[i] >= games_num:
+                        dt_next_update[i] = datetime.datetime.now() + datetime.timedelta(
+                            seconds=platforms[i].config.update_interval)
+                        platforms[i].mark_language_done()
+                        platforms[i].reset_games()
+                        renew_log.info("Update platform {0} finished, next_update {1}".format(platforms[i].name,
+                                                                                              dt_next_update[i]))
+                        mark_update_done(platforms[i], ID_PROCESS_GAME_UPDATER, dt_next_update[i])
+                        platform_games_indexes[i] = 0
+                    else:
+                        platform_games_indexes[i] += games_processed
+                        renew_log.info("Update platform {0} perform batch, progress {1}/{2}".
+                                       format(platforms[i].name,
+                                              platform_games_indexes[i], games_num))
                 else:
                     renew_log.debug("Skip update platform {0}, next update {1}".format(
                        platforms[i].name, dt_next_update[i]))
         except BaseException as err:
-            queue_log.exception(err)
+            renew_log.exception(err)
             if config.supress_errors:
                 time.sleep(5)
             else:
