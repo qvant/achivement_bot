@@ -32,7 +32,7 @@ def read_query(name: str) -> str:
     return open(queries[name], "r").read()
 
 
-def get_query(name: str ) -> str:
+def get_query(name: str) -> str:
     global query_texts
     if name not in query_texts:
         query_texts[name] = read_query(name)

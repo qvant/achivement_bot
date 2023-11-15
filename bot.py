@@ -116,7 +116,9 @@ def main_bot(config: Config):
                         if len(msg) > 0:
                             reply_markup = InlineKeyboardMarkup(main_keyboard(chat_id))
                             try:
-                                updater.dispatcher.bot.send_message(chat_id=chat_id, text=msg, reply_markup=reply_markup)
+                                updater.dispatcher.bot.send_message(chat_id=chat_id,
+                                                                    text=msg,
+                                                                    reply_markup=reply_markup)
                             except telegram.error.Unauthorized:
                                 queue_log.info("Bot banned by user {}, can\'t send message".format(chat_id))
                     elif cmd_type == 'stop_server':
