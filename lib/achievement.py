@@ -49,7 +49,7 @@ class Achievement:
                 cursor.execute(get_query(INSERT_ACHIEVEMENT),
                                (self.name, self.ext_id, self.platform_id, self.game_id, self.description, self.icon_url,
                                 self.locked_icon_url, self.is_hidden)
-                )
+                               )
             ret = cursor.fetchone()
             if ret is not None:
                 self.id = ret[0]

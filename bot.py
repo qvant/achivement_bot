@@ -11,7 +11,8 @@ from lib.log import get_logger
 from lib.platform import Platform
 from lib.queue import set_logger as set_queue_log, set_config as set_queue_config, get_mq_connect, BOT_QUEUE_NAME
 from lib.queue_handlers import set_telegram
-from lib.telegram import set_telegram_logger, telegram_init, set_connect, set_config as set_telegram_config, set_platforms, \
+from lib.telegram import set_telegram_logger, telegram_init, set_connect, set_config as set_telegram_config, \
+    set_platforms, \
     start, echo, main_menu, account_choice, platform_choice, game_choice, game_navigation, achievement_navigation, \
     locale_choice, admin_choice, shutdown_choice, stats_choice, set_locale, main_keyboard, achievement_detail, \
     consoles_navigation
