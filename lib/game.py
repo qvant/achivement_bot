@@ -2,7 +2,8 @@ from typing import Union, List, Dict
 from .achievement import Achievement
 from .console import Console
 from .query_holder import get_query, GET_COMPANY_ID, INSERT_COMPANY, GET_GENRE_ID, INSERT_GENRE, GET_FEATURE_ID, \
-    INSERT_FEATURE, INSERT_GAME, GET_GAME_ID, GET_GAME_GENRES, DELETE_GAME_GENRES, INSERT_GAME_GENRE, GET_GAME_FEATURES, \
+    INSERT_FEATURE, INSERT_GAME, GET_GAME_ID, GET_GAME_GENRES, DELETE_GAME_GENRES, \
+    INSERT_GAME_GENRE, GET_GAME_FEATURES, \
     DELETE_GAME_FEATURES, UPDATE_GAME, INSERT_GAME_FEATURE, GET_ACHIEVEMENTS_FOR_GAME, \
     GET_TRANSLATED_ACHIEVEMENTS_FOR_GAME, GET_GAME_STATS, UPSERT_GAME_STATS
 
@@ -177,7 +178,7 @@ class Game:
                             self.icon_url, self.release_date, developer_id, publisher_id,
                             self.name, self.has_achievements, self.console_id(), self.icon_url, self.release_date,
                             developer_id, publisher_id)
-            )
+                           )
             ret = cursor.fetchone()
             if ret is not None:
                 self.id = ret[0]
@@ -209,9 +210,9 @@ class Game:
                 cursor.execute(get_query(UPDATE_GAME), (self.name, self.has_achievements, self.console_id(),
                                                         self.icon_url, self.release_date, developer_id, publisher_id,
                                                         self.id, self.platform_id, self.name, self.has_achievements,
-                                                        self.console_id(),self.icon_url, self.release_date,
+                                                        self.console_id(), self.icon_url, self.release_date,
                                                         developer_id, publisher_id)
-                )
+                               )
                 cursor.execute(get_query(GET_GAME_GENRES), (self.platform_id, self.id))
                 saved_genres = []
                 for i in cursor:
