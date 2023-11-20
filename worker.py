@@ -13,7 +13,6 @@ from lib.player import STATUS_VALID
 from lib.queue import set_config as set_queue_config, set_logger as set_queue_log, get_mq_connect, WORKER_QUEUE_NAME, \
     enqueue_command
 from lib.stats import get_stats
-from lib.telegram import set_logger, set_platforms, set_connect
 from lib.db import load, load_players, set_load_logger, get_next_update_date, mark_update_done, start_update, \
     get_players_count
 from lib.message_types import MT_ACCOUNT_UPDATED
@@ -26,14 +25,11 @@ def main_worker(config: Config):
     renew_log = get_logger("renew_worker", config.log_level, True)
 
     set_load_logger(config)
-    set_logger(config)
     set_queue_config(config)
     set_queue_log(queue_log)
 
     Platform.set_config(config)
     platforms = load(config)
-    set_platforms(platforms)
-    set_connect(Platform.get_connect())
     set_skip_extra_info(True)
 
     m_queue = get_mq_connect(config)

@@ -1414,6 +1414,6 @@ def echo(update: Update, context: CallbackContext):
                                      reply_markup=reply_markup)
 
 
-def set_logger(cfg: Config):
+def set_telegram_logger(cfg: Config):
     global telegram_logger
     telegram_logger = get_logger("Telegram", cfg.log_level)

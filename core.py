@@ -9,7 +9,6 @@ from lib.queue import set_config as set_queue_config, set_logger as set_queue_lo
     enqueue_command
 from lib.queue_handlers import on_create, on_delete
 from lib.stats import get_stats
-from lib.telegram import set_logger, set_platforms, set_connect
 from lib.db import load, load_players, set_load_logger
 
 
@@ -17,14 +16,11 @@ def main_core(config: Config):
     queue_log = get_logger("Rabbit_core", config.log_level, True)
 
     set_load_logger(config)
-    set_logger(config)
     set_queue_config(config)
     set_queue_log(queue_log)
 
     Platform.set_config(config)
     platforms = load(config, load_achievements=False, load_games=False)
-    set_platforms(platforms)
-    set_connect(Platform.get_connect())
 
     m_queue = get_mq_connect(config)
     m_channel = m_queue.channel()

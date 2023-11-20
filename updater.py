@@ -11,7 +11,6 @@ from lib.platform import Platform
 from lib.queue import set_config as set_queue_config, set_logger as set_queue_log, get_mq_connect, UPDATER_QUEUE_NAME, \
     enqueue_command
 from lib.stats import get_stats
-from lib.telegram import set_logger
 from lib.db import set_load_logger
 
 
@@ -20,7 +19,6 @@ def main_updater(config: Config):
     db_log = get_logger("db_" + str(config.mode), config.log_level, True)
 
     set_load_logger(config)
-    set_logger(config)
     set_queue_config(config)
     set_queue_log(queue_log)
 
