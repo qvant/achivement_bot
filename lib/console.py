@@ -1,5 +1,7 @@
 from typing import Union
 
+from lib.query_holder import get_query, INSERT_CONSOLE, GET_CONSOLE_ID
+
 
 class Console:
     def __init__(self, id: Union[int, None], name: str, ext_id: str, platform_id: int):
@@ -11,18 +13,12 @@ class Console:
     def save(self, connect):
         if self.id is None:
             cur = connect.cursor()
-            cur.execute("""
-                insert into achievements_hunt.consoles(platform_id, name, ext_id)
-                values (%s, %s, %s)
-                on conflict ON CONSTRAINT u_consoles_ext_key
-                do nothing returning id""", (self.platform_id, self.name, str(self.ext_id,)))
+            cur.execute(get_query(INSERT_CONSOLE), (self.platform_id, self.name, str(self.ext_id,)))
             ret = cur.fetchone()
             if ret is not None:
                 self.id = ret[0]
             else:
-                cur.execute("""
-                select id from achievements_hunt.consoles c where c.platform_id = %s and c.ext_id = %s
-                """, (self.platform_id, str(self.ext_id)))
+                cur.execute(get_query(GET_CONSOLE_ID), (self.platform_id, str(self.ext_id)))
                 ret = cur.fetchone()
                 if ret is not None:
                     self.id = ret[0]
