@@ -134,7 +134,7 @@ class Platform:
                 self.logger.info("Saving console {0}".format(self._consoles_by_ext_id[i].name))
                 self._consoles_by_ext_id[i].save(conn)
                 if self._consoles_by_ext_id[i].id is not None:
-                    self._consoles_by_id[self._consoles_by_ext_id[i].id] = i
+                    self._consoles_by_id[self._consoles_by_ext_id[i].id] = self._consoles_by_ext_id[i]
                     self.logger.info("Set map id for console {0}".format(self._consoles_by_ext_id[i].name))
                 else:
                     self.logger.error("Missed id for console {0} with ext_id {1}".
@@ -163,7 +163,7 @@ class Platform:
     def load_consoles(self, console_id: Union[int, None] = None):
         conn = self.get_connect()
         cursor = conn.cursor()
-        if console_id is None:
+        if console_id is not None:
             cursor.execute("select id, name, ext_id from achievements_hunt.consoles c "
                            "where c.platform_id = %s and id = %s", (self.id, str(console_id)))
         else:
@@ -240,9 +240,14 @@ class Platform:
         games = {}
         for id, platform_id, name, ext_id, console_id, icon_url, release_date, developer_id, developer_name, \
                 publisher_id, publisher_name, genre_ids, genres, feature_ids, features in cursor:
+            self.logger.debug("Start loading game \"{0}\" (id: {1}, ext_id: {2}) for platform: {3}"
+                              .format(name, id, ext_id, self.name))
             if self.get_consoles is not None and console_id is not None:
                 console_id = int(console_id)
                 if self.get_console_by_id(console_id) is None:
+                    self.load_log.info(
+                        "Looking console with id {} into db"
+                        .format(console_id))
                     self.load_consoles(console_id)
                 console = self.get_console_by_id(console_id)
                 games[str(ext_id)] = Game(name=name, platform_id=platform_id, id=id, ext_id=ext_id, achievements=None,
