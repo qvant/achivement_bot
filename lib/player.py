@@ -5,6 +5,9 @@ from typing import Union, Dict
 from .platform import Platform
 from datetime import timezone
 
+from .query_holder import UPDATE_PLAYER_EXT_ID, get_query, DELETE_PLAYER, UPDATE_PLAYER_TELEGRAM_ID, \
+    UPDATE_PLAYER_STATUS
+
 STATUS_NEW = 1
 STATUS_VALID = 2
 
@@ -39,20 +42,12 @@ class Player:
         conn = self.platform.get_connect()
         cur = conn.cursor()
         try:
-            cur.execute("""
-                            update achievements_hunt.players set ext_id = %s, dt_update = %s where id = %s
-                        """, (self.ext_id, self.dt_updated, self.id,))
+            cur.execute(get_query(UPDATE_PLAYER_EXT_ID), (self.ext_id, self.dt_updated, self.id,))
         except PgError as err:
             if err.pgcode == "23505":
                 conn.rollback()
-                cur.execute("""
-                    delete from achievements_hunt.players where id = %s
-                """, (self.id,))
-                cur.execute("""
-                update achievements_hunt.players set telegram_id = %s where ext_id = %s and platform_id = %s
-                    and telegram_id is null
-                returning id
-                                """, (self.telegram_id, self.ext_id, self.platform.id,))
+                cur.execute(get_query(DELETE_PLAYER), (self.id,))
+                cur.execute(get_query(UPDATE_PLAYER_TELEGRAM_ID), (self.telegram_id, self.ext_id, self.platform.id,))
                 buf = cur.fetchone()
                 if buf is not None:
                     self.id = buf[0]
@@ -83,8 +78,7 @@ class Player:
     def mark_valid(self):
         conn = self.platform.get_connect()
         cur = conn.cursor()
-        cur.execute("""
-            update achievements_hunt.players set status_id = %s, name=%s where id = %s""",
+        cur.execute(get_query(UPDATE_PLAYER_STATUS),
                     (STATUS_VALID, self.name, self.id))
         conn.commit()
 

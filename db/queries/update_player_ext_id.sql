@@ -1,0 +1,1 @@
+update achievements_hunt.players set ext_id = %s, dt_update = %s where id = %s

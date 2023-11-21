@@ -45,6 +45,10 @@ GET_USER_LOCALE = "get_user_locale"
 INSERT_USER = "insert_user"
 GET_LAST_GLOBAL_ACHIEVEMENTS = "get_last_global_achievements"
 GET_LAST_GAME_PERFECTED_TIME_FOR_PLAYER = "get_last_game_perfected_time_for_player"
+UPDATE_PLAYER_EXT_ID = "update_player_ext_id"
+DELETE_PLAYER = "delete_player"
+UPDATE_PLAYER_TELEGRAM_ID = "update_player_telegram_id"
+UPDATE_PLAYER_STATUS = "update_player_status"
 
 queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            MARK_UPDATE_DONE: r"db/queries/mark_update_done.sql",
@@ -90,6 +94,10 @@ queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            INSERT_USER: r"db/queries/insert_user.sql",
            GET_LAST_GLOBAL_ACHIEVEMENTS: r"db/queries/get_last_global_achievements.sql",
            GET_LAST_GAME_PERFECTED_TIME_FOR_PLAYER: r"db/queries/get_last_game_perfected_time_for_player.sql",
+           UPDATE_PLAYER_EXT_ID: r"db/queries/update_player_ext_id.sql",
+           DELETE_PLAYER: r"db/queries/delete_player.sql",
+           UPDATE_PLAYER_TELEGRAM_ID: r"db/queries/update_player_telegram_id.sql",
+           UPDATE_PLAYER_STATUS: r"db/queries/update_player_status.sql",
            }
 query_texts = {}
 

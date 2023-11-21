@@ -1,0 +1,1 @@
+update achievements_hunt.players set status_id = %s, name=%s where id = %s
