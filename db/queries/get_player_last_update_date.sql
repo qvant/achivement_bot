@@ -1,0 +1,1 @@
+select dt_update_full from achievements_hunt.players where id = %s

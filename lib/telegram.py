@@ -5,7 +5,9 @@ from .config import Config, MODE_CORE, MODE_WORKER, MODE_UPDATER, MODE_BOT, MODE
 from .platform import Platform
 from .player import Player, GAMES_ALL, GAMES_PERFECT, GAMES_WITH_ACHIEVEMENTS
 from .log import get_logger
-from .query_holder import get_query, GET_PLAYERS_BY_TELEGRAM_ID, SET_USER_LOCALE, GET_PLAYER_GAMES, GET_PLAYER_STATS
+from .query_holder import get_query, GET_PLAYERS_BY_TELEGRAM_ID, SET_USER_LOCALE, GET_PLAYER_GAMES, GET_PLAYER_STATS, \
+    GET_ACCOUNT_LAST_ACHIEVEMENTS, GET_ACCOUNT_RAREST_ACHIEVEMENTS, GET_PLAYER_CONSOLES, GET_PLAYER_LAST_UPDATE_DATE, \
+    GET_USER_LOCALE, INSERT_USER, GET_LAST_GLOBAL_ACHIEVEMENTS
 from .queue import enqueue_command
 from .stats import get_stats
 from typing import Union, List, Dict
@@ -171,6 +173,7 @@ def main_keyboard(chat_id: int):
     _ = set_locale(chat_id=chat_id)
     players_by_tlg_id[chat_id] = []
     try:
+        # TODO: use common (global) connect
         connect = Platform.get_connect()
         cursor = connect.cursor()
         cursor.execute(get_query(GET_PLAYERS_BY_TELEGRAM_ID), (chat_id,))
@@ -808,35 +811,7 @@ def show_account_stats(update: Update, context: CallbackContext, console_id: Uni
             achievement_games = res[3]
         if player.dt_updated is not None:
             player.dt_updated = player.dt_updated.replace(microsecond=0)
-        cursor.execute("""
-        select
-                coalesce(tr.name, a.name),
-                a.percent_owners,
-                g.name || case when c.name is not null then ' (' || c.name || ')' else '' end,
-                ar.name
-            from achievements_hunt.player_achievements aa
-            join achievements_hunt.achievements a
-            on aa.achievement_id  = a.id
-              and aa.game_id  = a.game_id
-              and aa.platform_id = a.platform_id
-            left join achievements_hunt.achievement_translations tr
-            on tr.achievement_id  = a.id
-              and tr.game_id = aa.game_id
-              and tr.platform_id = aa.platform_id
-              and tr.locale = %s
-            join achievements_hunt.games g
-            on aa.game_id = g.id
-              and aa.platform_id = g.platform_id
-            left join achievements_hunt.consoles c
-            on c.id = g.console_id
-              and c.platform_id = g.platform_id
-            left join achievements_hunt.achievement_rarity ar
-            on ar.n_bottom_border < a.percent_owners
-              and ar.n_upper_border >= a.percent_owners
-            where aa.player_id = %s
-              and (c.id = %s or %s is null)
-            order by a.percent_owners, coalesce(tr.name, a.name) limit 10
-        """, (locale, player.id, console_id, console_id))
+        cursor.execute(get_query(GET_ACCOUNT_RAREST_ACHIEVEMENTS), (locale, player.id, console_id, console_id))
         buf = cursor.fetchall()
         if len(buf) > 0:
             achievement_list = chr(10) + chr(10) + _("Rarest achievements:") + chr(10)
@@ -847,35 +822,7 @@ def show_account_stats(update: Update, context: CallbackContext, console_id: Uni
                 achievement_list += chr(10)
         else:
             achievement_list = ""
-        cursor.execute("""
-                select
-                        coalesce(tr.name, a.name),
-                        a.percent_owners,
-                        g.name || case when c.name is not null then ' (' || c.name || ')' else '' end,
-                        ar.name
-                    from achievements_hunt.player_achievements aa
-                    join achievements_hunt.achievements a
-                    on aa.achievement_id  = a.id
-                      and aa.game_id  = a.game_id
-                      and aa.platform_id = a.platform_id
-                    left join achievements_hunt.achievement_translations tr
-                    on tr.achievement_id  = a.id
-                      and tr.game_id = aa.game_id
-                      and tr.platform_id = aa.platform_id
-                      and tr.locale = %s
-                    join achievements_hunt.games g
-                    on aa.game_id = g.id
-                      and aa.platform_id = g.platform_id
-                    left join achievements_hunt.consoles c
-                    on c.id = g.console_id
-                      and c.platform_id = g.platform_id
-                    left join achievements_hunt.achievement_rarity ar
-                    on ar.n_bottom_border < a.percent_owners
-                      and ar.n_upper_border >= a.percent_owners
-                    where aa.player_id = %s
-                      and (c.id = %s or %s is null)
-                    order by dt_unlock desc, coalesce(tr.name, a.name) limit 5
-                """, (locale, player.id, console_id, console_id))
+        cursor.execute(get_query(GET_ACCOUNT_LAST_ACHIEVEMENTS), (locale, player.id, console_id, console_id))
         buf = cursor.fetchall()
         if len(buf) > 0:
             new_achievement_list = chr(10) + _("Last achievements:") + chr(10)
@@ -950,7 +897,7 @@ def show_account_games(update: Update, context: CallbackContext):
         dt_update_full = None
         if player is not None:
             cursor = db.cursor()
-            cursor.execute("select dt_update_full from achievements_hunt.players where id = %s", (player.id,))
+            cursor.execute(get_query(GET_PLAYER_LAST_UPDATE_DATE), (player.id,))
             dt_update_full, = cursor.fetchone()
         if dt_update_full is not None:
             context.bot.send_message(chat_id=chat_id, text=_("There is no games on account."))
@@ -1015,18 +962,7 @@ def show_account_consoles(update: Update, context: CallbackContext):
         player = get_player_by_chat_id(chat_id)
         conn = Platform.get_connect()
         cursor = conn.cursor()
-        cursor.execute("""select c.id, c.name from achievements_hunt.consoles c
-                            where exists (
-                                select null from achievements_hunt.games g
-                                    join achievements_hunt.player_games gg
-                                    on g.platform_id = gg.platform_id
-                                      and g.id = gg.game_id
-                                    where g.platform_id = c.platform_id
-                                      and gg.player_id = %s
-                                      and g.console_id = c.id)
-                              and c.platform_id = %s
-                            order by c.name""",
-                       (player.id, player.platform.id,))
+        cursor.execute(get_query(GET_PLAYER_CONSOLES), (player.id, player.platform.id,))
         consoles = {}
         for con_id, con_name in cursor:
             consoles[con_id] = con_name
@@ -1152,7 +1088,7 @@ def set_locale(update: Union[Update, None] = None, chat_id: Union[int, None] = N
     if chat_id not in user_locales:
         try:
             cursor = db.cursor()
-            cursor.execute("""select locale, id from achievements_hunt.users where telegram_id = %s""",
+            cursor.execute(get_query(GET_USER_LOCALE),
                            (chat_id,))
             res = cursor.fetchone()
             locale = ""
@@ -1172,11 +1108,7 @@ def set_locale(update: Union[Update, None] = None, chat_id: Union[int, None] = N
                     if cb is not None:
                         locale = cb.data[7:]
             if user_id is None:
-                cursor.execute("""
-                                                insert into achievements_hunt.users(telegram_id, locale)
-                                                values (%s, %s)
-                                                on conflict (telegram_id) do nothing
-                                            """, (chat_id, locale))
+                cursor.execute(get_query(INSERT_USER), (chat_id, locale))
             db.commit()
             if len(locale) == 0:
                 locale = "en"
@@ -1210,8 +1142,8 @@ def get_locale_name(update: Union[Update, None], chat_id: Union[int, None] = Non
     user_id = None
     if chat_id not in user_locales:
         cursor = db.cursor()
-        cursor.execute("""select locale, id from achievements_hunt.users where telegram_id = %s""",
-                       (chat_id,))
+        # TODO: unify with set_locale
+        cursor.execute(get_query(GET_USER_LOCALE), (chat_id,))
         res = cursor.fetchone()
         locale = ""
         if res is not None:
@@ -1230,11 +1162,7 @@ def get_locale_name(update: Union[Update, None], chat_id: Union[int, None] = Non
                 if cb is not None:
                     locale = cb.data[7:]
         if user_id is None:
-            cursor.execute("""
-                                            insert into achievements_hunt.users(telegram_id, locale)
-                                            values (%s, %s)
-                                            on conflict (telegram_id) do nothing
-                                        """, (chat_id, locale))
+            cursor.execute(get_query(INSERT_USER), (chat_id, locale))
         db.commit()
         if len(locale) == 0:
             locale = "en"
@@ -1291,40 +1219,7 @@ def activity_feed(update: Update, context: CallbackContext):
         connect = Platform.get_connect()
         cursor = connect.cursor()
 
-        cursor.execute("""
-                        select
-                                coalesce(tr.name, a.name),
-                                a.percent_owners,
-                                g.name || case when c.name is not null then ' (' || c.name || ')' else '' end,
-                                p.name,
-                                pr.name,
-                                ar.name
-                            from achievements_hunt.players p
-                            join achievements_hunt.platforms pr
-                            on pr.id = p.platform_id
-                            join achievements_hunt.player_achievements aa
-                            on p.id = aa.player_id
-                              and p.platform_id = aa.platform_id
-                            join achievements_hunt.achievements a
-                            on aa.achievement_id  = a.id
-                              and aa.game_id  = a.game_id
-                              and aa.platform_id = a.platform_id
-                            left join achievements_hunt.achievement_translations tr
-                            on tr.achievement_id  = a.id
-                              and tr.game_id = aa.game_id
-                              and tr.platform_id = aa.platform_id
-                              and tr.locale = %s
-                            join achievements_hunt.games g
-                            on aa.game_id = g.id
-                              and aa.platform_id = g.platform_id
-                            left join achievements_hunt.consoles c
-                            on c.id = g.console_id
-                              and c.platform_id = g.platform_id
-                            left join achievements_hunt.achievement_rarity ar
-                            on ar.n_bottom_border < a.percent_owners
-                              and ar.n_upper_border >= a.percent_owners
-                            order by dt_unlock desc, coalesce(tr.name, a.name) limit 25
-                        """, (locale,))
+        cursor.execute(get_query(GET_LAST_GLOBAL_ACHIEVEMENTS), (locale,))
         buf = cursor.fetchall()
         db.commit()
         telegram_logger.info("activity_feed: data fetched")

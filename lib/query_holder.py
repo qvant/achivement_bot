@@ -36,7 +36,14 @@ UPDATE_GAME = "update_game"
 GET_ACHIEVEMENTS_FOR_GAME = "get_achievements_for_game"
 GET_TRANSLATED_ACHIEVEMENTS_FOR_GAME = "get_translated_achievements_for_game"
 GET_GAME_STATS = "get_game_stats"
-UPSERT_GAME_STATS = "UPSERT_GAME_STATS"
+UPSERT_GAME_STATS = "upsert_game_stats"
+GET_ACCOUNT_LAST_ACHIEVEMENTS = "GET_ACCOUNT_LAST_ACHIEVEMENTS"
+GET_ACCOUNT_RAREST_ACHIEVEMENTS = "GET_ACCOUNT_RAREST_ACHIEVEMENTS"
+GET_PLAYER_CONSOLES = "get_player_consoles"
+GET_PLAYER_LAST_UPDATE_DATE = "get_player_last_update_date"
+GET_USER_LOCALE = "get_user_locale"
+INSERT_USER = "insert_user"
+GET_LAST_GLOBAL_ACHIEVEMENTS = "get_last_global_achievements"
 
 queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            MARK_UPDATE_DONE: r"db/queries/mark_update_done.sql",
@@ -74,6 +81,13 @@ queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            GET_TRANSLATED_ACHIEVEMENTS_FOR_GAME: r"db/queries/get_translated_achievements_for_game.sql",
            GET_GAME_STATS: r"db/queries/get_game_stats.sql",
            UPSERT_GAME_STATS: r"db/queries/upsert_game_stats.sql",
+           GET_ACCOUNT_LAST_ACHIEVEMENTS: r"db/queries/get_account_last_achievements.sql",
+           GET_ACCOUNT_RAREST_ACHIEVEMENTS: r"db/queries/get_account_rarest_achievements.sql",
+           GET_PLAYER_CONSOLES: r"db/queries/get_player_consoles.sql",
+           GET_PLAYER_LAST_UPDATE_DATE: r"db/queries/get_player_last_update_date.sql",
+           GET_USER_LOCALE: r"db/queries/get_user_locale.sql",
+           INSERT_USER: r"db/queries/insert_user.sql",
+           GET_LAST_GLOBAL_ACHIEVEMENTS: r"db/queries/get_last_global_achievements.sql",
            }
 query_texts = {}
 

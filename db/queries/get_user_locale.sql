@@ -1,0 +1,1 @@
+select locale, id from achievements_hunt.users where telegram_id = %s
