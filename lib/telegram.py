@@ -7,7 +7,7 @@ from .player import Player, GAMES_ALL, GAMES_PERFECT, GAMES_WITH_ACHIEVEMENTS
 from .log import get_logger
 from .query_holder import get_query, GET_PLAYERS_BY_TELEGRAM_ID, SET_USER_LOCALE, GET_PLAYER_GAMES, GET_PLAYER_STATS, \
     GET_ACCOUNT_LAST_ACHIEVEMENTS, GET_ACCOUNT_RAREST_ACHIEVEMENTS, GET_PLAYER_CONSOLES, GET_PLAYER_LAST_UPDATE_DATE, \
-    GET_USER_LOCALE, INSERT_USER, GET_LAST_GLOBAL_ACHIEVEMENTS
+    GET_USER_LOCALE, INSERT_USER, GET_LAST_GLOBAL_ACHIEVEMENTS, GET_LAST_GAME_PERFECTED_TIME_FOR_PLAYER
 from .queue import enqueue_command
 from .stats import get_stats
 from typing import Union, List, Dict
@@ -1030,9 +1030,9 @@ def show_account_achievements(update: Update, context: CallbackContext):
                 msg += _("Genre: {0}").format(", ".join(cur_game.genres)) + chr(10)
             if len(cur_game.features) > 0:
                 msg += _("Features: {0}").format(", ".join(cur_game.features)) + chr(10)
+            # TODO: remove separate query
             cursor = db.cursor()
-            cursor.execute("""select dt_last_perfected from achievements_hunt.player_games where game_id = %s
-            and platform_id = %s and player_id = %s""",
+            cursor.execute(get_query(GET_LAST_GAME_PERFECTED_TIME_FOR_PLAYER),
                            (cur_game.id, cur_game.platform_id, player.id))
             dt_last_perfected = cursor.fetchone()
             if dt_last_perfected is not None:

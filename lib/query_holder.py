@@ -44,6 +44,7 @@ GET_PLAYER_LAST_UPDATE_DATE = "get_player_last_update_date"
 GET_USER_LOCALE = "get_user_locale"
 INSERT_USER = "insert_user"
 GET_LAST_GLOBAL_ACHIEVEMENTS = "get_last_global_achievements"
+GET_LAST_GAME_PERFECTED_TIME_FOR_PLAYER = "get_last_game_perfected_time_for_player"
 
 queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            MARK_UPDATE_DONE: r"db/queries/mark_update_done.sql",
@@ -88,6 +89,7 @@ queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            GET_USER_LOCALE: r"db/queries/get_user_locale.sql",
            INSERT_USER: r"db/queries/insert_user.sql",
            GET_LAST_GLOBAL_ACHIEVEMENTS: r"db/queries/get_last_global_achievements.sql",
+           GET_LAST_GAME_PERFECTED_TIME_FOR_PLAYER: r"db/queries/get_last_game_perfected_time_for_player.sql",
            }
 query_texts = {}
 
