@@ -97,17 +97,18 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
         if require_auth:
             inc_call_cnt(method_name)
         api_log.info("Request to {} for {}".
-                     format(url, params))
+                     format(url, params if len(params) > 0 else "no parameters"))
         try:
             r = session.get(real_url, timeout=30, headers=headers)
             api_log.info("Response from {} for {} is {}".
-                         format(url, params, r))
+                         format(url, params if len(params) > 0 else "no parameters", r))
             if r.status_code == 200 or cnt >= max_api_call_tries:
                 api_log.debug("Full response {} for {} is {}".
-                              format(url, params, r.text))
+                              format(url, params if len(params) > 0 else "no parameters", r.text))
                 break
             api_log.error("Full response from {} for {} is {}, Limit used: {}, ends {}".
-                          format(url, params, r.text, get_limit_counter(url), get_limit_interval_end(url)),
+                          format(url, params if len(params) > 0 else "no parameters", r.text,
+                                 get_limit_counter(url), get_limit_interval_end(url)),
                           exc_info=True,
                           )
             if r.status_code == 400:
