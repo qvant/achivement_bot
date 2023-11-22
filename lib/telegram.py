@@ -5,7 +5,7 @@ from .config import Config, MODE_CORE, MODE_WORKER, MODE_UPDATER, MODE_BOT, MODE
 from .platform import Platform
 from .player import Player, GAMES_ALL, GAMES_PERFECT, GAMES_WITH_ACHIEVEMENTS
 from .log import get_logger
-from .query_holder import get_query, GET_PLAYERS_BY_TELEGRAM_ID, SET_USER_LOCALE, GET_PLAYER_GAMES, GET_PLAYER_STATS, \
+from .query_holder import get_query, GET_PLAYERS_BY_TELEGRAM_ID, SET_USER_LOCALE, GET_PLAYER_INFO, GET_PLAYER_STATS, \
     GET_ACCOUNT_LAST_ACHIEVEMENTS, GET_ACCOUNT_RAREST_ACHIEVEMENTS, GET_PLAYER_CONSOLES, GET_PLAYER_LAST_UPDATE_DATE, \
     GET_USER_LOCALE, INSERT_USER, GET_LAST_GLOBAL_ACHIEVEMENTS, GET_LAST_GAME_PERFECTED_TIME_FOR_PLAYER
 from .queue import enqueue_command
@@ -703,7 +703,7 @@ def list_of_games(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     _ = set_locale(chat_id=chat_id)
     cursor = db.cursor()
-    cursor.execute(get_query(GET_PLAYER_GAMES), (update.effective_chat.id,))
+    cursor.execute(get_query(GET_PLAYER_INFO), (update.effective_chat.id,))
     players_by_tlg_id[update.effective_chat.id] = []
     _ = set_locale(update)
     db.commit()

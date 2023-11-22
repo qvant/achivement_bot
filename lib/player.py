@@ -7,7 +7,8 @@ from datetime import timezone
 
 from .query_holder import UPDATE_PLAYER_EXT_ID, get_query, DELETE_PLAYER, UPDATE_PLAYER_TELEGRAM_ID, \
     UPDATE_PLAYER_STATUS, GET_PLAYER_STATUS, GET_USER_LAST_DELETE, UPDATE_USER_SET_LAST_DELETE_DATE, \
-    CHECK_PLAYERS_FOR_TELEGRAM_ID, CHECK_PLAYERS_FOR_EXT_ID, CHECK_IS_PLAYER_BOUND_TO_TELEGRAM
+    CHECK_PLAYERS_FOR_TELEGRAM_ID, CHECK_PLAYERS_FOR_EXT_ID, CHECK_IS_PLAYER_BOUND_TO_TELEGRAM, GET_PLAYER_GAMES, \
+    GET_PLAYER_GAMES_WITH_ACHIEVEMENTS, GET_PLAYER_PERFECT_GAMES
 
 STATUS_NEW = 1
 STATUS_VALID = 2
@@ -139,35 +140,18 @@ class Player:
             conn = self.platform.get_connect()
             cur = conn.cursor()
             if mode == GAMES_ALL:
-                cur.execute("""select g.game_id, g.is_perfect from achievements_hunt.player_games g
-                join achievements_hunt.games gg on gg.id = g.game_id
-                 where g.platform_id = %s and g.player_id = %s
-                   and (gg.console_id = %s or %s is null)
-                 order by gg.name""",
+                # TODO: make one query for all branches
+                cur.execute(get_query(GET_PLAYER_GAMES),
                             (self.platform.id, self.id, console_id, console_id))
             elif mode == GAMES_WITH_ACHIEVEMENTS:
-                cur.execute("""select g.game_id, g.is_perfect from achievements_hunt.player_games g
-                                join achievements_hunt.games gg on gg.id = g.game_id
-                                 where g.platform_id = %s and g.player_id = %s
-                                   and gg.has_achievements
-                                   and (gg.console_id = %s or %s is null)
-                                 order by gg.name""",
+                cur.execute(get_query(GET_PLAYER_GAMES_WITH_ACHIEVEMENTS),
                             (self.platform.id, self.id, console_id, console_id))
             elif mode == GAMES_PERFECT:
-                cur.execute("""select g.game_id, g.is_perfect from achievements_hunt.player_games g
-                                join achievements_hunt.games gg on gg.id = g.game_id
-                                 where g.platform_id = %s and g.player_id = %s
-                                   and g.is_perfect
-                                   and (gg.console_id = %s or %s is null)
-                                 order by gg.name""",
+                cur.execute(get_query(GET_PLAYER_PERFECT_GAMES),
                             (self.platform.id, self.id, console_id, console_id))
             else:
                 self.platform.logger.critical("incorrect get games mode {0}".format(mode))
-                cur.execute("""select g.game_id, g.is_perfect from achievements_hunt.player_games g
-                                join achievements_hunt.games gg on gg.id = g.game_id
-                                 where g.platform_id = %s and g.player_id = %s
-                                   and (gg.console_id = %s or %s is null)
-                                 order by gg.name""",
+                cur.execute(get_query(GET_PLAYER_GAMES),
                             (self.platform.id, self.id, console_id, console_id))
             ret = cur.fetchall()
             self.has_perfect_games = False
