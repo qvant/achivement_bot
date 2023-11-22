@@ -1,0 +1,1 @@
+select status_id from achievements_hunt.players p where p.id = %s

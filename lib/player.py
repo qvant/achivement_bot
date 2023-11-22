@@ -6,7 +6,7 @@ from .platform import Platform
 from datetime import timezone
 
 from .query_holder import UPDATE_PLAYER_EXT_ID, get_query, DELETE_PLAYER, UPDATE_PLAYER_TELEGRAM_ID, \
-    UPDATE_PLAYER_STATUS
+    UPDATE_PLAYER_STATUS, GET_PLAYER_STATUS, GET_USER_LAST_DELETE, UPDATE_USER_SET_LAST_DELETE_DATE
 
 STATUS_NEW = 1
 STATUS_VALID = 2
@@ -46,7 +46,7 @@ class Player:
         except PgError as err:
             if err.pgcode == "23505":
                 conn.rollback()
-                cur.execute(get_query(DELETE_PLAYER), (self.id,))
+                cur.execute(get_query(DELETE_PLAYER), (self.id,self.platform.id))
                 cur.execute(get_query(UPDATE_PLAYER_TELEGRAM_ID), (self.telegram_id, self.ext_id, self.platform.id,))
                 buf = cur.fetchone()
                 if buf is not None:
@@ -86,13 +86,9 @@ class Player:
         conn = self.platform.get_connect()
         cur = conn.cursor()
         if self.id is not None:
-            cur.execute("""
-                                           select status_id from achievements_hunt.players p where p.id = %s
-                                       """, (self.id,))
+            cur.execute(get_query(GET_PLAYER_STATUS), (self.id,))
             status, = cur.fetchone()
-            cur.execute("""
-                select dt_last_delete from achievements_hunt.users u where u.telegram_id = %s
-            """, (self.telegram_id,))
+            cur.execute(get_query(GET_USER_LAST_DELETE), (self.telegram_id,))
             ret = cur.fetchone()
             if ret is not None and ret[0] is not None and \
                     ret[0].replace(tzinfo=timezone.utc) + datetime.timedelta(days=3) > datetime.datetime.now()\
@@ -103,13 +99,8 @@ class Player:
                 pass
             else:
                 self.platform.logger.info("Deleting player {0}".format(self.ext_id))
-                cur.execute("""
-                            delete from achievements_hunt.players where id = %s and platform_id = %s
-                        """, (self.id, self.platform.id))
-                cur.execute("""
-                                update achievements_hunt.users u set dt_last_delete = current_timestamp
-                                where u.telegram_id = %s
-                            """, (self.telegram_id,))
+                cur.execute(get_query(DELETE_PLAYER), (self.id, self.platform.id))
+                cur.execute(get_query(UPDATE_USER_SET_LAST_DELETE_DATE), (self.telegram_id,))
                 conn.commit()
                 self.platform.logger.info("Deleted player {0}".format(self.ext_id))
         self.platform.reset_connect()

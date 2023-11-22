@@ -49,6 +49,9 @@ UPDATE_PLAYER_EXT_ID = "update_player_ext_id"
 DELETE_PLAYER = "delete_player"
 UPDATE_PLAYER_TELEGRAM_ID = "update_player_telegram_id"
 UPDATE_PLAYER_STATUS = "update_player_status"
+GET_PLAYER_STATUS = "get_player_status"
+GET_USER_LAST_DELETE = "get_user_last_delete"
+UPDATE_USER_SET_LAST_DELETE_DATE = "update_user_set_last_delete_date"
 
 queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            MARK_UPDATE_DONE: r"db/queries/mark_update_done.sql",
@@ -98,6 +101,9 @@ queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            DELETE_PLAYER: r"db/queries/delete_player.sql",
            UPDATE_PLAYER_TELEGRAM_ID: r"db/queries/update_player_telegram_id.sql",
            UPDATE_PLAYER_STATUS: r"db/queries/update_player_status.sql",
+           GET_PLAYER_STATUS: r"db/queries/get_player_status.sql",
+           GET_USER_LAST_DELETE: r"db/queries/get_user_last_delete.sql",
+           UPDATE_USER_SET_LAST_DELETE_DATE: r"db/queries/update_user_set_last_delete_date.sql",
            }
 query_texts = {}
 
