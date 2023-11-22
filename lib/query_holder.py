@@ -52,6 +52,9 @@ UPDATE_PLAYER_STATUS = "update_player_status"
 GET_PLAYER_STATUS = "get_player_status"
 GET_USER_LAST_DELETE = "get_user_last_delete"
 UPDATE_USER_SET_LAST_DELETE_DATE = "update_user_set_last_delete_date"
+CHECK_PLAYERS_FOR_TELEGRAM_ID = "check_players_for_telegram_id"
+CHECK_PLAYERS_FOR_EXT_ID = "check_players_for_ext_id"
+CHECK_IS_PLAYER_BOUND_TO_TELEGRAM = "check_is_player_bound_to_telegram"
 
 queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            MARK_UPDATE_DONE: r"db/queries/mark_update_done.sql",
@@ -104,6 +107,9 @@ queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            GET_PLAYER_STATUS: r"db/queries/get_player_status.sql",
            GET_USER_LAST_DELETE: r"db/queries/get_user_last_delete.sql",
            UPDATE_USER_SET_LAST_DELETE_DATE: r"db/queries/update_user_set_last_delete_date.sql",
+           CHECK_PLAYERS_FOR_TELEGRAM_ID: r"db/queries/check_players_for_telegram_id.sql",
+           CHECK_PLAYERS_FOR_EXT_ID: r"db/queries/check_players_for_ext_id.sql",
+           CHECK_IS_PLAYER_BOUND_TO_TELEGRAM: r"db/queries/check_is_player_bound_to_telegram.sql",
            }
 query_texts = {}
 

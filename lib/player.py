@@ -6,7 +6,8 @@ from .platform import Platform
 from datetime import timezone
 
 from .query_holder import UPDATE_PLAYER_EXT_ID, get_query, DELETE_PLAYER, UPDATE_PLAYER_TELEGRAM_ID, \
-    UPDATE_PLAYER_STATUS, GET_PLAYER_STATUS, GET_USER_LAST_DELETE, UPDATE_USER_SET_LAST_DELETE_DATE
+    UPDATE_PLAYER_STATUS, GET_PLAYER_STATUS, GET_USER_LAST_DELETE, UPDATE_USER_SET_LAST_DELETE_DATE, \
+    CHECK_PLAYERS_FOR_TELEGRAM_ID, CHECK_PLAYERS_FOR_EXT_ID, CHECK_IS_PLAYER_BOUND_TO_TELEGRAM
 
 STATUS_NEW = 1
 STATUS_VALID = 2
@@ -108,26 +109,24 @@ class Player:
     def is_unique(self):
         conn = self.platform.get_connect()
         cur = conn.cursor()
-        cur.execute("""select count(1) from achievements_hunt.players where platform_id = %s and telegram_id = %s""",
+        cur.execute(get_query(CHECK_PLAYERS_FOR_TELEGRAM_ID),
                     (self.platform.id, self.telegram_id))
         ret = cur.fetchone()
         if ret[0] > 0:
             return False, "Only one account per telegram user for platform"
-        cur.execute("""select count(1) from achievements_hunt.players where platform_id = %s and ext_id = %s""",
+        cur.execute(get_query(CHECK_PLAYERS_FOR_EXT_ID),
                     (self.platform.id, self.ext_id))
         ret = cur.fetchone()
         if ret[0] > 0:
-            cur.execute("""select telegram_id, id from achievements_hunt.players where platform_id = %s
-                        and ext_id = %s""",
+            cur.execute(get_query(CHECK_IS_PLAYER_BOUND_TO_TELEGRAM),
                         (self.platform.id, self.ext_id))
             ret = cur.fetchone()
             if ret[0] is not None:
                 return False, "Account already bound"
             else:
                 self.id = ret[1]
-                cur.execute("""update achievements_hunt.players set telegram_id = %s where platform_id = %s
-                        and ext_id = %s and telegram_id is null""",
-                            (self.telegram_id, self.platform.id, self.ext_id))
+                cur.execute(get_query(UPDATE_PLAYER_TELEGRAM_ID),
+                            (self.telegram_id, self.ext_id, self.platform.id))
                 conn.commit()
         return True, "Ok"
 
