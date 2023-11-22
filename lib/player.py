@@ -48,7 +48,7 @@ class Player:
         except PgError as err:
             if err.pgcode == "23505":
                 conn.rollback()
-                cur.execute(get_query(DELETE_PLAYER), (self.id,self.platform.id))
+                cur.execute(get_query(DELETE_PLAYER), (self.id, self.platform.id))
                 cur.execute(get_query(UPDATE_PLAYER_TELEGRAM_ID), (self.telegram_id, self.ext_id, self.platform.id,))
                 buf = cur.fetchone()
                 if buf is not None:
