@@ -8,7 +8,8 @@ from datetime import timezone
 from .query_holder import UPDATE_PLAYER_EXT_ID, get_query, DELETE_PLAYER, UPDATE_PLAYER_TELEGRAM_ID, \
     UPDATE_PLAYER_STATUS, GET_PLAYER_STATUS, GET_USER_LAST_DELETE, UPDATE_USER_SET_LAST_DELETE_DATE, \
     CHECK_PLAYERS_FOR_TELEGRAM_ID, CHECK_PLAYERS_FOR_EXT_ID, CHECK_IS_PLAYER_BOUND_TO_TELEGRAM, GET_PLAYER_GAMES, \
-    GET_PLAYER_GAMES_WITH_ACHIEVEMENTS, GET_PLAYER_PERFECT_GAMES
+    GET_PLAYER_GAMES_WITH_ACHIEVEMENTS, GET_PLAYER_PERFECT_GAMES, GET_PLAYER_ACHIEVEMENTS_STATS_FOR_GAME, \
+    GET_PLAYER_GAME_STATS
 
 STATUS_NEW = 1
 STATUS_VALID = 2
@@ -178,23 +179,7 @@ class Player:
             self.achievement_stats = {game_id: []}
             conn = self.platform.get_connect()
             cur = conn.cursor()
-            cur.execute("""select coalesce (tr.name, a.name) as name, pa.id, a.percent_owners, a.id,
-             coalesce(tr.description, a.description) as description, pa.dt_unlock,
-             case when pa.id is not null then a.icon_url else a.locked_icon_url end,
-             ar.name,
-             a.is_hidden
-             from achievements_hunt.achievements a
-             left join achievements_hunt.player_achievements pa
-             on pa.achievement_id = a.id and pa.player_id = %s
-             left join achievements_hunt.achievement_translations tr
-             on tr.achievement_id = a.id and tr.platform_id = a.platform_id
-             and tr.locale = %s
-             left join achievements_hunt.achievement_rarity ar
-             on ar.n_bottom_border < a.percent_owners
-               and ar.n_upper_border >= a.percent_owners
-             where a.platform_id = %s
-             and a.game_id = %s
-             order by a.percent_owners desc, a.name""",
+            cur.execute(get_query(GET_PLAYER_ACHIEVEMENTS_STATS_FOR_GAME),
                         (self.id, locale, self.platform.id, game_id))
             ret = cur.fetchall()
             for j in ret:
@@ -211,16 +196,7 @@ class Player:
         stats = []
         conn = self.platform.get_connect()
         cur = conn.cursor()
-        cur.execute("""
-            select gs.name,
-                   s.stat_value
-            from achievements_hunt.player_game_stats s
-            join achievements_hunt.game_stats gs
-            on gs.id = s.stat_id
-            where s.player_id = %s
-                and s.platform_id = %s
-                and s.game_id = %s
-            order by gs.name""",
+        cur.execute(get_query(GET_PLAYER_GAME_STATS),
                     (self.id, self.platform.id, game_id))
         ret = cur.fetchall()
         for j in ret:

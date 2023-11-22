@@ -58,6 +58,8 @@ CHECK_IS_PLAYER_BOUND_TO_TELEGRAM = "check_is_player_bound_to_telegram"
 GET_PLAYER_GAMES = "get_player_games"
 GET_PLAYER_GAMES_WITH_ACHIEVEMENTS = "get_player_games_with_achievements"
 GET_PLAYER_PERFECT_GAMES = "get_player_perfect_games"
+GET_PLAYER_ACHIEVEMENTS_STATS_FOR_GAME = "get_player_achievements_stats_for_game"
+GET_PLAYER_GAME_STATS = "get_player_game_stats"
 
 queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            MARK_UPDATE_DONE: r"db/queries/mark_update_done.sql",
@@ -116,6 +118,8 @@ queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            GET_PLAYER_GAMES: r"db/queries/get_player_games.sql",
            GET_PLAYER_GAMES_WITH_ACHIEVEMENTS: r"db/queries/get_player_games_with_achievements.sql",
            GET_PLAYER_PERFECT_GAMES: r"db/queries/get_player_perfect_games.sql",
+           GET_PLAYER_ACHIEVEMENTS_STATS_FOR_GAME: r"db/queries/get_player_achievements_stats_for_game.sql",
+           GET_PLAYER_GAME_STATS: r"db/queries/get_player_game_stats.sql",
            }
 query_texts = {}
 
