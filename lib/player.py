@@ -9,7 +9,9 @@ from .query_holder import UPDATE_PLAYER_EXT_ID, get_query, DELETE_PLAYER, UPDATE
     UPDATE_PLAYER_STATUS, GET_PLAYER_STATUS, GET_USER_LAST_DELETE, UPDATE_USER_SET_LAST_DELETE_DATE, \
     CHECK_PLAYERS_FOR_TELEGRAM_ID, CHECK_PLAYERS_FOR_EXT_ID, CHECK_IS_PLAYER_BOUND_TO_TELEGRAM, GET_PLAYER_GAMES, \
     GET_PLAYER_GAMES_WITH_ACHIEVEMENTS, GET_PLAYER_PERFECT_GAMES, GET_PLAYER_ACHIEVEMENTS_STATS_FOR_GAME, \
-    GET_PLAYER_GAME_STATS
+    GET_PLAYER_GAME_STATS, INSERT_USER, INSERT_PLAYER, LOCK_PLAYER, UPDATE_PLAYER_FULL, GET_PLAYER_GAME_IDS, \
+    INSERT_PLAYER_GAME, GET_PLAYER_ACHIEVEMENT_IDS, GET_ACHIEVEMENT_ID, INSERT_PLAYER_ACHIEVEMENT, \
+    GET_PLAYER_GAME_STATS_FOR_GAME, INSERT_PLAYER_GAME_STATS
 
 STATUS_NEW = 1
 STATUS_VALID = 2
@@ -209,49 +211,28 @@ class Player:
         if self.id is None:
             if self.telegram_id is not None:
                 self.platform.logger.info("Saving user {0}".format(self.telegram_id))
-                cur.execute("""
-                                insert into achievements_hunt.users(telegram_id)
-                                values (%s)
-                                on conflict (telegram_id) do nothing
-                            """, (self.telegram_id,))
+                cur.execute(get_query(INSERT_USER), (self.telegram_id, "en"))
             self.platform.logger.info("Saving player {0}".format(self.ext_id))
-            cur.execute("""
-                insert into achievements_hunt.players(platform_id, name, ext_id, telegram_id, status_id, dt_update,
-                                                      is_public, avatar_url)
-                values (%s, %s, %s, %s, %s, %s,
-                        %s, %s) on conflict ON CONSTRAINT u_players_ext_key do nothing returning id
-            """, (self.platform.id, self.name, self.ext_id, self.telegram_id, STATUS_NEW, self.dt_updated,
-                  self.is_public, self.avatar_url))
+            cur.execute(get_query(INSERT_PLAYER),
+                        (self.platform.id, self.name, self.ext_id, self.telegram_id, STATUS_NEW, self.dt_updated,
+                         self.is_public, self.avatar_url))
             ret = cur.fetchone()
             if ret is not None:
                 self.id = ret[0]
         else:
-            cur.execute("""
-            select id from achievements_hunt.players where id = %s for update
-            """, (self.id,))
+            cur.execute(get_query(LOCK_PLAYER), (self.id,))
             ret = cur.fetchone()
             if ret is None:
                 self.platform.logger.info("Empty result on getting lock for player {0}, so it was deleted.".
                                           format(self.id))
                 return
-            cur.execute("""
-                update achievements_hunt.players set dt_update = %s,
-                                                     is_public = %s,
-                                                     dt_update_full = coalesce(%s, dt_update_full),
-                                                     dt_update_inc = coalesce(%s, dt_update_inc),
-                                                     name = coalesce(%s, name),
-                                                     avatar_url = coalesce(%s, avatar_url)
-                where id = %s
-            """, (self.dt_updated, self.is_public, self.dt_updated_full, self.dt_updated_inc,
-                  self.name, self.avatar_url,
-                  self.id))
+            cur.execute(get_query(UPDATE_PLAYER_FULL),
+                        (self.dt_updated, self.is_public, self.dt_updated_full, self.dt_updated_inc,
+                         self.name, self.avatar_url,
+                         self.id))
         self.platform.logger.info("Get saved games for player {} ({}) ".format(self.name, self.ext_id))
-        cur.execute("""
-                            select game_id
-                                from achievements_hunt.player_games t
-                                where t.player_id = %s
-                                    and t.platform_id = %s
-                        """, (self.id, self.platform.id))
+        # TODO: use single query for GET_PLAYER_GAME_IDS and GET_PLAYER_GAMES
+        cur.execute(get_query(GET_PLAYER_GAME_IDS), (self.id, self.platform.id))
         ret = cur.fetchall()
         saved_games = []
         for j in ret:
@@ -259,10 +240,7 @@ class Player:
         for i in range(len(self.games)):
             game = self.platform.get_game_by_ext_id(str(self.games[i]))
             if game.id not in saved_games:
-                cur.execute("""
-                                insert into achievements_hunt.player_games(platform_id, game_id, player_id)
-                                values (%s, %s, %s) returning id
-                                                """,
+                cur.execute(get_query(INSERT_PLAYER_GAME),
                             (self.platform.id, game.id, self.id))
             if self.games[i] in self.achievements:
                 if len(self.achievements[self.games[i]]) == 0:
@@ -270,13 +248,7 @@ class Player:
 
                 self.platform.logger.info("Get saved achievements for player {} ({}) and game \"{}\" ({})".
                                           format(self.name, self.ext_id, game.name, game.ext_id))
-                cur.execute("""
-                    select achievement_id
-                        from achievements_hunt.player_achievements t
-                        where t.player_id = %s
-                            and t.platform_id = %s
-                            and t.game_id = %s
-                """,  (self.id, self.platform.id, game.id))
+                cur.execute(get_query(GET_PLAYER_ACHIEVEMENT_IDS), (self.id, self.platform.id, game.id))
                 ret = cur.fetchall()
                 saved_achievements = []
                 saved_cnt = 0
@@ -295,11 +267,8 @@ class Player:
                         self.platform.logger.warn("Empty id for achievement {} and game {} ({}) on platform {}".
                                                   format(self.achievements[self.games[i]][j], game.id, game.name,
                                                          self.platform.name))
-                        cur.execute("""
-                                        select id from achievements_hunt.achievements
-                                        where platform_id = %s and ext_id = %s
-                                        and game_id = %s
-                                    """, (self.platform.id, str(self.achievements[self.games[i]][j]), game.id))
+                        cur.execute(get_query(GET_ACHIEVEMENT_ID),
+                                    (self.platform.id, str(self.achievements[self.games[i]][j]), game.id))
                         ret = cur.fetchone()
                         if ret is not None:
                             achievement.id = ret[0]
@@ -311,11 +280,7 @@ class Player:
                                                       "refresh".
                                                       format(self.achievements[self.games[i]][j], game.id, game.name,
                                                              self.platform.name))
-                            cur.execute("""
-                                            select id from achievements_hunt.achievements
-                                            where platform_id = %s and ext_id = %s
-                                            and game_id = %s
-                                        """,
+                            cur.execute(get_query(GET_ACHIEVEMENT_ID),
                                         (self.platform.id, str(self.achievements[self.games[i]][j]), game.id))
                             ret = cur.fetchone()
                             if ret is not None:
@@ -326,11 +291,8 @@ class Player:
                                                            format(self.achievements[self.games[i]][j], game.id,
                                                                   game.name,
                                                                   self.platform.name))
-                    cur.execute("""
-                                    insert into achievements_hunt.player_achievements
-                                    (platform_id, game_id, achievement_id, player_id, dt_unlock)
-                                    values (%s, %s, %s, %s, %s) returning id
-                                """, (self.platform.id, game.id, achievement.id, self.id, achievement_date))
+                    cur.execute(get_query(INSERT_PLAYER_ACHIEVEMENT),
+                                (self.platform.id, game.id, achievement.id, self.id, achievement_date))
                     saved_cnt += 1
                     self.platform.logger.info(
                         "Saved into db achievement \"{5}\" ({2}) for player {3} ({0}) and game \"{4}\" ({1}).".
@@ -349,6 +311,7 @@ class Player:
                         saved_cnt))
         self.platform.logger.info("Saved achievements for player {0}".format(self.ext_id))
 
+        # TODO: split into procedures
         if len(self.stats) > 0:
             self.platform.logger.info(
                 "Find stats for player {0} games: {1}".format(
@@ -359,12 +322,8 @@ class Player:
                     self.ext_id, game.ext_id, len(self.stats[i]), game.name))
                 saved_stats = {}
                 stats_to_save = {}
-                cur.execute("""
-                    select gs.ext_id, s.stat_value from achievements_hunt.player_game_stats s
-                            join achievements_hunt.game_stats gs
-                            on gs.id = s.stat_id
-                            where s.player_id = %s
-                            and s.platform_id = %s and s.game_id = %s""",
+                # TODO: check if possible to unify player_game_stats queries
+                cur.execute(get_query(GET_PLAYER_GAME_STATS_FOR_GAME),
                             (self.id, self.platform.id, game.id))
                 for stat_id, stat_value in cur:
                     saved_stats[stat_id] = stat_value
@@ -378,14 +337,7 @@ class Player:
                         new_game = self.platform.get_game(game_id=game.id, name=game.name)
                         new_game.save(cursor=cur, active_locale='en')
                         game = new_game
-                    cur.execute(
-                        """
-                            insert into achievements_hunt.player_game_stats as s
-                            (platform_id, game_id, stat_id, player_id, stat_value)
-                            values (%s, %s, %s, %s, %s )
-                            on conflict ON CONSTRAINT u_player_game_stats_key do update
-                                set dt_update=current_timestamp, stat_value=EXCLUDED.stat_value
-                        """,
+                    cur.execute(get_query(INSERT_PLAYER_GAME_STATS),
                         (self.platform.id, game.id, game.get_stat_id(j), self.id, stats_to_save[j])
                     )
 

@@ -60,6 +60,16 @@ GET_PLAYER_GAMES_WITH_ACHIEVEMENTS = "get_player_games_with_achievements"
 GET_PLAYER_PERFECT_GAMES = "get_player_perfect_games"
 GET_PLAYER_ACHIEVEMENTS_STATS_FOR_GAME = "get_player_achievements_stats_for_game"
 GET_PLAYER_GAME_STATS = "get_player_game_stats"
+INSERT_PLAYER = "insert_player"
+LOCK_PLAYER = "lock_player"
+UPDATE_PLAYER_FULL = "update_player_full"
+GET_PLAYER_GAME_IDS = "get_player_game_ids"
+INSERT_PLAYER_GAME = "insert_player_game"
+GET_PLAYER_ACHIEVEMENT_IDS = "get_player_achievement_ids"
+GET_ACHIEVEMENT_ID = "get_achievement_id"
+INSERT_PLAYER_ACHIEVEMENT = "insert_player_achievement"
+GET_PLAYER_GAME_STATS_FOR_GAME = "get_player_game_stats_for_game"
+INSERT_PLAYER_GAME_STATS = "insert_player_game_stats"
 
 queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            MARK_UPDATE_DONE: r"db/queries/mark_update_done.sql",
@@ -120,6 +130,16 @@ queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            GET_PLAYER_PERFECT_GAMES: r"db/queries/get_player_perfect_games.sql",
            GET_PLAYER_ACHIEVEMENTS_STATS_FOR_GAME: r"db/queries/get_player_achievements_stats_for_game.sql",
            GET_PLAYER_GAME_STATS: r"db/queries/get_player_game_stats.sql",
+           INSERT_PLAYER: r"db/queries/insert_player.sql",
+           LOCK_PLAYER: r"db/queries/lock_player.sql",
+           UPDATE_PLAYER_FULL: r"db/queries/update_player_full.sql",
+           GET_PLAYER_GAME_IDS: r"db/queries/get_player_game_ids.sql",
+           INSERT_PLAYER_GAME: r"db/queries/insert_player_game.sql",
+           GET_PLAYER_ACHIEVEMENT_IDS: r"db/queries/get_player_achievement_ids.sql",
+           GET_ACHIEVEMENT_ID: r"db/queries/get_achievement_id.sql",
+           INSERT_PLAYER_ACHIEVEMENT: r"db/queries/insert_player_achievement.sql",
+           GET_PLAYER_GAME_STATS_FOR_GAME: r"db/queries/get_player_game_stats_for_game.sql",
+           INSERT_PLAYER_GAME_STATS: r"db/queries/insert_player_game_stats.sql",
            }
 query_texts = {}
 

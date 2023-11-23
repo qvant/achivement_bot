@@ -1,0 +1,1 @@
+select id from achievements_hunt.players where id = %s for update
