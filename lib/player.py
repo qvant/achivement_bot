@@ -380,8 +380,8 @@ class Player:
                         if str(owned_games[cg]) not in saved_games_by_ext and str(owned_games[cg]) not in str_games:
                             new_games.append(owned_games[cg])
                             new_game_names.append(owned_games_names[cg])
-                            self.platform.logger.info("""Found new owned, but not played yet game {2} ({1}) 
-                            for player {0}.""".
+                            self.platform.logger.info("Found new owned, but not played yet game {2} ({1} "
+                                                      "for player {0}.".
                                                       format(self.name, owned_games[cg], owned_games_names[cg]))
                     self.games = [*self.games, *new_games]
                     names = [*names, *new_game_names]
