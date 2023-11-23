@@ -339,7 +339,7 @@ class Player:
                         game = new_game
                     cur.execute(get_query(INSERT_PLAYER_GAME_STATS),
                                 (self.platform.id, game.id, game.get_stat_id(j), self.id, stats_to_save[j])
-                    )
+                                )
 
         conn.commit()
         conn.close()
