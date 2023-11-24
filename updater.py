@@ -8,6 +8,8 @@ import psycopg2.extras
 from lib.config import Config, MODE_BOT, MODE_CORE
 from lib.log import get_logger
 from lib.platform import Platform
+from lib.query_holder import get_query, LOCK_QUEUE_GAMES_UPDATE, get_query_for_prepare, UPDATE_GAME_SET_NUM_OWNERS, \
+    DELETE_QUEUE_GAMES_UPDATE, UPDATE_ACHIEVEMENT_SET_PERCENT_OWNERS
 from lib.queue import set_config as set_queue_config, set_logger as set_queue_log, get_mq_connect, UPDATER_QUEUE_NAME, \
     enqueue_command
 from lib.stats import get_stats
@@ -44,6 +46,7 @@ def main_updater(config: Config):
     while is_running:
 
         need_wait = True
+        # TODO: split into procedures
 
         try:
             db_log.info("""Check queue_games_update""")
@@ -51,13 +54,7 @@ def main_updater(config: Config):
             # Process new games queue - recalc owner numbers and percent of achievers
             for step in range(config.db_update_cycles):
                 db_log.info("""Check queue_games_update, step {0}""".format(step))
-                cursor.execute("""
-                select id, game_id, operation
-                from achievements_hunt.queue_games_update
-                order by game_id
-                for update skip locked
-                fetch first {} rows only
-                """.format(config.db_update_size))
+                cursor.execute(get_query(LOCK_QUEUE_GAMES_UPDATE), (config.db_update_size,))
                 games = {}
                 recs = []
                 for id_rec, game_id, operation in cursor:
@@ -72,10 +69,8 @@ def main_updater(config: Config):
                             format(len(recs), len(games)))
                 if len(games) > 0:
                     need_wait = False
-                    cursor.execute("""
-                            PREPARE upd_games as
-                            update achievements_hunt.games set num_owners = num_owners + $1 where id = $2
-                            """)
+                    # TODO: constants
+                    cursor.execute(get_query_for_prepare("upd_games", UPDATE_GAME_SET_NUM_OWNERS))
                     game_res = []
                     game_4_ach = []
                     for i in games:
@@ -83,22 +78,8 @@ def main_updater(config: Config):
                         game_4_ach.append((i, ))
 
                     psycopg2.extras.execute_batch(cursor, """EXECUTE upd_games (%s, %s)""", game_res)
-                    cursor.execute("""
-                    PREPARE del_q as delete from achievements_hunt.queue_games_update where id = $1
-                    """)
-                    cursor.execute("""PREPARE upd_achievement as
-                                    update achievements_hunt.achievements as a
-                                        set percent_owners =
-                                        case when num_owners > 0 then
-                                            round(a.num_owners * 100 /
-                                            greatest(1, (select g.num_owners
-                                                            from achievements_hunt.games as g
-                                                            where g.id = a.game_id
-                                                                and g.platform_id = a.platform_id)), 2)
-                                        else 0
-                                        end
-                                    where a.game_id = $1
-                                    """)
+                    cursor.execute(get_query_for_prepare("del_q", DELETE_QUEUE_GAMES_UPDATE))
+                    cursor.execute(get_query_for_prepare("upd_achievement", UPDATE_ACHIEVEMENT_SET_PERCENT_OWNERS))
                     psycopg2.extras.execute_batch(cursor, """EXECUTE upd_achievement (%s)""", game_4_ach)
                     psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
                     cursor.execute("""DEALLOCATE  upd_games""")
