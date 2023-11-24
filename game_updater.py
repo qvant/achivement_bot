@@ -12,7 +12,6 @@ from lib.platforms.steam import set_skip_extra_info
 from lib.queue import set_config as set_queue_config, set_logger as set_queue_log, get_mq_connect, \
     GAME_UPDATER_QUEUE_NAME, enqueue_command
 from lib.stats import get_stats
-from lib.telegram import set_logger, set_platforms, set_connect
 from lib.db import load, set_load_logger, get_next_update_date, mark_update_done, start_update
 
 ID_PROCESS_GAME_UPDATER = 2
@@ -23,15 +22,12 @@ def main_game_updater(config: Config):
     renew_log = get_logger("renew_game_updater", config.log_level, True)
 
     set_load_logger(config)
-    set_logger(config)
     set_queue_config(config)
     set_queue_log(queue_log)
 
     Platform.set_config(config)
     platforms = load(config)
-    set_platforms(platforms)
     set_skip_extra_info(False)
-    set_connect(Platform.get_connect())
 
     m_queue = get_mq_connect(config)
     m_channel = m_queue.channel()

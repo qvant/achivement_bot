@@ -1,0 +1,1 @@
+select dt_last_delete from achievements_hunt.users u where u.telegram_id = %s
