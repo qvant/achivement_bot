@@ -353,15 +353,14 @@ class Platform:
             select id, name, locale_name, dt_last_update from achievements_hunt.platform_languages
             where platform_id = %s order by dt_last_update nulls first, locale_name""", (self.id, ))
         for id, name, locale_name, dt_last_update in cursor:
-            lang = PlatformLanguage(id, self, name, locale_name, dt_last_update)
+            lang = PlatformLanguage(id, name, locale_name, dt_last_update)
             self.languages.append(lang)
         self.set_def_locale()
 
 
 class PlatformLanguage:
-    def __init__(self, id, platform: Platform, name, locale_name, dt_last_update):
+    def __init__(self, id, name, locale_name, dt_last_update):
         self.id = id
-        self.platfrom = platform
         self.name = name
         self.locale_name = locale_name
         self.dt_last_update = dt_last_update
