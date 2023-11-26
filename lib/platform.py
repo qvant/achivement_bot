@@ -6,6 +6,8 @@ from .achievement import Achievement
 import psycopg2
 from typing import Union, List
 
+from .platform_language import PlatformLanguage
+
 
 class Platform:
     config = None
@@ -357,10 +359,3 @@ class Platform:
             self.languages.append(lang)
         self.set_def_locale()
 
-
-class PlatformLanguage:
-    def __init__(self, id, name, locale_name, dt_last_update):
-        self.id = id
-        self.name = name
-        self.locale_name = locale_name
-        self.dt_last_update = dt_last_update
