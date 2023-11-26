@@ -9,7 +9,8 @@ from lib.config import Config, MODE_BOT, MODE_CORE
 from lib.log import get_logger
 from lib.platform import Platform
 from lib.query_holder import get_query, LOCK_QUEUE_GAMES_UPDATE, get_query_for_prepare, UPDATE_GAME_SET_NUM_OWNERS, \
-    DELETE_QUEUE_GAMES_UPDATE, UPDATE_ACHIEVEMENT_SET_PERCENT_OWNERS
+    DELETE_QUEUE_GAMES_UPDATE, UPDATE_ACHIEVEMENT_SET_PERCENT_OWNERS, LOCK_QUEUE_ACHIEVEMENTS_UPDATE, \
+    UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE, UPDATE_PLAYER_GAMES_SET_PERFECT, DELETE_QUEUE_ACHIEVEMENTS_UPDATE
 from lib.queue import set_config as set_queue_config, set_logger as set_queue_log, get_mq_connect, UPDATER_QUEUE_NAME, \
     enqueue_command
 from lib.stats import get_stats
@@ -94,13 +95,7 @@ def main_updater(config: Config):
             # Process new achievements queue - reset perfect games and recalc % complete for all players
             db_log.info("""Check queue_achievements_update""")
             for step in range(config.db_update_cycles):
-                cursor.execute("""
-                                    select id, game_id, platform_id
-                                    from achievements_hunt.queue_achievements_update
-                                    order by achievement_id
-                                    for update skip locked
-                                    fetch first 1000 rows only
-                                    """)
+                cursor.execute(get_query(LOCK_QUEUE_ACHIEVEMENTS_UPDATE), (config.db_update_size,))
                 db_log.info("""Check queue_achievements_update, step {0}""".format(step))
                 recs = []
                 games = []
@@ -114,37 +109,18 @@ def main_updater(config: Config):
                     need_wait = False
                     db_log.info("""Process queue_achievements_update, found {0} records for {1} games""".
                                 format(len(recs), len(games_ids)))
-                    cursor.execute("""
-                                                            PREPARE update_player_games as
-                                                            update achievements_hunt.player_games pg
-                                                            set percent_complete =
-                                                            round(
-                                                            (select count(1) from
-                                                             achievements_hunt.player_achievements a
-                                                             where a.platform_id = pg.platform_id
-                                                             and a.game_id = pg.game_id
-                                                             and a.player_id = pg.player_id) * 100 /
-                                                            (select count(1) from  achievements_hunt.achievements ac
-                                                            where ac.platform_id = pg.platform_id
-                                                            and ac.game_id = pg.game_id)  , 2)
-                                                             where pg.game_id = $1
-                                                             and pg.platform_id = $2
-                                                            """)
-                    cursor.execute("""
-                                                            PREPARE update_player_games_perf as
-                                                            update achievements_hunt.player_games pg
-                                                            set is_perfect = (percent_complete = 100)
-                                                            where pg.game_id = $1 and pg.platform_id = $2
-                                                            """)
+                    cursor.execute(get_query_for_prepare("update_player_games",
+                                                         UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE))
+
+                    cursor.execute(get_query_for_prepare("update_player_games_perf", UPDATE_PLAYER_GAMES_SET_PERFECT))
                     psycopg2.extras.execute_batch(cursor, """EXECUTE update_player_games  (%s, %s)""", games)
+                    # TODO: check if possible one query instead of two
                     psycopg2.extras.execute_batch(cursor, """EXECUTE update_player_games_perf  (%s, %s)""", games)
 
-                    cursor.execute("""
-                                    PREPARE del_q as delete from achievements_hunt.queue_achievements_update
-                                    where id = $1
-                                    """)
+                    cursor.execute(get_query_for_prepare("del_q", DELETE_QUEUE_ACHIEVEMENTS_UPDATE))
                     psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
 
+                    # TODO: remove unnecessary prepare\deallocate
                     cursor.execute("""DEALLOCATE  update_player_games""")
                     cursor.execute("""DEALLOCATE  update_player_games_perf""")
                     cursor.execute("""DEALLOCATE  del_q""")
