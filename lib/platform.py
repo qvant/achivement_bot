@@ -358,4 +358,3 @@ class Platform:
             lang = PlatformLanguage(id, name, locale_name, dt_last_update)
             self.languages.append(lang)
         self.set_def_locale()
-
