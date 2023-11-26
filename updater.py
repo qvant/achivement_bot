@@ -10,7 +10,10 @@ from lib.log import get_logger
 from lib.platform import Platform
 from lib.query_holder import get_query, LOCK_QUEUE_GAMES_UPDATE, get_query_for_prepare, UPDATE_GAME_SET_NUM_OWNERS, \
     DELETE_QUEUE_GAMES_UPDATE, UPDATE_ACHIEVEMENT_SET_PERCENT_OWNERS, LOCK_QUEUE_ACHIEVEMENTS_UPDATE, \
-    UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE, UPDATE_PLAYER_GAMES_SET_PERFECT, DELETE_QUEUE_ACHIEVEMENTS_UPDATE
+    UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE, UPDATE_PLAYER_GAMES_SET_PERFECT, DELETE_QUEUE_ACHIEVEMENTS_UPDATE, \
+    LOCK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE, UPDATE_ACHIEVEMENT_SET_NUM_OWNERS, \
+    UPDATE_ACHIEVEMENTS_SET_PERCENT_OWNERS_BY_ID, UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE_BY_PLAYER, \
+    DELETE_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE
 from lib.queue import set_config as set_queue_config, set_logger as set_queue_log, get_mq_connect, UPDATER_QUEUE_NAME, \
     enqueue_command
 from lib.stats import get_stats
@@ -134,13 +137,7 @@ def main_updater(config: Config):
             db_log.info("""Check queue_player_achievements_update""")
             for step in range(config.db_update_cycles):
                 db_log.info("""Check queue_achievements_update, step {0}""".format(step))
-                cursor.execute("""
-                        select id, achievement_id, player_id, game_id, platform_id, operation
-                        from achievements_hunt.queue_player_achievements_update
-                        order by achievement_id
-                        for update skip locked
-                        fetch first 1000 rows only
-                        """)
+                cursor.execute(get_query(LOCK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE), (config.db_update_size,))
                 achievements = {}
                 recs = []
                 player_games = []
@@ -157,10 +154,7 @@ def main_updater(config: Config):
                     need_wait = False
                     db_log.info("""Process queue_player_achievements_update, found {0} records for {1} achievements""".
                                 format(len(recs), len(achievements)))
-                    cursor.execute("""
-                                    PREPARE upd_achievements as update achievements_hunt.achievements
-                                    set num_owners = num_owners + $1 where id = $2
-                                    """)
+                    cursor.execute(get_query_for_prepare("upd_achievements", UPDATE_ACHIEVEMENT_SET_NUM_OWNERS))
                     game_res = []
                     game_4_ach = []
                     for i in achievements:
@@ -169,41 +163,17 @@ def main_updater(config: Config):
 
                     psycopg2.extras.execute_batch(cursor, """EXECUTE upd_achievements (%s, %s)""", game_res)
 
-                    cursor.execute("""PREPARE upd_achievement_percent as
-                                            update achievements_hunt.achievements as a set percent_owners =
-                                                case when num_owners > 0 then
-                                                    round(a.num_owners * 100 /
-                                                    greatest((select g.num_owners from achievements_hunt.games as g
-                                                                where g.id = a.game_id
-                                                                and g.platform_id = a.platform_id), 1), 2)
-                                                else 0
-                                                end
-                                            where a.id = $1
-                                            """)
+                    cursor.execute(get_query_for_prepare("upd_achievement_percent",
+                                                         UPDATE_ACHIEVEMENTS_SET_PERCENT_OWNERS_BY_ID))
                     psycopg2.extras.execute_batch(cursor, """EXECUTE upd_achievement_percent (%s)""", game_4_ach)
-                    cursor.execute("""
-                                                PREPARE update_player_games as
-                                                update achievements_hunt.player_games pg set percent_complete =
-                                                round(
-                                                (select count(1) from achievements_hunt.player_achievements a
-                                                 where a.platform_id = pg.platform_id
-                                                 and a.game_id = pg.game_id
-                                                 and a.player_id = pg.player_id) * 100 /
-                                                (select count(1) from achievements_hunt.achievements ac
-                                                where ac.platform_id = pg.platform_id
-                                                and ac.game_id = pg.game_id), 2)
-                                                 where pg.player_id = $1 and pg.game_id = $2
-                                                 and pg.platform_id = $3
-                                                """)
+                    cursor.execute(get_query_for_prepare("update_player_games",
+                                                         UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE_BY_PLAYER))
+
                     db_log.debug(""" start EXECUTE update_player_games""")
                     psycopg2.extras.execute_batch(cursor, """EXECUTE update_player_games (%s, %s, %s)""", player_games)
                     db_log.debug(""" end EXECUTE update_player_games""")
 
-                    cursor.execute("""
-                                    PREPARE del_q as
-                                    delete from achievements_hunt.queue_player_achievements_update
-                                    where id = $1
-                                    """)
+                    cursor.execute(get_query_for_prepare("del_q", DELETE_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE))
                     db_log.debug(""" start EXECUTE del_q""")
                     psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
                     db_log.debug(""" end EXECUTE del_q""")

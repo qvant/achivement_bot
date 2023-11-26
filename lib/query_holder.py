@@ -78,6 +78,11 @@ LOCK_QUEUE_ACHIEVEMENTS_UPDATE = "lock_queue_achievements_update"
 UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE = "update_player_game_set_percent_complete"
 UPDATE_PLAYER_GAMES_SET_PERFECT = "update_player_games_set_perfect"
 DELETE_QUEUE_ACHIEVEMENTS_UPDATE = "delete_queue_achievements_update"
+LOCK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE = "lock_queue_player_achievements_update"
+UPDATE_ACHIEVEMENT_SET_NUM_OWNERS = "update_achievement_set_num_owners"
+UPDATE_ACHIEVEMENTS_SET_PERCENT_OWNERS_BY_ID = "update_achievements_set_percent_owners_by_id"
+UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE_BY_PLAYER = "update_player_game_set_percent_complete_by_player"
+DELETE_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE = "delete_queue_player_achievements_update"
 
 queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            MARK_UPDATE_DONE: r"db/queries/mark_update_done.sql",
@@ -156,6 +161,12 @@ queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE: r"db/queries/update_player_game_set_percent_complete.sql",
            UPDATE_PLAYER_GAMES_SET_PERFECT: r"db/queries/update_player_games_set_perfect.sql",
            DELETE_QUEUE_ACHIEVEMENTS_UPDATE: r"db/queries/delete_queue_achievements_update.sql",
+           LOCK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE: r"db/queries/lock_queue_player_achievements_update.sql",
+           UPDATE_ACHIEVEMENT_SET_NUM_OWNERS: r"db/queries/update_achievement_set_num_owners.sql",
+           UPDATE_ACHIEVEMENTS_SET_PERCENT_OWNERS_BY_ID: r"db/queries/update_achievements_set_percent_owners_by_id.sql",
+           UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE_BY_PLAYER:
+               r"db/queries/update_player_game_set_percent_complete_by_player.sql",
+           DELETE_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE: r"db/queries/delete_queue_player_achievements_update.sql",
            }
 query_texts = {}
 
