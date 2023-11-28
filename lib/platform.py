@@ -7,6 +7,10 @@ import psycopg2
 from typing import Union, List
 
 from .platform_language import PlatformLanguage
+from .query_holder import get_query, INSERT_PLATFORM, GET_CONSOLE_BY_ID, GET_CONSOLES_FOR_PLATFORM, \
+    GET_HARDCODED_GAMES_BY_PLATFORM, GET_GAMES_BY_PLATFORM, GET_GAME_BY_PLATFORM_AND_ID, GET_ACHIEVEMENTS_BY_PLATFORM, \
+    GET_ACHIEVEMENTS_BY_PLATFORM_AND_GAME_ID, UPDATE_PLATFORM_LANGUAGES_SET_LAST_UPDATE, \
+    GET_PLATFORM_LANGUAGES_BY_PLATFORM_ID
 
 
 class Platform:
@@ -119,13 +123,7 @@ class Platform:
         cursor = conn.cursor()
         self.logger.info("Start saving to db")
         if not self._is_persist:
-            cursor.execute(
-                """insert into achievements_hunt.platforms as l (name, id )
-                        values(%s, %s)
-                        on conflict (id) do nothing
-                        returning id
-                """, (self.name, self.id)
-            )
+            cursor.execute(get_query(INSERT_PLATFORM), (self.name, self.id))
             ret = cursor.fetchone()
             if ret is not None:
                 self.id = [0]
@@ -166,11 +164,9 @@ class Platform:
         conn = self.get_connect()
         cursor = conn.cursor()
         if console_id is not None:
-            cursor.execute("select id, name, ext_id from achievements_hunt.consoles c "
-                           "where c.platform_id = %s and id = %s", (self.id, str(console_id)))
+            cursor.execute(get_query(GET_CONSOLE_BY_ID), (self.id, str(console_id)))
         else:
-            cursor.execute("select id, name, ext_id from achievements_hunt.consoles c "
-                           "where c.platform_id = %s", (self.id,))
+            cursor.execute(get_query(GET_CONSOLES_FOR_PLATFORM), (self.id,))
         consoles = []
         for id, name, ext_id in cursor:
             consoles.append(Console(id=id, name=name, ext_id=ext_id, platform_id=self.id))
@@ -181,65 +177,17 @@ class Platform:
         cursor = conn.cursor()
         if game_id is None:
             if load_hardcoded:
-                cursor.execute("""
-                    select ext_id,
-                           name
-                      from achievements_hunt.games_hardcoded h
-                      where h.platform_id = %s
-                """, (self.id,))
+                # TODO: check if still be useful
+                cursor.execute(get_query(GET_HARDCODED_GAMES_BY_PLATFORM), (self.id,))
                 for game_ext_id, game_name in cursor:
                     self._hardcoded_games[str(game_ext_id)] = game_name
                 if self.set_hardcoded is not None:
                     self.set_hardcoded(self._hardcoded_games)
-            cursor.execute("""
-                    select g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url, g.release_date,
-                           g.developer_id, d.name, g.publisher_id, p.name,
-                           ARRAY_AGG(distinct gr.id), ARRAY_AGG(distinct gr.name)
-                           ,ARRAY_AGG(distinct fr.id), ARRAY_AGG( distinct fr.name)
-                    from achievements_hunt.games g
-                    left join achievements_hunt.companies p
-                      on p.id = g.publisher_id and p.platform_id = g.platform_id
-                    left join achievements_hunt.companies d
-                      on d.id = g.developer_id and d.platform_id = g.platform_id
-                    left join achievements_hunt.map_games_to_genres m
-                      on m.platform_id = g.platform_id and m.game_id = g.id
-                    left join achievements_hunt.genres gr
-                      on m.genre_id = gr.id
-                    left join achievements_hunt.map_games_to_features mf
-                      on mf.platform_id = g.platform_id and mf.game_id = g.id
-                    left join achievements_hunt.features fr
-                      on mf.feature_id = fr.id
-                    where g.platform_id = %s
-                    group by g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url, g.release_date,
-                             g.developer_id, d.name, g.publisher_id, p.name
-                    order by g.id
-                    """, (self.id,))
+            cursor.execute(get_query(GET_GAMES_BY_PLATFORM), (self.id,))
         else:
-            cursor.execute("""
-                                select g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url, g.release_date,
-                                       g.developer_id, d.name, g.publisher_id, p.name,
-                                       ARRAY_AGG(distinct gr.id), ARRAY_AGG(distinct gr.name)
-                                       ,ARRAY_AGG(distinct fr.id), ARRAY_AGG(distinct fr.name)
-                                from achievements_hunt.games g
-                                left join achievements_hunt.companies p
-                                  on p.id = g.publisher_id and p.platform_id = g.platform_id
-                                left join achievements_hunt.companies d
-                                  on d.id = g.developer_id and d.platform_id = g.platform_id
-                                left join achievements_hunt.map_games_to_genres m
-                                  on m.platform_id = g.platform_id and m.game_id = g.id
-                                left join achievements_hunt.genres gr
-                                  on m.genre_id = gr.id
-                                left join achievements_hunt.map_games_to_features mf
-                                  on mf.platform_id = g.platform_id and mf.game_id = g.id
-                                left join achievements_hunt.features fr
-                                  on mf.feature_id = fr.id
-                                where g.platform_id = %s and g.id = %s
-                                group by g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url,
-                                         g.release_date,
-                                         g.developer_id, d.name, g.publisher_id, p.name
-                                order by g.id
-                                """, (self.id, game_id))
+            cursor.execute(get_query(GET_GAME_BY_PLATFORM_AND_ID), (self.id, game_id))
         games = {}
+        # TODO: Shadows built-in name 'id
         for id, platform_id, name, ext_id, console_id, icon_url, release_date, developer_id, developer_name, \
                 publisher_id, publisher_name, genre_ids, genres, feature_ids, features in cursor:
             self.logger.debug("Start loading game \"{0}\" (id: {1}, ext_id: {2}) for platform: {3}"
@@ -283,21 +231,10 @@ class Platform:
                                    format(name, id, ext_id, self.name))
         if load_achievements:
             if game_id is None:
-                cursor.execute("""
-                                    select a.id, a.platform_id, a.name, a.ext_id, g.ext_id, a.description, a.game_id,
-                                        a.icon_url, a.locked_icon_url, a.is_hidden
-                                     from achievements_hunt.achievements a
-                                     join  achievements_hunt.games g on a.game_id = g.id
-                                      where a.platform_id = %s order by id
-                                    """, (self.id,))
+                cursor.execute(get_query(GET_ACHIEVEMENTS_BY_PLATFORM), (self.id,))
             else:
-                cursor.execute("""
-                                    select a.id, a.platform_id, a.name, a.ext_id, g.ext_id, a.description, a.game_id,
-                                        a.icon_url, a.locked_icon_url, a.is_hidden
-                                     from achievements_hunt.achievements a
-                                     join  achievements_hunt.games g on a.game_id = g.id  where a.platform_id = %s
-                                      and a.game_id = %s order by id
-                                                    """, (self.id, game_id))
+                cursor.execute(get_query(GET_ACHIEVEMENTS_BY_PLATFORM_AND_GAME_ID), (self.id, game_id))
+            # TODO: Shadows built-in name 'id
             for id, platform_id, name, ext_id, game_ext_id, description, game_id, icon_url, locked_icon_url, \
                     is_hidden in cursor:
                 self.load_log.debug("Loaded achievement {0} with id: {1}, ext_id: {2}, for game \"{3}\" "
@@ -342,19 +279,15 @@ class Platform:
     def mark_language_done(self):
         conn = self.get_connect()
         cursor = conn.cursor()
-        cursor.execute("""
-                    update achievements_hunt.platform_languages set dt_last_update = current_timestamp
-                    where platform_id = %s and locale_name = %s """, (self.id, self.active_locale))
+        cursor.execute(get_query(UPDATE_PLATFORM_LANGUAGES_SET_LAST_UPDATE), (self.id, self.active_locale))
         conn.commit()
 
     def load_languages(self):
         self.languages = []
         conn = self.get_connect()
         cursor = conn.cursor()
-        cursor.execute("""
-            select id, name, locale_name, dt_last_update from achievements_hunt.platform_languages
-            where platform_id = %s order by dt_last_update nulls first, locale_name""", (self.id, ))
-        for id, name, locale_name, dt_last_update in cursor:
-            lang = PlatformLanguage(id, name, locale_name, dt_last_update)
+        cursor.execute(get_query(GET_PLATFORM_LANGUAGES_BY_PLATFORM_ID), (self.id, ))
+        for language_id, name, locale_name, dt_last_update in cursor:
+            lang = PlatformLanguage(language_id, name, locale_name, dt_last_update)
             self.languages.append(lang)
         self.set_def_locale()

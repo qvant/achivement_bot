@@ -83,6 +83,16 @@ UPDATE_ACHIEVEMENT_SET_NUM_OWNERS = "update_achievement_set_num_owners"
 UPDATE_ACHIEVEMENTS_SET_PERCENT_OWNERS_BY_ID = "update_achievements_set_percent_owners_by_id"
 UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE_BY_PLAYER = "update_player_game_set_percent_complete_by_player"
 DELETE_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE = "delete_queue_player_achievements_update"
+INSERT_PLATFORM = "insert_platform"
+GET_CONSOLE_BY_ID = "get_console_by_id"
+GET_CONSOLES_FOR_PLATFORM = "get_consoles_for_platform"
+GET_HARDCODED_GAMES_BY_PLATFORM = "get_hardcoded_games_by_platform"
+GET_GAMES_BY_PLATFORM = "get_games_by_platform"
+GET_GAME_BY_PLATFORM_AND_ID = "get_game_by_platform_and_id"
+GET_ACHIEVEMENTS_BY_PLATFORM = "get_achievements_by_platform"
+GET_ACHIEVEMENTS_BY_PLATFORM_AND_GAME_ID = "get_achievements_by_platform_and_game_id"
+UPDATE_PLATFORM_LANGUAGES_SET_LAST_UPDATE = "update_platform_languages_set_last_update"
+GET_PLATFORM_LANGUAGES_BY_PLATFORM_ID = "get_platform_languages_by_platform_id"
 
 queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            MARK_UPDATE_DONE: r"db/queries/mark_update_done.sql",
@@ -167,6 +177,16 @@ queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE_BY_PLAYER:
                r"db/queries/update_player_game_set_percent_complete_by_player.sql",
            DELETE_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE: r"db/queries/delete_queue_player_achievements_update.sql",
+           INSERT_PLATFORM: r"db/queries/insert_platform.sql",
+           GET_CONSOLE_BY_ID: r"db/queries/get_console_by_id.sql",
+           GET_CONSOLES_FOR_PLATFORM: r"db/queries/get_consoles_for_platform.sql",
+           GET_HARDCODED_GAMES_BY_PLATFORM: r"db/queries/get_hardcoded_games_by_platform.sql",
+           GET_GAMES_BY_PLATFORM: r"db/queries/get_games_by_platform.sql",
+           GET_GAME_BY_PLATFORM_AND_ID: r"db/queries/get_game_by_platform_and_id.sql",
+           GET_ACHIEVEMENTS_BY_PLATFORM: r"db/queries/get_achievements_by_platform.sql",
+           GET_ACHIEVEMENTS_BY_PLATFORM_AND_GAME_ID: r"db/queries/get_achievements_by_platform_and_game_id.sql",
+           UPDATE_PLATFORM_LANGUAGES_SET_LAST_UPDATE: r"db/queries/update_platform_languages_set_last_update.sql",
+           GET_PLATFORM_LANGUAGES_BY_PLATFORM_ID: r"db/queries/get_platform_languages_by_platform_id.sql",
            }
 query_texts = {}
 
