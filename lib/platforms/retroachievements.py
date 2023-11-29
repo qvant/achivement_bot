@@ -115,6 +115,9 @@ def _call_api(url: str, method_name: str, params: Dict) -> requests.Response:
                 api_log.debug("Full response {} for {} is {}".
                               format(url, params if len(params) > 0 else "no parameters", r.text))
                 break
+            if r.status_code == 403:
+                api_log.info("Didn't have access to {}, probably because of private profile".format(url))
+                break
             api_log.error("Full response from {} for {} is {}".
                           format(url, params if len(params) > 0 else "no parameters", r.text),
                           exc_info=True,
