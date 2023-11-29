@@ -162,6 +162,7 @@ def process_games_queue(config: Config, db_log: Logger) -> bool:
     db_log.info("""Check queue_games_update""")
     connect = Platform.get_connect()
     cursor = connect.cursor()
+    query_prepared = False
     # Process new games queue - recalc owner numbers and percent of achievers
     for step in range(config.db_update_cycles):
         db_log.info("""Check queue_games_update, step {0}""".format(step))
@@ -181,24 +182,25 @@ def process_games_queue(config: Config, db_log: Logger) -> bool:
         if len(games) > 0:
             queue_is_empty = False
             # TODO: constants
-            cursor.execute(get_query_for_prepare("upd_games", UPDATE_GAME_SET_NUM_OWNERS))
+            if not query_prepared:
+                cursor.execute(get_query_for_prepare("upd_games", UPDATE_GAME_SET_NUM_OWNERS))
+                cursor.execute(get_query_for_prepare("del_q", DELETE_QUEUE_GAMES_UPDATE))
+                cursor.execute(get_query_for_prepare("upd_achievement", UPDATE_ACHIEVEMENT_SET_PERCENT_OWNERS))
             game_res = []
             game_4_ach = []
             for i in games:
                 game_res.append((games[i], i))
                 game_4_ach.append((i,))
-
             psycopg2.extras.execute_batch(cursor, """EXECUTE upd_games (%s, %s)""", game_res)
-            cursor.execute(get_query_for_prepare("del_q", DELETE_QUEUE_GAMES_UPDATE))
-            cursor.execute(get_query_for_prepare("upd_achievement", UPDATE_ACHIEVEMENT_SET_PERCENT_OWNERS))
             psycopg2.extras.execute_batch(cursor, """EXECUTE upd_achievement (%s)""", game_4_ach)
             psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
-            cursor.execute("""DEALLOCATE  upd_games""")
-            cursor.execute("""DEALLOCATE  del_q""")
-            cursor.execute("""DEALLOCATE  upd_achievement""")
         else:
             db_log.info("""No more in queue queue_games_update on step {0}""".format(step))
             break
+        if query_prepared:
+            cursor.execute("""DEALLOCATE upd_games""")
+            cursor.execute("""DEALLOCATE del_q""")
+            cursor.execute("""DEALLOCATE upd_achievement""")
         connect.commit()
     db_log.info("""Finish queue_games_update processing""")
     return queue_is_empty
