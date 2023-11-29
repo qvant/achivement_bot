@@ -1,9 +1,11 @@
 import json
 import datetime
 import time
+from logging import Logger
 
 import psycopg2
 import psycopg2.extras
+from pika.adapters.blocking_connection import BlockingChannel
 
 from lib.config import Config, MODE_BOT, MODE_CORE
 from lib.log import get_logger
@@ -21,22 +23,21 @@ from lib.db import set_load_logger
 
 
 def main_updater(config: Config):
-    connect, db_log, m_channel, queue_log = init_updater(config)
+    db_log, m_channel, queue_log = init_updater(config)
 
     is_running = True
 
     while is_running:
 
-        need_wait = True
+        queues_are_empty = True
         # TODO: split into procedures
 
         try:
-            cursor, need_wait = process_games_queue(config, connect, db_log, need_wait)
-
-            need_wait = process_achievements_queue(config, connect, cursor, db_log, need_wait)
-
-            need_wait = process_player_achievements_queue(config, connect, cursor, db_log, need_wait)
-
+            games_queue_are_empty = process_games_queue(config, db_log)
+            achievements_queue_are_empty = process_achievements_queue(config, db_log)
+            player_achievements_queue_are_empty = process_player_achievements_queue(config, db_log)
+            queues_are_empty = \
+                games_queue_are_empty and achievements_queue_are_empty and player_achievements_queue_are_empty
             db_log.info("""Pause db queue processing, check rabbitMQ for new messages...""")
         except BaseException as err:
             db_log.exception(err)
@@ -45,12 +46,19 @@ def main_updater(config: Config):
             else:
                 raise
 
-        is_running = process_external_messages(config, is_running, m_channel, need_wait, queue_log)
+        is_running = process_external_messages(config, is_running, m_channel, queue_log)
+        if not queues_are_empty and is_running:
+            # Additional sleep if all queues are empty, so there is noting to do.
+            # Other processes has unconditional sleep between work cycles
+            time.sleep(4)
 
 
-def process_player_achievements_queue(config, connect, cursor, db_log, need_wait):
+def process_player_achievements_queue(config: Config, db_log: Logger) -> bool:
     # Process player achievements queue, renew percent of achievers and update player perfect games status
     db_log.info("""Check queue_player_achievements_update""")
+    connect = Platform.get_connect()
+    cursor = connect.cursor()
+    queue_is_empty = True
     for step in range(config.db_update_cycles):
         db_log.info("""Check queue_achievements_update, step {0}""".format(step))
         cursor.execute(get_query(LOCK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE), (config.db_update_size,))
@@ -67,7 +75,7 @@ def process_player_achievements_queue(config, connect, cursor, db_log, need_wait
             recs.append((id_rec,))
             player_games.append((player_id, game_id, platform_id))
         if len(player_games) > 0:
-            need_wait = False
+            queue_is_empty = False
             db_log.info("""Process queue_player_achievements_update, found {0} records for {1} achievements""".
                         format(len(recs), len(achievements)))
             cursor.execute(get_query_for_prepare("upd_achievements", UPDATE_ACHIEVEMENT_SET_NUM_OWNERS))
@@ -102,12 +110,15 @@ def process_player_achievements_queue(config, connect, cursor, db_log, need_wait
             break
     connect.commit()
     db_log.info("""Finish queue_player_achievements_update processing""")
-    return need_wait
+    return queue_is_empty
 
 
-def process_achievements_queue(config, connect, cursor, db_log, need_wait):
+def process_achievements_queue(config: Config, db_log: Logger) -> bool:
     # Process new achievements queue - reset perfect games and recalc % complete for all players
     db_log.info("""Check queue_achievements_update""")
+    queue_is_empty = True
+    connect = Platform.get_connect()
+    cursor = connect.cursor()
     for step in range(config.db_update_cycles):
         cursor.execute(get_query(LOCK_QUEUE_ACHIEVEMENTS_UPDATE), (config.db_update_size,))
         db_log.info("""Check queue_achievements_update, step {0}""".format(step))
@@ -120,7 +131,7 @@ def process_achievements_queue(config, connect, cursor, db_log, need_wait):
                 games.append((game_id, platform_id))
             recs.append((id_rec,))
         if len(games) > 0:
-            need_wait = False
+            queue_is_empty = False
             db_log.info("""Process queue_achievements_update, found {0} records for {1} games""".
                         format(len(recs), len(games_ids)))
             cursor.execute(get_query_for_prepare("update_player_games",
@@ -143,11 +154,13 @@ def process_achievements_queue(config, connect, cursor, db_log, need_wait):
             break
     connect.commit()
     db_log.info("""Finish queue_achievements_update processing""")
-    return need_wait
+    return queue_is_empty
 
 
-def process_games_queue(config, connect, db_log, need_wait):
+def process_games_queue(config: Config, db_log: Logger) -> bool:
+    queue_is_empty = True
     db_log.info("""Check queue_games_update""")
+    connect = Platform.get_connect()
     cursor = connect.cursor()
     # Process new games queue - recalc owner numbers and percent of achievers
     for step in range(config.db_update_cycles):
@@ -166,7 +179,7 @@ def process_games_queue(config, connect, db_log, need_wait):
         db_log.info("""Process queue_games_update, found {0} records for {1} games""".
                     format(len(recs), len(games)))
         if len(games) > 0:
-            need_wait = False
+            queue_is_empty = False
             # TODO: constants
             cursor.execute(get_query_for_prepare("upd_games", UPDATE_GAME_SET_NUM_OWNERS))
             game_res = []
@@ -188,10 +201,10 @@ def process_games_queue(config, connect, db_log, need_wait):
             break
         connect.commit()
     db_log.info("""Finish queue_games_update processing""")
-    return cursor, need_wait
+    return queue_is_empty
 
 
-def process_external_messages(config, is_running, m_channel, need_wait, queue_log):
+def process_external_messages(config: Config, is_running: bool, m_channel: BlockingChannel, queue_log: Logger) -> bool:
     try:
         for method_frame, properties, body in m_channel.consume(UPDATER_QUEUE_NAME, inactivity_timeout=1,
                                                                 auto_ack=False,
@@ -219,8 +232,7 @@ def process_external_messages(config, is_running, m_channel, need_wait, queue_lo
                 queue_log.info("No more messages in {0}".format(UPDATER_QUEUE_NAME))
                 m_channel.cancel()
                 break
-        if need_wait:
-            time.sleep(4)
+
     except BaseException as err:
         queue_log.exception(err)
         if config.supress_errors:
@@ -230,14 +242,13 @@ def process_external_messages(config, is_running, m_channel, need_wait, queue_lo
     return is_running
 
 
-def init_updater(config):
+def init_updater(config: Config):
     queue_log = get_logger("Rabbit" + str(config.mode), config.log_level, True)
     db_log = get_logger("db_" + str(config.mode), config.log_level, True)
     set_load_logger(config)
     set_queue_config(config)
     set_queue_log(queue_log)
     Platform.set_config(config)
-    connect = Platform.get_connect()
     m_queue = get_mq_connect(config)
     m_channel = m_queue.channel()
     m_channel.queue_declare(queue=UPDATER_QUEUE_NAME, durable=True)
@@ -249,4 +260,4 @@ def init_updater(config):
                          routing_key=config.mode)
     cmd = {"cmd": "process_response", "text": "Updater started at {0}.".format(datetime.datetime.now())}
     enqueue_command(cmd, MODE_BOT)
-    return connect, db_log, m_channel, queue_log
+    return db_log, m_channel, queue_log
