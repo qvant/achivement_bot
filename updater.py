@@ -47,7 +47,7 @@ def main_updater(config: Config):
                 raise
 
         is_running = process_external_messages(config, is_running, m_channel, queue_log)
-        if not queues_are_empty and is_running:
+        if queues_are_empty and is_running:
             # Additional sleep if all queues are empty, so there is noting to do.
             # Other processes has unconditional sleep between work cycles
             time.sleep(4)
