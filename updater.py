@@ -59,6 +59,7 @@ def process_player_achievements_queue(config: Config, db_log: Logger) -> bool:
     connect = Platform.get_connect()
     cursor = connect.cursor()
     queue_is_empty = True
+    query_prepared = False
     for step in range(config.db_update_cycles):
         db_log.info("""Check queue_achievements_update, step {0}""".format(step))
         cursor.execute(get_query(LOCK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE), (config.db_update_size,))
@@ -78,7 +79,14 @@ def process_player_achievements_queue(config: Config, db_log: Logger) -> bool:
             queue_is_empty = False
             db_log.info("""Process queue_player_achievements_update, found {0} records for {1} achievements""".
                         format(len(recs), len(achievements)))
-            cursor.execute(get_query_for_prepare("upd_achievements", UPDATE_ACHIEVEMENT_SET_NUM_OWNERS))
+            if not query_prepared:
+                query_prepared = True
+                cursor.execute(get_query_for_prepare("upd_achievements", UPDATE_ACHIEVEMENT_SET_NUM_OWNERS))
+                cursor.execute(get_query_for_prepare("upd_achievement_percent",
+                                                     UPDATE_ACHIEVEMENTS_SET_PERCENT_OWNERS_BY_ID))
+                cursor.execute(get_query_for_prepare("update_player_games",
+                                                     UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE_BY_PLAYER))
+                cursor.execute(get_query_for_prepare("del_q", DELETE_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE))
             game_res = []
             game_4_ach = []
             for i in achievements:
@@ -87,27 +95,24 @@ def process_player_achievements_queue(config: Config, db_log: Logger) -> bool:
 
             psycopg2.extras.execute_batch(cursor, """EXECUTE upd_achievements (%s, %s)""", game_res)
 
-            cursor.execute(get_query_for_prepare("upd_achievement_percent",
-                                                 UPDATE_ACHIEVEMENTS_SET_PERCENT_OWNERS_BY_ID))
             psycopg2.extras.execute_batch(cursor, """EXECUTE upd_achievement_percent (%s)""", game_4_ach)
-            cursor.execute(get_query_for_prepare("update_player_games",
-                                                 UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE_BY_PLAYER))
 
             db_log.debug(""" start EXECUTE update_player_games""")
             psycopg2.extras.execute_batch(cursor, """EXECUTE update_player_games (%s, %s, %s)""", player_games)
             db_log.debug(""" end EXECUTE update_player_games""")
 
-            cursor.execute(get_query_for_prepare("del_q", DELETE_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE))
             db_log.debug(""" start EXECUTE del_q""")
             psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
             db_log.debug(""" end EXECUTE del_q""")
-            cursor.execute("""DEALLOCATE update_player_games""")
-            cursor.execute("""DEALLOCATE upd_achievements""")
-            cursor.execute("""DEALLOCATE del_q""")
-            cursor.execute("""DEALLOCATE upd_achievement_percent""")
+
         else:
             db_log.info("""No more in queue queue_player_achievements_update on step {0}""".format(step))
             break
+    if query_prepared:
+        cursor.execute("""DEALLOCATE update_player_games""")
+        cursor.execute("""DEALLOCATE upd_achievements""")
+        cursor.execute("""DEALLOCATE del_q""")
+        cursor.execute("""DEALLOCATE upd_achievement_percent""")
     connect.commit()
     db_log.info("""Finish queue_player_achievements_update processing""")
     return queue_is_empty
@@ -117,6 +122,7 @@ def process_achievements_queue(config: Config, db_log: Logger) -> bool:
     # Process new achievements queue - reset perfect games and recalc % complete for all players
     db_log.info("""Check queue_achievements_update""")
     queue_is_empty = True
+    query_prepared = False
     connect = Platform.get_connect()
     cursor = connect.cursor()
     for step in range(config.db_update_cycles):
@@ -134,24 +140,24 @@ def process_achievements_queue(config: Config, db_log: Logger) -> bool:
             queue_is_empty = False
             db_log.info("""Process queue_achievements_update, found {0} records for {1} games""".
                         format(len(recs), len(games_ids)))
-            cursor.execute(get_query_for_prepare("update_player_games",
-                                                 UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE))
-
-            cursor.execute(get_query_for_prepare("update_player_games_perf", UPDATE_PLAYER_GAMES_SET_PERFECT))
+            if not query_prepared:
+                query_prepared = True
+                cursor.execute(get_query_for_prepare("update_player_games",
+                                                     UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE))
+                cursor.execute(get_query_for_prepare("update_player_games_perf", UPDATE_PLAYER_GAMES_SET_PERFECT))
+                cursor.execute(get_query_for_prepare("del_q", DELETE_QUEUE_ACHIEVEMENTS_UPDATE))
             psycopg2.extras.execute_batch(cursor, """EXECUTE update_player_games  (%s, %s)""", games)
             # TODO: check if possible one query instead of two
             psycopg2.extras.execute_batch(cursor, """EXECUTE update_player_games_perf  (%s, %s)""", games)
 
-            cursor.execute(get_query_for_prepare("del_q", DELETE_QUEUE_ACHIEVEMENTS_UPDATE))
             psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
-
-            # TODO: remove unnecessary prepare\deallocate
-            cursor.execute("""DEALLOCATE  update_player_games""")
-            cursor.execute("""DEALLOCATE  update_player_games_perf""")
-            cursor.execute("""DEALLOCATE  del_q""")
         else:
             db_log.info("""No more in queue queue_achievements_update on step {0}""".format(step))
             break
+    if query_prepared:
+        cursor.execute("""DEALLOCATE  update_player_games""")
+        cursor.execute("""DEALLOCATE  update_player_games_perf""")
+        cursor.execute("""DEALLOCATE  del_q""")
     connect.commit()
     db_log.info("""Finish queue_achievements_update processing""")
     return queue_is_empty
@@ -183,6 +189,7 @@ def process_games_queue(config: Config, db_log: Logger) -> bool:
             queue_is_empty = False
             # TODO: constants
             if not query_prepared:
+                query_prepared = True
                 cursor.execute(get_query_for_prepare("upd_games", UPDATE_GAME_SET_NUM_OWNERS))
                 cursor.execute(get_query_for_prepare("del_q", DELETE_QUEUE_GAMES_UPDATE))
                 cursor.execute(get_query_for_prepare("upd_achievement", UPDATE_ACHIEVEMENT_SET_PERCENT_OWNERS))
