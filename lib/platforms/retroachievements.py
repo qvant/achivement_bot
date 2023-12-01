@@ -260,23 +260,44 @@ def get_player_achievements(player_id, game_id):
 
 def get_player_games(player_id):
     global api_log
+    res = [[], []]
+    pack_size = 10
+    games_total = 0
     params = {
         "u": player_id,
-        "c": 99999,
+        "c": pack_size,
+        "o": 0
     }
-    # TODO: 50 games max and offset not working. sad :(
-    r = _call_api(url="https://retroachievements.org/API/API_GetUserRecentlyPlayedGames.php",
-                  method_name="API_GetUserRecentlyPlayedGames",
-                  params=params,
-                  )
-    res = [[], []]
-    obj = r.json()
-    if obj is not None and len(obj) > 0 and len(obj[0]) > 0:
-        for i in obj:
-            game_id = i.get("GameID")
-            if game_id != "0":
-                res[0].append(game_id)
-                res[1].append(i.get("Title"))
+    while True:
+        r = _call_api(url="https://retroachievements.org/API/API_GetUserRecentlyPlayedGames.php",
+                      method_name="API_GetUserRecentlyPlayedGames",
+                      params=params,
+                      )
+        obj = r.json()
+        games_fetched = 0
+        if obj is not None:
+            if len(obj) > 0 and len(obj[0]) > 0:
+                games_fetched = len(obj)
+                games_total += games_fetched
+                api_log.info("Received {} games for player with ext_id {}".
+                             format(games_fetched, player_id))
+                for i in obj:
+                    game_id = i.get("GameID")
+                    if game_id != "0":
+                        if game_id not in res[0]:
+                            res[0].append(game_id)
+                            res[1].append(i.get("Title"))
+                        else:
+                            api_log.info(
+                                "Found game with ext_id {} for player {} "
+                                "in GetUserRecentlyPlayedGames second time".format(player_id, game_id))
+        if games_fetched == 0 or games_fetched < pack_size:
+            api_log.info("All {} games for player with ext_id {} received from retroachievements.org".
+                         format(games_total, player_id))
+            break
+        api_log.info("Continue to get games for player with ext_id {} from retroachievements.org. Received so far {}".
+                     format(player_id, games_total))
+        params["o"] = games_total
     return res
 
 
