@@ -113,6 +113,9 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
                           )
             if r.status_code == 400:
                 break
+            if r.status_code == 403:
+                api_log.info("Didn't have access to {}, probably because of private profile".format(url))
+                break
         except requests.exceptions.ConnectTimeout as exc:
             session = requests.Session()
             api_log.error(exc)

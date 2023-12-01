@@ -238,6 +238,12 @@ class Player:
         for j in ret:
             saved_games.append(j[0])
         for i in range(len(self.games)):
+            if not (self.platform.is_game_known(str(self.games[i]))):
+                # TODO: check
+                new_game = self.platform.get_game(game_id=str(self.games[i]), name=str(self.games[i]))
+                new_game.save(cursor=cur, active_locale='en')
+                conn.commit()
+                self.platform.load_games(game_id=new_game.id)
             game = self.platform.get_game_by_ext_id(str(self.games[i]))
             if game.id not in saved_games:
                 cur.execute(get_query(INSERT_PLAYER_GAME),

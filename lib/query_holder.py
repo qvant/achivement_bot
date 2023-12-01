@@ -70,6 +70,29 @@ GET_ACHIEVEMENT_ID = "get_achievement_id"
 INSERT_PLAYER_ACHIEVEMENT = "insert_player_achievement"
 GET_PLAYER_GAME_STATS_FOR_GAME = "get_player_game_stats_for_game"
 INSERT_PLAYER_GAME_STATS = "insert_player_game_stats"
+LOCK_QUEUE_GAMES_UPDATE = "lock_queue_games_update"
+UPDATE_GAME_SET_NUM_OWNERS = "update_game_set_num_owners"
+DELETE_QUEUE_GAMES_UPDATE = "delete_queue_games_update"
+UPDATE_ACHIEVEMENT_SET_PERCENT_OWNERS = "update_achievement_set_percent_owners"
+LOCK_QUEUE_ACHIEVEMENTS_UPDATE = "lock_queue_achievements_update"
+UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE = "update_player_game_set_percent_complete"
+UPDATE_PLAYER_GAMES_SET_PERFECT = "update_player_games_set_perfect"
+DELETE_QUEUE_ACHIEVEMENTS_UPDATE = "delete_queue_achievements_update"
+LOCK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE = "lock_queue_player_achievements_update"
+UPDATE_ACHIEVEMENT_SET_NUM_OWNERS = "update_achievement_set_num_owners"
+UPDATE_ACHIEVEMENTS_SET_PERCENT_OWNERS_BY_ID = "update_achievements_set_percent_owners_by_id"
+UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE_BY_PLAYER = "update_player_game_set_percent_complete_by_player"
+DELETE_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE = "delete_queue_player_achievements_update"
+INSERT_PLATFORM = "insert_platform"
+GET_CONSOLE_BY_ID = "get_console_by_id"
+GET_CONSOLES_FOR_PLATFORM = "get_consoles_for_platform"
+GET_HARDCODED_GAMES_BY_PLATFORM = "get_hardcoded_games_by_platform"
+GET_GAMES_BY_PLATFORM = "get_games_by_platform"
+GET_GAME_BY_PLATFORM_AND_ID = "get_game_by_platform_and_id"
+GET_ACHIEVEMENTS_BY_PLATFORM = "get_achievements_by_platform"
+GET_ACHIEVEMENTS_BY_PLATFORM_AND_GAME_ID = "get_achievements_by_platform_and_game_id"
+UPDATE_PLATFORM_LANGUAGES_SET_LAST_UPDATE = "update_platform_languages_set_last_update"
+GET_PLATFORM_LANGUAGES_BY_PLATFORM_ID = "get_platform_languages_by_platform_id"
 
 queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            MARK_UPDATE_DONE: r"db/queries/mark_update_done.sql",
@@ -140,6 +163,30 @@ queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            INSERT_PLAYER_ACHIEVEMENT: r"db/queries/insert_player_achievement.sql",
            GET_PLAYER_GAME_STATS_FOR_GAME: r"db/queries/get_player_game_stats_for_game.sql",
            INSERT_PLAYER_GAME_STATS: r"db/queries/insert_player_game_stats.sql",
+           LOCK_QUEUE_GAMES_UPDATE: r"db/queries/lock_queue_games_update.sql",
+           UPDATE_GAME_SET_NUM_OWNERS: r"db/queries/update_game_set_num_owners.sql",
+           DELETE_QUEUE_GAMES_UPDATE: r"db/queries/delete_queue_games_update.sql",
+           UPDATE_ACHIEVEMENT_SET_PERCENT_OWNERS: r"db/queries/update_achievement_set_percent_owners.sql",
+           LOCK_QUEUE_ACHIEVEMENTS_UPDATE: r"db/queries/lock_queue_achievements_update.sql",
+           UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE: r"db/queries/update_player_game_set_percent_complete.sql",
+           UPDATE_PLAYER_GAMES_SET_PERFECT: r"db/queries/update_player_games_set_perfect.sql",
+           DELETE_QUEUE_ACHIEVEMENTS_UPDATE: r"db/queries/delete_queue_achievements_update.sql",
+           LOCK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE: r"db/queries/lock_queue_player_achievements_update.sql",
+           UPDATE_ACHIEVEMENT_SET_NUM_OWNERS: r"db/queries/update_achievement_set_num_owners.sql",
+           UPDATE_ACHIEVEMENTS_SET_PERCENT_OWNERS_BY_ID: r"db/queries/update_achievements_set_percent_owners_by_id.sql",
+           UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE_BY_PLAYER:
+               r"db/queries/update_player_game_set_percent_complete_by_player.sql",
+           DELETE_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE: r"db/queries/delete_queue_player_achievements_update.sql",
+           INSERT_PLATFORM: r"db/queries/insert_platform.sql",
+           GET_CONSOLE_BY_ID: r"db/queries/get_console_by_id.sql",
+           GET_CONSOLES_FOR_PLATFORM: r"db/queries/get_consoles_for_platform.sql",
+           GET_HARDCODED_GAMES_BY_PLATFORM: r"db/queries/get_hardcoded_games_by_platform.sql",
+           GET_GAMES_BY_PLATFORM: r"db/queries/get_games_by_platform.sql",
+           GET_GAME_BY_PLATFORM_AND_ID: r"db/queries/get_game_by_platform_and_id.sql",
+           GET_ACHIEVEMENTS_BY_PLATFORM: r"db/queries/get_achievements_by_platform.sql",
+           GET_ACHIEVEMENTS_BY_PLATFORM_AND_GAME_ID: r"db/queries/get_achievements_by_platform_and_game_id.sql",
+           UPDATE_PLATFORM_LANGUAGES_SET_LAST_UPDATE: r"db/queries/update_platform_languages_set_last_update.sql",
+           GET_PLATFORM_LANGUAGES_BY_PLATFORM_ID: r"db/queries/get_platform_languages_by_platform_id.sql",
            }
 query_texts = {}
 
@@ -153,3 +200,10 @@ def get_query(name: str) -> str:
     if name not in query_texts:
         query_texts[name] = read_query(name)
     return query_texts[name]
+
+
+def get_query_for_prepare(label: str, name: str) -> str:
+    global query_texts
+    if name not in query_texts:
+        query_texts[name] = read_query(name)
+    return "PREPARE " + label + " as " + query_texts[name]

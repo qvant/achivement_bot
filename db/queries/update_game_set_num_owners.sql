@@ -1,0 +1,1 @@
+update achievements_hunt.games set num_owners = num_owners + $1 where id = $2
