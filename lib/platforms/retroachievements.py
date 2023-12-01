@@ -261,7 +261,7 @@ def get_player_achievements(player_id, game_id):
 def get_player_games(player_id):
     global api_log
     res = [[], []]
-    pack_size = 10
+    pack_size = 50
     games_total = 0
     params = {
         "u": player_id,
