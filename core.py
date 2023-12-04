@@ -20,7 +20,6 @@ def main_core(config: Config):
     while is_running:
 
         try:
-            m_channel.basic_consume(MAIN_QUEUE_NAME, on_message_callback=)
             for method_frame, properties, body in m_channel.consume(MAIN_QUEUE_NAME, inactivity_timeout=1,
                                                                     auto_ack=False,
                                                                     arguments={"routing_key": config.mode}):
