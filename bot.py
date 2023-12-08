@@ -1,6 +1,7 @@
 import datetime
 import json
 import time
+from logging import Logger
 
 import telegram
 from telegram import InlineKeyboardMarkup
@@ -58,7 +59,9 @@ def main_bot(config: Config):
                 if body is not None:
                     queue_log.info("Received user message {0} with delivery_tag {1}".format(body,
                                                                                             method_frame.delivery_tag))
-                    is_running = process_queue_command(body, config, is_running, queue_log, updater)
+                    need_to_stop = process_queue_command(body, config, queue_log, updater)
+                    if need_to_stop:
+                        is_running = False
                     m_channel.basic_ack(method_frame.delivery_tag)
                     queue_log.info("User message " + str(body) + " with delivery_tag " +
                                    str(method_frame.delivery_tag) + " acknowledged")
@@ -78,28 +81,13 @@ def main_bot(config: Config):
     exit(0)
 
 
-def process_queue_command(body, config, is_running, queue_log, updater):
+def process_queue_command(body: bytes, config: Config, queue_log: Logger, updater) -> bool:
     cmd = json.loads(body)
     cmd_type = cmd.get("cmd")
     chat_id = cmd.get("chat_id")
+    need_to_stop = False
     if cmd_type == 'msg_to_user':
-        _ = set_locale(update=None, chat_id=chat_id)
-        msg = ""
-        msg_type = cmd.get("type")
-        if msg_type == MT_VALIDATION_OK:
-            msg = _('Validation for account {} platform {} ok').format(
-                cmd.get("ext_id"), cmd.get("platform"))
-        elif msg_type == MT_VALIDATION_FAILED:
-            msg = _('Validation for account {} platform {} failed').format(
-                cmd.get("ext_id"), cmd.get("platform"))
-        elif msg_type == MT_ACCOUNT_DELETED:
-            msg = _('Account {} for platform {} deleted').format(
-                cmd.get("name"), cmd.get("platform"))
-        elif msg_type == MT_ACCOUNT_UPDATED:
-            msg = _('Stats for account {} and platform {} renewed').format(
-                cmd.get("name"), cmd.get("platform"))
-        else:
-            queue_log.error("Nothing to respond in msg {0}".format(body))
+        msg = build_response_for_user(chat_id, cmd)
         if len(msg) > 0:
             reply_markup = InlineKeyboardMarkup(main_keyboard(chat_id))
             try:
@@ -108,35 +96,62 @@ def process_queue_command(body, config, is_running, queue_log, updater):
                                                     reply_markup=reply_markup)
             except telegram.error.Unauthorized:
                 queue_log.info("Bot banned by user {}, can\'t send message".format(chat_id))
+        else:
+            queue_log.error("Nothing to respond in msg {0}".format(body))
     elif cmd_type == 'stop_server':
-        is_running = False
+        need_to_stop = True
         queue_log.info("Stop smd received")
     elif cmd_type == "process_response":
-        try:
-            resp = eval(cmd.get("text"))
-            msg = ""
-            for i in resp:
-                if i == "platform_stats":
-                    msg += r"  " + i + ": " + chr(10)
-                    for j in sorted(resp[i]):
-                        msg += r"    " + j + ": " + chr(10)
-                        cur = eval(resp[i][j])
-                        for m in cur:
-                            msg += r"      " + m + ": " + chr(10)
-                            for k in cur[m]:
-                                msg += r"        " + k + ": " + str(cur[m][k]) + chr(10)
-                elif i == "players":
-                    msg += r"  " + i + ": " + chr(10)
-                    for j in sorted(resp[i]):
-                        msg += r"    " + j + ": " + str(resp[i][j]) + chr(10)
-                else:
-                    msg += i + ": " + str(resp.get(i)) + chr(10)
-        except SyntaxError:
-            msg = cmd.get("text")
+        msg = format_stats_message(cmd)
         for i in config.admin_list:
             reply_markup = InlineKeyboardMarkup(main_keyboard(i))
             updater.dispatcher.bot.send_message(chat_id=i, text=msg, reply_markup=reply_markup)
-    return is_running
+    return need_to_stop
+
+
+def build_response_for_user(chat_id: int, cmd) -> str:
+    _ = set_locale(update=None, chat_id=chat_id)
+    msg_type = cmd.get("type")
+    if msg_type == MT_VALIDATION_OK:
+        msg = _('Validation for account {} platform {} ok').format(
+            cmd.get("ext_id"), cmd.get("platform"))
+    elif msg_type == MT_VALIDATION_FAILED:
+        msg = _('Validation for account {} platform {} failed').format(
+            cmd.get("ext_id"), cmd.get("platform"))
+    elif msg_type == MT_ACCOUNT_DELETED:
+        msg = _('Account {} for platform {} deleted').format(
+            cmd.get("name"), cmd.get("platform"))
+    elif msg_type == MT_ACCOUNT_UPDATED:
+        msg = _('Stats for account {} and platform {} renewed').format(
+            cmd.get("name"), cmd.get("platform"))
+    else:
+        msg = ""
+    return msg
+
+
+def format_stats_message(cmd):
+    try:
+        resp = eval(cmd.get("text"))
+        msg = ""
+        for i in resp:
+            if i == "platform_stats":
+                msg += r"  " + i + ": " + chr(10)
+                for j in sorted(resp[i]):
+                    msg += r"    " + j + ": " + chr(10)
+                    cur = eval(resp[i][j])
+                    for m in cur:
+                        msg += r"      " + m + ": " + chr(10)
+                        for k in cur[m]:
+                            msg += r"        " + k + ": " + str(cur[m][k]) + chr(10)
+            elif i == "players":
+                msg += r"  " + i + ": " + chr(10)
+                for j in sorted(resp[i]):
+                    msg += r"    " + j + ": " + str(resp[i][j]) + chr(10)
+            else:
+                msg += i + ": " + str(resp.get(i)) + chr(10)
+    except SyntaxError:
+        msg = cmd.get("text")
+    return msg
 
 
 def init_queue(config):

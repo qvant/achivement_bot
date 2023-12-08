@@ -46,7 +46,9 @@ def main_updater(config: Config):
             else:
                 raise
 
-        is_running = process_external_messages(config, is_running, m_channel, queue_log)
+        need_to_stop = process_external_messages(config, m_channel, queue_log)
+        if need_to_stop:
+            is_running = False
         if queues_are_empty and is_running:
             # Additional sleep if all queues are empty, so there is noting to do.
             # Other processes has unconditional sleep between work cycles
@@ -213,7 +215,8 @@ def process_games_queue(config: Config, db_log: Logger) -> bool:
     return queue_is_empty
 
 
-def process_external_messages(config: Config, is_running: bool, m_channel: BlockingChannel, queue_log: Logger) -> bool:
+def process_external_messages(config: Config, m_channel: BlockingChannel, queue_log: Logger) -> bool:
+    need_to_stop = False
     try:
         for method_frame, properties, body in m_channel.consume(UPDATER_QUEUE_NAME, inactivity_timeout=1,
                                                                 auto_ack=False,
@@ -221,19 +224,7 @@ def process_external_messages(config: Config, is_running: bool, m_channel: Block
             if body is not None:
                 queue_log.info("Received user message {0} with delivery_tag {1}".format(body,
                                                                                         method_frame.delivery_tag))
-                cmd = json.loads(body)
-                cmd_type = cmd.get("cmd")
-                if cmd_type == 'stop_server':
-                    is_running = False
-                    cmd = {"cmd": "process_response", "text": "Updater shutdown started"}
-                    enqueue_command(cmd, MODE_BOT)
-                elif cmd_type == "get_stats":
-                    msg = get_stats()
-                    msg["module"] = "Updater"
-                    cmd = {"cmd": "process_response", "text": str(msg)}
-                    enqueue_command(cmd, MODE_BOT)
-                elif cmd_type == "msg_to_user":
-                    enqueue_command(cmd, MODE_CORE)
+                need_to_stop = process_queue_message(body)
                 m_channel.basic_ack(method_frame.delivery_tag)
                 queue_log.info("User message " + str(body) + " with delivery_tag " +
                                str(method_frame.delivery_tag) + " acknowledged")
@@ -248,7 +239,25 @@ def process_external_messages(config: Config, is_running: bool, m_channel: Block
             pass
         else:
             raise
-    return is_running
+    return need_to_stop
+
+
+def process_queue_message(body: bytes) -> bool:
+    cmd = json.loads(body)
+    cmd_type = cmd.get("cmd")
+    need_to_stop = False
+    if cmd_type == 'stop_server':
+        need_to_stop = True
+        cmd = {"cmd": "process_response", "text": "Updater shutdown started"}
+        enqueue_command(cmd, MODE_BOT)
+    elif cmd_type == "get_stats":
+        msg = get_stats()
+        msg["module"] = "Updater"
+        cmd = {"cmd": "process_response", "text": str(msg)}
+        enqueue_command(cmd, MODE_BOT)
+    elif cmd_type == "msg_to_user":
+        enqueue_command(cmd, MODE_CORE)
+    return need_to_stop
 
 
 def init_updater(config: Config):
