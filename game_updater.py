@@ -2,6 +2,7 @@ import datetime
 import json
 import time
 from datetime import timezone
+from typing import List
 
 import pika
 
@@ -134,20 +135,9 @@ def main_game_updater(config: Config):
                 if body is not None:
                     queue_log.info("Received user message {0} with delivery_tag {1}".format(body,
                                                                                             method_frame.delivery_tag))
-                    cmd = json.loads(body)
-                    cmd_type = cmd.get("cmd")
-                    if cmd_type == 'stop_server':
-                        is_running = False
-                        cmd = {"cmd": "process_response", "text": "Game updater shutdown started"}
-                        enqueue_command(cmd, MODE_BOT)
-                    elif cmd_type == "get_stats":
-                        msg = get_stats()
-                        msg["module"] = "Game updater"
-                        msg["platform_stats"] = {}
-                        for j in platforms:
-                            msg["platform_stats"][j.name] = str(j.get_stats())
-                        cmd = {"cmd": "process_response", "text": str(msg)}
-                        enqueue_command(cmd, MODE_BOT)
+                    need_stop = process_queue_command(body, platforms)
+                    if need_stop:
+                        is_running = False;
                     try:
                         m_channel.basic_ack(method_frame.delivery_tag)
                     except BaseException as exc:
@@ -174,3 +164,22 @@ def main_game_updater(config: Config):
                 pass
             else:
                 raise
+
+
+def process_queue_command(body: bytes, platforms: List[Platform]) -> bool:
+    cmd = json.loads(body)
+    cmd_type = cmd.get("cmd")
+    need_stop = False
+    if cmd_type == 'stop_server':
+        need_stop = True
+        cmd = {"cmd": "process_response", "text": "Game updater shutdown started"}
+        enqueue_command(cmd, MODE_BOT)
+    elif cmd_type == "get_stats":
+        msg = get_stats()
+        msg["module"] = "Game updater"
+        msg["platform_stats"] = {}
+        for j in platforms:
+            msg["platform_stats"][j.name] = str(j.get_stats())
+        cmd = {"cmd": "process_response", "text": str(msg)}
+        enqueue_command(cmd, MODE_BOT)
+    return need_stop

@@ -415,6 +415,8 @@ class Player:
                                       format(self.name, self.dt_updated_inc, self.dt_updated_full))
         games_num = len(self.games)
         self.is_public = True
+        self.platform.logger.info("Begin to refresh {} games from player {}".
+                                  format(games_num, self.name))
         for i in range(games_num):
             # if new game, not discovered by game updater yet
             if not self.platform.is_game_known(str(self.games[i])):
