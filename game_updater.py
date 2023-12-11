@@ -137,7 +137,7 @@ def main_game_updater(config: Config):
                                                                                             method_frame.delivery_tag))
                     need_stop = process_queue_command(body, platforms)
                     if need_stop:
-                        is_running = False;
+                        is_running = False
                     try:
                         m_channel.basic_ack(method_frame.delivery_tag)
                     except BaseException as exc:
