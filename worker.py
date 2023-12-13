@@ -2,6 +2,7 @@ import datetime
 import json
 import time
 from datetime import timezone
+from logging import Logger
 
 import pika
 
@@ -133,83 +134,9 @@ def main_worker(config: Config):
                 if body is not None:
                     queue_log.info("Received user message {0} with delivery_tag {1}".format(body,
                                                                                             method_frame.delivery_tag))
-                    cmd = json.loads(body)
-                    cmd_type = cmd.get("cmd")
-                    if cmd_type == 'renew_achievements':
-                        platform_id = cmd.get("platform_id")
-                        player_id = cmd.get("player_id")
-                        dt_sent = cmd.get("dt_sent")
-                        dt_sent = datetime.datetime.fromtimestamp(dt_sent)
-                        queue_log.info("Start renew achievements for player {2} and platform {3} because msg {0} "
-                                       "with delivery_tag {1}".format(body, method_frame.delivery_tag,
-                                                                      player_id, platform_id))
-                        player = None
-                        for i in platforms:
-                            queue_log.debug("Check platform {0} {1}".format(i.name, i.id))
-                            if int(i.id) == int(platform_id):
-                                players = load_players(platform=i, config=config, player_id=player_id,
-                                                       status_id=STATUS_VALID)
-                                if len(players) > 0:
-                                    player = players[0]
-                                    if player.dt_updated is None or player.dt_updated.replace(tzinfo=timezone.utc) < \
-                                            dt_sent.replace(tzinfo=timezone.utc):
-                                        queue_log.info(
-                                            "Start actually renew achievements for player {2}  and platform {3} "
-                                            "because msg {0} with delivery_tag {1}".format(
-                                                body,
-                                                method_frame.delivery_tag,
-                                                player_id, i.name))
-                                        i.set_def_locale()
-                                        player.renew()
-                                        player.platform.save()
-                                        player.save()
-                                        cmd = {"chat_id": player.telegram_id,
-                                               "cmd": "msg_to_user",
-                                               "text": 'Achievements for account {} platform {} renewed'.format(
-                                                   player.ext_id, i.name),
-                                               "type": MT_ACCOUNT_UPDATED,
-                                               "telegram_id": player.telegram_id,
-                                               "name": player.name,
-                                               "platform": i.name
-                                               }
-                                        enqueue_command(cmd, MODE_UPDATER)
-                                    else:
-                                        queue_log.info(
-                                            "Skipped renew achievements for player {2} and platform {3} because msg "
-                                            "{0} with delivery_tag {1} was sent at {4} and last renew was {5}".format(
-                                                body,
-                                                method_frame.delivery_tag,
-                                                player_id, i.name, dt_sent, player.dt_updated))
-                                        cmd = {"chat_id": player.telegram_id,
-                                               "cmd": "msg_to_user",
-                                               "text": 'Achievements for account {} platform {} renewed'.format(
-                                                   player.ext_id, i.name),
-                                               "type": MT_ACCOUNT_UPDATED,
-                                               "telegram_id": player.telegram_id,
-                                               "name": player.name,
-                                               "platform": i.name
-                                               }
-                                        enqueue_command(cmd, MODE_UPDATER)
-                                else:
-                                    queue_log.error(
-                                        "Player {0} for platform {1} wasn't found in db".format(player_id, platform_id))
-                                pass
-                        if player is None:
-                            queue_log.error("Player {0} for platform {1} wasn't proceed".format(player_id, platform_id))
-
-                    elif cmd_type == 'stop_server':
+                    need_stop = process_queue_command(body, config, method_frame, platforms, queue_log)
+                    if need_stop:
                         is_running = False
-                        cmd = {"cmd": "process_response", "text": "Worker shutdown started"}
-                        enqueue_command(cmd, MODE_BOT)
-                    elif cmd_type == "get_stats":
-                        msg = get_stats()
-                        msg["players"] = get_players_count()
-                        msg["module"] = "Worker"
-                        msg["platform_stats"] = {}
-                        for i in platforms:
-                            msg["platform_stats"][i.name] = str(i.get_stats())
-                        cmd = {"cmd": "process_response", "text": str(msg)}
-                        enqueue_command(cmd, MODE_BOT)
                     try:
                         m_channel.basic_ack(method_frame.delivery_tag)
                     except BaseException as exc:
@@ -236,3 +163,85 @@ def main_worker(config: Config):
                 pass
             else:
                 raise
+
+
+def process_queue_command(body: bytes, config: Config, method_frame, platforms, queue_log: Logger) -> bool:
+    cmd = json.loads(body)
+    cmd_type = cmd.get("cmd")
+    need_stop = False
+    if cmd_type == 'renew_achievements':
+        platform_id = cmd.get("platform_id")
+        player_id = cmd.get("player_id")
+        dt_sent = cmd.get("dt_sent")
+        dt_sent = datetime.datetime.fromtimestamp(dt_sent)
+        queue_log.info("Start renew achievements for player {2} and platform {3} because msg {0} "
+                       "with delivery_tag {1}".format(body, method_frame.delivery_tag,
+                                                      player_id, platform_id))
+        player = None
+        for i in platforms:
+            queue_log.debug("Check platform {0} {1}".format(i.name, i.id))
+            if int(i.id) == int(platform_id):
+                players = load_players(platform=i, config=config, player_id=player_id,
+                                       status_id=STATUS_VALID)
+                if len(players) > 0:
+                    player = players[0]
+                    if player.dt_updated is None or player.dt_updated.replace(tzinfo=timezone.utc) < \
+                            dt_sent.replace(tzinfo=timezone.utc):
+                        queue_log.info(
+                            "Start actually renew achievements for player {2}  and platform {3} "
+                            "because msg {0} with delivery_tag {1}".format(
+                                body,
+                                method_frame.delivery_tag,
+                                player_id, i.name))
+                        i.set_def_locale()
+                        player.renew()
+                        player.platform.save()
+                        player.save()
+                        cmd = {"chat_id": player.telegram_id,
+                               "cmd": "msg_to_user",
+                               "text": 'Achievements for account {} platform {} renewed'.format(
+                                   player.ext_id, i.name),
+                               "type": MT_ACCOUNT_UPDATED,
+                               "telegram_id": player.telegram_id,
+                               "name": player.name,
+                               "platform": i.name
+                               }
+                        enqueue_command(cmd, MODE_UPDATER)
+                    else:
+                        queue_log.info(
+                            "Skipped renew achievements for player {2} and platform {3} because msg "
+                            "{0} with delivery_tag {1} was sent at {4} and last renew was {5}".format(
+                                body,
+                                method_frame.delivery_tag,
+                                player_id, i.name, dt_sent, player.dt_updated))
+                        cmd = {"chat_id": player.telegram_id,
+                               "cmd": "msg_to_user",
+                               "text": 'Achievements for account {} platform {} renewed'.format(
+                                   player.ext_id, i.name),
+                               "type": MT_ACCOUNT_UPDATED,
+                               "telegram_id": player.telegram_id,
+                               "name": player.name,
+                               "platform": i.name
+                               }
+                        enqueue_command(cmd, MODE_UPDATER)
+                else:
+                    queue_log.error(
+                        "Player {0} for platform {1} wasn't found in db".format(player_id, platform_id))
+                pass
+        if player is None:
+            queue_log.error("Player {0} for platform {1} wasn't proceed".format(player_id, platform_id))
+
+    elif cmd_type == 'stop_server':
+        need_stop = True
+        cmd = {"cmd": "process_response", "text": "Worker shutdown started"}
+        enqueue_command(cmd, MODE_BOT)
+    elif cmd_type == "get_stats":
+        msg = get_stats()
+        msg["players"] = get_players_count()
+        msg["module"] = "Worker"
+        msg["platform_stats"] = {}
+        for i in platforms:
+            msg["platform_stats"][i.name] = str(i.get_stats())
+        cmd = {"cmd": "process_response", "text": str(msg)}
+        enqueue_command(cmd, MODE_BOT)
+    return need_stop
