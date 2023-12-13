@@ -13,6 +13,7 @@ from ..game import Game
 from ..log import get_logger
 from ..platform import Platform
 from ..platform_utils import save_api_key, inc_call_cnt, get_call_cnt, set_call_counters_retain, sef_daily_call_limit
+from ..rates import set_limit, do_with_limit
 from ..security import is_password_encrypted, encrypt_password, decrypt_password
 from ..config import MODE_CORE
 
@@ -67,7 +68,9 @@ def _call_api(url: str, method_name: str, params: Dict) -> requests.Response:
         api_log.info("Request to {} for {}".
                      format(url, params if len(params) > 0 else "no parameters"))
         try:
-            r = requests.get(real_url, timeout=30)
+            r = do_with_limit("https://retroachievements.org/",
+                              requests.get,
+                              dict(url=real_url, timeout=30))
             api_log.info("Response from {} for {} is {}".
                          format(url, params if len(params) > 0 else "no parameters", r))
             if r.status_code == 200 or cnt >= max_api_call_tries:
@@ -358,6 +361,8 @@ def init_platform(config: Config) -> Platform:
         open_key = key_read
     set_key(open_key)
     set_user(user)
+    # TODO: it's approximate limit, calculated by just one sample. Set exact
+    set_limit("https://retroachievements.org/", 10, 19, api_log)
     return retro
 
 
