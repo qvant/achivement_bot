@@ -164,7 +164,7 @@ class Platform:
         conn = self.get_connect()
         cursor = conn.cursor()
         if console_id is not None:
-            cursor.execute(get_query(GET_CONSOLE_BY_ID), (self.id, str(console_id)))
+            cursor.execute(get_query(GET_CONSOLE_BY_ID), (self.id, console_id))
         else:
             cursor.execute(get_query(GET_CONSOLES_FOR_PLATFORM), (self.id,))
         consoles = []
