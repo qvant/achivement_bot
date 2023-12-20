@@ -11,19 +11,18 @@ from ..config import Config
 from ..game import Game
 from ..log import get_logger
 from ..platform import Platform
+from ..platform_utils import save_api_key, inc_call_cnt, get_call_cnt, sef_daily_call_limit, set_call_counters_retain
 from ..rates import do_with_limit, set_limit, get_limit_counter, get_limit_interval_end
 from ..security import is_password_encrypted, encrypt_password, decrypt_password
 from ..config import MODE_CORE
 
 PLATFORM_STEAM = 1
+PLATFORM_NAME = "Steam"
 
 global api_log
 global api_key
-global call_counters
-global api_calls_daily_limit
 global max_api_call_tries
 global api_call_pause_on_error
-global call_counters_retain
 global hardcoded_games
 global skip_extra_info
 global session
@@ -48,34 +47,6 @@ def set_skip_extra_info(val: bool = False):
     skip_extra_info = val
 
 
-def _save_api_key(password: str, path: str):
-    fp = codecs.open(path, 'r', "utf-8")
-    config = json.load(fp)
-    fp.close()
-    fp = codecs.open(path, 'w', "utf-8")
-    config["API_KEY"] = password
-    json.dump(config, fp, indent=2)
-    fp.close()
-
-
-def inc_call_cnt(method: str):
-    global call_counters
-    global call_counters_retain
-    cur_dt = str(datetime.date.today())
-    if call_counters is None:
-        call_counters = {}
-    if cur_dt not in call_counters:
-        call_counters[cur_dt] = {}
-    if method not in call_counters[cur_dt]:
-        call_counters[cur_dt][method] = int(0)
-    call_counters[cur_dt][method] += int(1)
-    while len(call_counters) > call_counters_retain >= 0:
-        keys = [key for key in call_counters]
-        keys.sort()
-        old_dt = keys[0]
-        call_counters.pop(old_dt, 'None')
-
-
 def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool = True) -> requests.Response:
     global max_api_call_tries
     global api_call_pause_on_error
@@ -95,7 +66,7 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
     headers = {'Accept-Encoding': 'gzip'}
     while True:
         if require_auth:
-            inc_call_cnt(method_name)
+            inc_call_cnt(PLATFORM_NAME, method_name)
         api_log.info("Request to {} for {}".
                      format(url, params if len(params) > 0 else "no parameters"))
         try:
@@ -131,33 +102,13 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
     return r
 
 
-def get_call_cnt():
-    global call_counters
-    if call_counters is not None:
-        for i in call_counters:
-            total = int(0)
-            for j in call_counters[i]:
-                if j != "Total":
-                    total += int(call_counters[i][j])
-            call_counters[i]["Total"] = total
-            call_counters[i]["Used calls %"] = 0
-            if total > 0:
-                call_counters[i]["Used calls %"] = round(total / api_calls_daily_limit * 100, 2)
-
-    return call_counters
-
-
 def init_platform(config: Config) -> Platform:
     global api_log
-    global call_counters
-    global api_calls_daily_limit
     global max_api_call_tries
     global api_call_pause_on_error
-    global call_counters_retain
     global hardcoded_games
     global session
     session = requests.Session()
-    call_counters = {}
     hardcoded_games = {}
     api_log = get_logger("LOG_API_steam_" + str(config.mode), config.log_level, True)
     f = config.file_path[:config.file_path.rfind('/')] + "steam.json"
@@ -168,10 +119,8 @@ def init_platform(config: Config) -> Platform:
     incremental_update_interval = steam_config.get("INCREMENTAL_UPDATE_INTERVAL")
     incremental_skip_chance = steam_config.get("INCREMENTAL_SKIP_CHANCE")
     api_calls_daily_limit = steam_config.get("API_CALLS_DAILY_LIMIT")
-    if api_calls_daily_limit is None:
-        api_calls_daily_limit = 100000
-    else:
-        api_calls_daily_limit = int(api_calls_daily_limit)
+    if api_calls_daily_limit is not None:
+        sef_daily_call_limit(PLATFORM_NAME, int(api_calls_daily_limit))
     max_api_call_tries = steam_config.get("MAX_API_CALL_TRIES")
     if max_api_call_tries is None:
         max_api_call_tries = 3
@@ -183,14 +132,12 @@ def init_platform(config: Config) -> Platform:
     else:
         api_call_pause_on_error = int(api_call_pause_on_error)
     call_counters_retain = steam_config.get("CALL_COUNTERS_RETAIN")
-    if call_counters_retain is None:
-        call_counters_retain = 7
-    else:
-        call_counters_retain = int(call_counters_retain)
+    if call_counters_retain is not None:
+        set_call_counters_retain(PLATFORM_NAME, int(call_counters_retain))
     steam = Platform(name='Steam', get_games=get_player_games, get_achievements=get_player_achievements,
                      get_game=get_game, games=None, id=PLATFORM_STEAM, validate_player=get_player_stats,
                      get_player_id=get_name,
-                     get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,
+                     get_stats=get_api_counters, incremental_update_enabled=incremental_update_enabled,
                      incremental_update_interval=incremental_update_interval, get_last_games=get_player_last_games,
                      incremental_skip_chance=incremental_skip_chance, get_consoles=None,
                      get_player_stats=get_player_stats_for_game, set_hardcoded=set_hardcoded,
@@ -201,7 +148,7 @@ def init_platform(config: Config) -> Platform:
     elif config.mode == MODE_CORE:
         api_log.info("Steam key in plain text, start encrypt")
         password = encrypt_password(key_read, config.server_name, config.db_port)
-        _save_api_key(password, f)
+        save_api_key(password, f)
         api_log.info("Steam key encrypted and save back in config")
         open_key = key_read
     else:
@@ -474,6 +421,10 @@ def get_player_avatar(player_id):
         else:
             url = None
         return url
+
+
+def get_api_counters():
+    return get_call_cnt(PLATFORM_NAME)
 
 
 def set_hardcoded(games_names_map: Dict):

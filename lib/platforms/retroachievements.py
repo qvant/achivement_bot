@@ -12,11 +12,14 @@ from ..console import Console
 from ..game import Game
 from ..log import get_logger
 from ..platform import Platform
+from ..platform_utils import save_api_key, inc_call_cnt, get_call_cnt, set_call_counters_retain, sef_daily_call_limit
+from ..rates import set_limit, do_with_limit
 from ..security import is_password_encrypted, encrypt_password, decrypt_password
 from ..config import MODE_CORE
 
 
 PLATFORM_RETRO = 2
+PLATFORM_NAME = "Retroachievements"
 
 ACHIEVEMENT_ICON_URL_TEMPLATE = "https://s3-eu-west-1.amazonaws.com/i.retroachievements.org/Badge/{0}.png"
 GAME_ICON_URL_TEMPLATE = "https://retroachievements.org{0}"
@@ -52,49 +55,6 @@ def set_user(user):
     api_user = user
 
 
-def _save_api_key(password: str, path: str):
-    fp = codecs.open(path, 'r', "utf-8")
-    config = json.load(fp)
-    fp.close()
-    fp = codecs.open(path, 'w', "utf-8")
-    config["API_KEY"] = password
-    json.dump(config, fp, indent=2)
-    fp.close()
-
-
-def inc_call_cnt(method: str):
-    global call_counters
-    global call_counters_retain
-    cur_dt = str(datetime.date.today())
-    if call_counters is None:
-        call_counters = {}
-    if cur_dt not in call_counters:
-        call_counters[cur_dt] = {}
-    if method not in call_counters[cur_dt]:
-        call_counters[cur_dt][method] = int(0)
-    call_counters[cur_dt][method] += 1
-    while len(call_counters) > call_counters_retain >= 0:
-        keys = [key for key in call_counters]
-        keys.sort()
-        old_dt = keys[0]
-        call_counters.pop(old_dt, 'None')
-
-
-def get_call_cnt():
-    global call_counters
-    if call_counters is not None:
-        for i in call_counters:
-            total = int(0)
-            for j in call_counters[i]:
-                if j != "Total":
-                    total += call_counters[i][j]
-            call_counters[i]["Total"] = total
-            call_counters[i]["Used calls %"] = 0
-            if total > 0:
-                call_counters[i]["Used calls %"] = round(total / 100000 * 100, 2)
-    return call_counters
-
-
 def _call_api(url: str, method_name: str, params: Dict) -> requests.Response:
     global max_api_call_tries
     global api_call_pause_on_error
@@ -104,11 +64,13 @@ def _call_api(url: str, method_name: str, params: Dict) -> requests.Response:
     for i in params:
         real_url += "&{}={}".format(i, params[i])
     while True:
-        inc_call_cnt(method_name)
+        inc_call_cnt(PLATFORM_NAME, method_name)
         api_log.info("Request to {} for {}".
                      format(url, params if len(params) > 0 else "no parameters"))
         try:
-            r = requests.get(real_url, timeout=30)
+            r = do_with_limit("https://retroachievements.org/",
+                              requests.get,
+                              dict(url=real_url, timeout=30))
             api_log.info("Response from {} for {} is {}".
                          format(url, params if len(params) > 0 else "no parameters", r))
             if r.status_code == 200 or cnt >= max_api_call_tries:
@@ -261,7 +223,7 @@ def get_player_achievements(player_id, game_id):
 def get_player_games(player_id):
     global api_log
     res = [[], []]
-    pack_size = 10
+    pack_size = 50
     games_total = 0
     params = {
         "u": player_id,
@@ -364,10 +326,8 @@ def init_platform(config: Config) -> Platform:
     incremental_update_interval = retro_config.get("INCREMENTAL_UPDATE_INTERVAL")
     incremental_skip_chance = retro_config.get("INCREMENTAL_SKIP_CHANCE")
     api_calls_daily_limit = retro_config.get("API_CALLS_DAILY_LIMIT")
-    if api_calls_daily_limit is None:
-        api_calls_daily_limit = 100000
-    else:
-        api_calls_daily_limit = int(api_calls_daily_limit)
+    if api_calls_daily_limit is not None:
+        sef_daily_call_limit(PLATFORM_NAME, int(api_calls_daily_limit))
     max_api_call_tries = retro_config.get("MAX_API_CALL_TRIES")
     if max_api_call_tries is None:
         max_api_call_tries = 3
@@ -379,13 +339,11 @@ def init_platform(config: Config) -> Platform:
     else:
         api_call_pause_on_error = int(api_call_pause_on_error)
     call_counters_retain = retro_config.get("CALL_COUNTERS_RETAIN")
-    if call_counters_retain is None:
-        call_counters_retain = 7
-    else:
-        call_counters_retain = int(call_counters_retain)
+    if call_counters_retain is not None:
+        set_call_counters_retain(PLATFORM_NAME, int(call_counters_retain))
     retro = Platform(name='Retroachievements', get_games=get_player_games, get_achievements=get_player_achievements,
                      get_game=get_game, games=None, id=PLATFORM_RETRO, validate_player=get_name, get_player_id=get_name,
-                     get_stats=get_call_cnt, incremental_update_enabled=incremental_update_enabled,
+                     get_stats=get_api_counters, incremental_update_enabled=incremental_update_enabled,
                      incremental_update_interval=incremental_update_interval, get_last_games=get_last_player_games,
                      incremental_skip_chance=incremental_skip_chance, get_consoles=get_consoles,
                      get_player_avatar=get_player_avatar)
@@ -395,7 +353,7 @@ def init_platform(config: Config) -> Platform:
     elif config.mode == MODE_CORE:
         api_log.info("Retroachievements key in plain text, start encrypt")
         password = encrypt_password(key_read, config.server_name, config.db_port)
-        _save_api_key(password, f)
+        save_api_key(password, f)
         api_log.info("Retroachievements key encrypted and save back in config")
         open_key = key_read
     else:
@@ -403,4 +361,14 @@ def init_platform(config: Config) -> Platform:
         open_key = key_read
     set_key(open_key)
     set_user(user)
+    # TODO: it's approximate limit, calculated by just one sample. Set exact
+    set_limit("https://retroachievements.org/", 10, 15, api_log)
     return retro
+
+
+def set_game_updater_limits():
+    set_limit("https://retroachievements.org/", 1, 1, api_log)
+
+
+def get_api_counters():
+    return get_call_cnt(PLATFORM_NAME)

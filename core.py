@@ -13,29 +13,9 @@ from lib.db import load, load_players, set_load_logger
 
 
 def main_core(config: Config):
-    queue_log = get_logger("Rabbit_core", config.log_level, True)
-
-    set_load_logger(config)
-    set_queue_config(config)
-    set_queue_log(queue_log)
-
-    Platform.set_config(config)
-    platforms = load(config, load_achievements=False, load_games=False)
-
-    m_queue = get_mq_connect(config)
-    m_channel = m_queue.channel()
-    m_channel.queue_declare(queue=MAIN_QUEUE_NAME, durable=True)
-    m_channel.exchange_declare(exchange='achievement_hunt',
-                               exchange_type='direct',
-                               durable=True)
-    m_channel.queue_bind(exchange='achievement_hunt',
-                         queue=MAIN_QUEUE_NAME,
-                         routing_key=config.mode)
+    m_channel, platforms, queue_log = init_core(config)
 
     is_running = True
-
-    cmd = {"cmd": "process_response", "text": "Core started at {0}.".format(datetime.datetime.now())}
-    enqueue_command(cmd, MODE_BOT)
 
     while is_running:
 
@@ -106,3 +86,24 @@ def main_core(config: Config):
                 queue_log.info("Continue work because suppress errors mode")
             else:
                 raise
+
+
+def init_core(config: Config):
+    queue_log = get_logger("Rabbit_core", config.log_level, True)
+    set_load_logger(config)
+    set_queue_config(config)
+    set_queue_log(queue_log)
+    Platform.set_config(config)
+    platforms = load(config, load_achievements=False, load_games=False)
+    m_queue = get_mq_connect(config)
+    m_channel = m_queue.channel()
+    m_channel.queue_declare(queue=MAIN_QUEUE_NAME, durable=True)
+    m_channel.exchange_declare(exchange='achievement_hunt',
+                               exchange_type='direct',
+                               durable=True)
+    m_channel.queue_bind(exchange='achievement_hunt',
+                         queue=MAIN_QUEUE_NAME,
+                         routing_key=config.mode)
+    cmd = {"cmd": "process_response", "text": "Core started at {0}.".format(datetime.datetime.now())}
+    enqueue_command(cmd, MODE_BOT)
+    return m_channel, platforms, queue_log

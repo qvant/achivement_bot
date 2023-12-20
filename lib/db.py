@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from typing import Union
+from typing import Union, List
 
 import psycopg2
 
@@ -21,7 +21,7 @@ def set_load_logger(cfg: Config):
     load_log = get_logger("loader_" + str(cfg.mode), cfg.log_level)
 
 
-def load(config: Config, load_games: bool = True, load_achievements: bool = True):
+def load(config: Config, load_games: bool = True, load_achievements: bool = True) -> List[Platform]:
     global load_log
     platforms = [
         init_steam(config), init_retro(config)]

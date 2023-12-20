@@ -2,12 +2,14 @@ import datetime
 import json
 import time
 from datetime import timezone
+from typing import List
 
 import pika
 
 from lib.config import Config, MODE_BOT
 from lib.log import get_logger
 from lib.platform import Platform
+from lib.platforms.retroachievements import set_game_updater_limits
 from lib.platforms.steam import set_skip_extra_info
 from lib.queue import set_config as set_queue_config, set_logger as set_queue_log, get_mq_connect, \
     GAME_UPDATER_QUEUE_NAME, enqueue_command
@@ -28,6 +30,7 @@ def main_game_updater(config: Config):
     Platform.set_config(config)
     platforms = load(config)
     set_skip_extra_info(False)
+    set_game_updater_limits()
 
     m_queue = get_mq_connect(config)
     m_channel = m_queue.channel()
@@ -134,20 +137,9 @@ def main_game_updater(config: Config):
                 if body is not None:
                     queue_log.info("Received user message {0} with delivery_tag {1}".format(body,
                                                                                             method_frame.delivery_tag))
-                    cmd = json.loads(body)
-                    cmd_type = cmd.get("cmd")
-                    if cmd_type == 'stop_server':
+                    need_stop = process_queue_command(body, platforms)
+                    if need_stop:
                         is_running = False
-                        cmd = {"cmd": "process_response", "text": "Game updater shutdown started"}
-                        enqueue_command(cmd, MODE_BOT)
-                    elif cmd_type == "get_stats":
-                        msg = get_stats()
-                        msg["module"] = "Game updater"
-                        msg["platform_stats"] = {}
-                        for j in platforms:
-                            msg["platform_stats"][j.name] = str(j.get_stats())
-                        cmd = {"cmd": "process_response", "text": str(msg)}
-                        enqueue_command(cmd, MODE_BOT)
                     try:
                         m_channel.basic_ack(method_frame.delivery_tag)
                     except BaseException as exc:
@@ -174,3 +166,22 @@ def main_game_updater(config: Config):
                 pass
             else:
                 raise
+
+
+def process_queue_command(body: bytes, platforms: List[Platform]) -> bool:
+    cmd = json.loads(body)
+    cmd_type = cmd.get("cmd")
+    need_stop = False
+    if cmd_type == 'stop_server':
+        need_stop = True
+        cmd = {"cmd": "process_response", "text": "Game updater shutdown started"}
+        enqueue_command(cmd, MODE_BOT)
+    elif cmd_type == "get_stats":
+        msg = get_stats()
+        msg["module"] = "Game updater"
+        msg["platform_stats"] = {}
+        for j in platforms:
+            msg["platform_stats"][j.name] = str(j.get_stats())
+        cmd = {"cmd": "process_response", "text": str(msg)}
+        enqueue_command(cmd, MODE_BOT)
+    return need_stop
