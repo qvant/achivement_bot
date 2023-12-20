@@ -135,7 +135,7 @@ def main_worker(config: Config):
                 if body is not None:
                     queue_log.info("Received user message {0} with delivery_tag {1}".format(body,
                                                                                             method_frame.delivery_tag))
-                    need_stop = process_queue_command(body, config, method_frame, platforms, queue_log)
+                    need_stop = process_queue_command(body, config, platforms, queue_log)
                     if need_stop:
                         is_running = False
                     try:
@@ -166,7 +166,7 @@ def main_worker(config: Config):
                 raise
 
 
-def process_queue_command(body: bytes, config: Config, method_frame, platforms: List[Platform],
+def process_queue_command(body: bytes, config: Config, platforms: List[Platform],
                           queue_log: Logger) -> bool:
     cmd = json.loads(body)
     cmd_type = cmd.get("cmd")
@@ -176,7 +176,7 @@ def process_queue_command(body: bytes, config: Config, method_frame, platforms: 
         player_id = cmd.get("player_id")
         dt_sent = cmd.get("dt_sent")
         dt_sent = datetime.datetime.fromtimestamp(dt_sent)
-        update_player_achievements_cmd_handler(body, config, dt_sent, method_frame, platform_id, platforms, player_id,
+        update_player_achievements_cmd_handler(config, dt_sent, platform_id, platforms, player_id,
                                                queue_log)
 
     elif cmd_type == 'stop_server':
@@ -199,11 +199,10 @@ def get_stats_cmd_handler(platforms: List[Platform]):
     enqueue_command(cmd, MODE_BOT)
 
 
-def update_player_achievements_cmd_handler(body: bytes, config: Config, dt_sent, method_frame, platform_id,
-                                           platforms: List[Platform], player_id, queue_log):
-    queue_log.info("Start renew achievements for player {2} and platform {3} because msg {0} "
-                   "with delivery_tag {1}".format(body, method_frame.delivery_tag,
-                                                  player_id, platform_id))
+def update_player_achievements_cmd_handler(config: Config, dt_sent, platform_id,
+                                           platforms: List[Platform], player_id, queue_log: Logger):
+    queue_log.info("Start renew achievements for player {} and platform {} because command received"
+                   .format(player_id, platform_id))
     player = None
     for i in platforms:
         queue_log.debug("Check platform {0} {1}".format(i.name, i.id))
@@ -215,42 +214,27 @@ def update_player_achievements_cmd_handler(body: bytes, config: Config, dt_sent,
                 if player.dt_updated is None or player.dt_updated.replace(tzinfo=timezone.utc) < \
                         dt_sent.replace(tzinfo=timezone.utc):
                     queue_log.info(
-                        "Start actually renew achievements for player {2}  and platform {3} "
-                        "because msg {0} with delivery_tag {1}".format(
-                            body,
-                            method_frame.delivery_tag,
+                        "Start actually renew achievements for player {} and platform {}".format(
                             player_id, i.name))
                     i.set_def_locale()
                     player.renew()
                     player.platform.save()
                     player.save()
-                    cmd = {"chat_id": player.telegram_id,
-                           "cmd": "msg_to_user",
-                           "text": 'Achievements for account {} platform {} renewed'.format(
-                               player.ext_id, i.name),
-                           "type": MT_ACCOUNT_UPDATED,
-                           "telegram_id": player.telegram_id,
-                           "name": player.name,
-                           "platform": i.name
-                           }
-                    enqueue_command(cmd, MODE_UPDATER)
                 else:
                     queue_log.info(
-                        "Skipped renew achievements for player {2} and platform {3} because msg "
-                        "{0} with delivery_tag {1} was sent at {4} and last renew was {5}".format(
-                            body,
-                            method_frame.delivery_tag,
+                        "Skipped renew achievements for player {} and platform {} because command "
+                        "was sent at {} and last renew was {}".format(
                             player_id, i.name, dt_sent, player.dt_updated))
-                    cmd = {"chat_id": player.telegram_id,
-                           "cmd": "msg_to_user",
-                           "text": 'Achievements for account {} platform {} renewed'.format(
-                               player.ext_id, i.name),
-                           "type": MT_ACCOUNT_UPDATED,
-                           "telegram_id": player.telegram_id,
-                           "name": player.name,
-                           "platform": i.name
-                           }
-                    enqueue_command(cmd, MODE_UPDATER)
+                cmd = {"chat_id": player.telegram_id,
+                       "cmd": "msg_to_user",
+                       "text": 'Achievements for account {} platform {} renewed'.format(
+                           player.ext_id, i.name),
+                       "type": MT_ACCOUNT_UPDATED,
+                       "telegram_id": player.telegram_id,
+                       "name": player.name,
+                       "platform": i.name
+                       }
+                enqueue_command(cmd, MODE_UPDATER)
             else:
                 queue_log.error(
                     "Player {0} for platform {1} wasn't found in db".format(player_id, platform_id))
