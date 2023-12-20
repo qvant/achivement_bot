@@ -10,7 +10,8 @@ select a.id,
        a.is_hidden
 from achievements_hunt.achievements a
 join achievements_hunt.games g
-  on a.game_id = g.id
+on a.game_id = g.id
+  and a.platform_id  = g.platform_id
 where a.platform_id = %s
   and a.game_id = %s
-order by id
+order by a.id
