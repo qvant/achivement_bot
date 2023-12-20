@@ -362,8 +362,12 @@ def init_platform(config: Config) -> Platform:
     set_key(open_key)
     set_user(user)
     # TODO: it's approximate limit, calculated by just one sample. Set exact
-    set_limit("https://retroachievements.org/", 10, 19, api_log)
+    set_limit("https://retroachievements.org/", 10, 15, api_log)
     return retro
+
+
+def set_game_updater_limits():
+    set_limit("https://retroachievements.org/", 1, 1, api_log)
 
 
 def get_api_counters():

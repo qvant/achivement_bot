@@ -9,6 +9,7 @@ import pika
 from lib.config import Config, MODE_BOT
 from lib.log import get_logger
 from lib.platform import Platform
+from lib.platforms.retroachievements import set_game_updater_limits
 from lib.platforms.steam import set_skip_extra_info
 from lib.queue import set_config as set_queue_config, set_logger as set_queue_log, get_mq_connect, \
     GAME_UPDATER_QUEUE_NAME, enqueue_command
@@ -29,6 +30,7 @@ def main_game_updater(config: Config):
     Platform.set_config(config)
     platforms = load(config)
     set_skip_extra_info(False)
+    set_game_updater_limits()
 
     m_queue = get_mq_connect(config)
     m_channel = m_queue.channel()
