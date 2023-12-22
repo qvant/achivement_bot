@@ -10,4 +10,4 @@ insert into achievements_hunt.achievements as l (name, ext_id, platform_id, game
                             or coalesce(l.locked_icon_url, '')
                                     != coalesce(EXCLUDED.locked_icon_url, l.locked_icon_url, '')
                             or l.is_hidden != EXCLUDED.is_hidden
-                            returning id, name, description
+                            returning id

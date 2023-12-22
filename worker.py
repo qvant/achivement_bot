@@ -17,6 +17,7 @@ from lib.queue import set_config as set_queue_config, set_logger as set_queue_lo
 from lib.stats import get_stats
 from lib.db import load, load_players, set_load_logger, get_next_update_date, mark_update_done, start_update, \
     get_players_count
+from lib.db_api import set_db_config
 from lib.message_types import MT_ACCOUNT_UPDATED
 
 ID_PROCESS_WORKER = 1
@@ -27,6 +28,7 @@ def main_worker(config: Config):
     renew_log = get_logger("renew_worker", config.log_level, True)
 
     set_load_logger(config)
+    set_db_config(config)
     set_queue_config(config)
     set_queue_log(queue_log)
 

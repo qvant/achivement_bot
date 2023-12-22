@@ -1,3 +1,4 @@
+from .db_api import commit
 from .game import Game
 from .console import Console
 from .config import Config
@@ -11,6 +12,7 @@ from .query_holder import get_query, INSERT_PLATFORM, GET_CONSOLE_BY_ID, GET_CON
     GET_HARDCODED_GAMES_BY_PLATFORM, GET_GAMES_BY_PLATFORM, GET_GAME_BY_PLATFORM_AND_ID, GET_ACHIEVEMENTS_BY_PLATFORM, \
     GET_ACHIEVEMENTS_BY_PLATFORM_AND_GAME_ID, UPDATE_PLATFORM_LANGUAGES_SET_LAST_UPDATE, \
     GET_PLATFORM_LANGUAGES_BY_PLATFORM_ID
+from .db_api import get_connect as db_api_get_connect
 
 
 class Platform:
@@ -103,15 +105,7 @@ class Platform:
     # Temp!
     @classmethod
     def get_connect(cls):
-        if cls.conn is None:
-            cls.conn = psycopg2.connect(dbname=cls.config.db_name, user=cls.config.db_user,
-                                        password=cls.config.db_password, host=cls.config.db_host,
-                                        port=cls.config.db_port)
-        elif cls.conn.closed != 0:
-            cls.conn = psycopg2.connect(dbname=cls.config.db_name, user=cls.config.db_user,
-                                        password=cls.config.db_password, host=cls.config.db_host,
-                                        port=cls.config.db_port)
-        return cls.conn
+        return db_api_get_connect()
 
     @classmethod
     def reset_connect(cls):
@@ -148,6 +142,7 @@ class Platform:
                                                                            self.games[i].name))
             self.games[i].save(cursor, self.active_locale)
         conn.commit()
+        commit()
         self.logger.info("Finish saving to db")
 
     def update_games(self, game_id: str, game_name: str, force: bool = False):

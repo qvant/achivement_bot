@@ -20,6 +20,7 @@ from lib.queue import set_config as set_queue_config, set_logger as set_queue_lo
     enqueue_command
 from lib.stats import get_stats
 from lib.db import set_load_logger
+from lib.db_api import set_db_config
 
 
 def main_updater(config: Config):
@@ -264,6 +265,7 @@ def init_updater(config: Config):
     queue_log = get_logger("Rabbit" + str(config.mode), config.log_level, True)
     db_log = get_logger("db_" + str(config.mode), config.log_level, True)
     set_load_logger(config)
+    set_db_config(config)
     set_queue_config(config)
     set_queue_log(queue_log)
     Platform.set_config(config)

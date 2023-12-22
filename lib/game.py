@@ -267,7 +267,7 @@ class Game:
                     if self.achievements[i].id is None or i in to_save:
                         self.achievements[i].set_game_id(self.id)
                         self.achievements[i].id = None
-                        self.achievements[i].save(cursor, active_locale)
+                        self.achievements[i].save(active_locale)
         if not self._stats_saved:
             stats_to_save = {}
             stats_exists = {}

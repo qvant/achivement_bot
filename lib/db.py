@@ -15,6 +15,8 @@ from .query_holder import get_query, GET_NEXT_UPDATE_DATE, MARK_UPDATE_DONE, CHE
 
 global load_log
 
+# TODO: Move everything into db_api.py
+
 
 def set_load_logger(cfg: Config):
     global load_log

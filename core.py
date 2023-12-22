@@ -10,6 +10,7 @@ from lib.queue import set_config as set_queue_config, set_logger as set_queue_lo
 from lib.queue_handlers import on_create, on_delete
 from lib.stats import get_stats
 from lib.db import load, load_players, set_load_logger
+from lib.db_api import set_db_config
 
 
 def main_core(config: Config):
@@ -91,6 +92,7 @@ def main_core(config: Config):
 def init_core(config: Config):
     queue_log = get_logger("Rabbit_core", config.log_level, True)
     set_load_logger(config)
+    set_db_config(config)
     set_queue_config(config)
     set_queue_log(queue_log)
     Platform.set_config(config)
