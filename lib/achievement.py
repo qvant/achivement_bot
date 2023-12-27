@@ -34,6 +34,9 @@ class Achievement:
     def set_game_id(self, game_id):
         self.game_id = game_id
 
+    def set_is_removed(self, is_removed: bool):
+        self.is_removed = is_removed
+
     def save(self, active_locale: str):
         from lib.db_api import save_english_achievement, save_l18n_achievement, save_achievement_translation, \
             get_achievement_text_for_locale
