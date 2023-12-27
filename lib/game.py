@@ -241,7 +241,8 @@ class Game:
             need_save = False
             to_save = []
             rows_found = False
-            for id, ext_id, name, description, icon_url, locked_icon_url, is_hidden in cursor:
+            existed_achievements = []
+            for id, ext_id, name, description, icon_url, locked_icon_url, is_hidden, is_removed in cursor:
                 rows_found = True
                 if ext_id in self.achievements:
                     self.achievements[ext_id].id = id
@@ -255,6 +256,8 @@ class Game:
                 else:
                     need_save = True
                     to_save.append(ext_id)
+                    if not is_removed and ext_id not in existed_achievements:
+                        existed_achievements.append(ext_id)
             if not rows_found:
                 need_save = True
             if not need_save:
@@ -262,6 +265,18 @@ class Game:
                     if self.achievements[i].id is None:
                         need_save = True
                         break
+            for i in existed_achievements:
+                if i not in self.achievements:
+
+                    removed_achievement = Achievement(id=None,
+                                                      game_id=self.id,
+                                                      name="",
+                                                      ext_id=i,
+                                                      platform_id=self.platform_id,
+                                                      description="",
+                                                      is_removed=True)
+                    removed_achievement.save(active_locale)
+
             if need_save:
                 for i in self.achievements:
                     if self.achievements[i].id is None or i in to_save:

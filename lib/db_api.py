@@ -15,7 +15,8 @@ def save_english_achievement(achievement: Achievement):
     cursor = get_cursor()
     cursor.execute(get_query(UPSERT_ACHIEVEMENT_ENGLISH),
                    (achievement.name, achievement.ext_id, achievement.platform_id, achievement.game_id,
-                    achievement.description, achievement.icon_url,achievement.locked_icon_url, achievement.is_hidden)
+                    achievement.description, achievement.icon_url,achievement.locked_icon_url, achievement.is_hidden,
+                    achievement.is_removed)
                    )
     ret = cursor.fetchone()
     id = ret[0]
@@ -26,7 +27,8 @@ def save_l18n_achievement(achievement: Achievement):
     cursor = get_cursor()
     cursor.execute(get_query(INSERT_ACHIEVEMENT),
                    (achievement.name, achievement.ext_id, achievement.platform_id, achievement.game_id,
-                    achievement.description, achievement.icon_url, achievement.locked_icon_url, achievement.is_hidden)
+                    achievement.description, achievement.icon_url, achievement.locked_icon_url, achievement.is_hidden,
+                    achievement.is_removed)
                    )
     ret = cursor.fetchone()
     if ret is None:

@@ -4,7 +4,7 @@ from typing import Union
 class Achievement:
     def __init__(self, id: Union[int, None], game_id: Union[int, None], name: Union[str, None],
                  platform_id: int, ext_id: Union[str, None], description: str, icon_url: Union[str, None] = None,
-                 locked_icon_url: Union[str, None] = None, is_hidden: bool = False):
+                 locked_icon_url: Union[str, None] = None, is_hidden: bool = False, is_removed: bool = False):
         self.id = id
         self.game_id = game_id
         self.platform_id = platform_id
@@ -26,6 +26,7 @@ class Achievement:
             self.name = name
         else:
             self.name = ext_id
+        self.is_removed = is_removed
 
     def get_id(self):
         return self.id

@@ -1,7 +1,7 @@
-alter table achievements_hunt.achievements add removed boolean not null default false;
-comment on column achievements_hunt.achievements.removed is 'Achievement removed by developer';
-alter table achievements_hunt.achievements add broken boolean not null default false;
-comment on column achievements_hunt.achievements.removed is 'Achievement can''t be obtained in legit way any more';
+alter table achievements_hunt.achievements add is_removed boolean not null default false;
+comment on column achievements_hunt.achievements.is_removed is 'Achievement removed by developer';
+alter table achievements_hunt.achievements add is_broken boolean not null default false;
+comment on column achievements_hunt.achievements.is_broken is 'Achievement can''t be obtained in legit way any more';
 
 CREATE OR REPLACE FUNCTION achievements_hunt.f_on_achievements_upd()
  RETURNS trigger
@@ -15,7 +15,7 @@ $function$
 ;
 
 create trigger trg_on_achievements_au after
-update of removed
+update of is_removed
     on
     achievements_hunt.achievements for each row execute procedure achievements_hunt.f_on_achievements_upd();
 
