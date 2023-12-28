@@ -25,7 +25,7 @@ left join achievements_hunt.map_games_to_genres m
   and m.game_id = g.id
 left join achievements_hunt.genres gr
   on m.genre_id = gr.id
-  and m.platform_id = gr.platform_id =
+  and m.platform_id = gr.platform_id
 left join achievements_hunt.map_games_to_features mf
   on mf.platform_id = g.platform_id
   and mf.game_id = g.id
