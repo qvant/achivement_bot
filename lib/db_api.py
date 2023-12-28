@@ -19,7 +19,15 @@ def save_english_achievement(achievement: Achievement):
                     achievement.is_removed)
                    )
     ret = cursor.fetchone()
-    id = ret[0]
+    if ret is None:
+        cursor = get_cursor()
+        cursor.execute(get_query(GET_ACHIEVEMENT_ID),
+                       (achievement.platform_id, achievement.ext_id, achievement.game_id))
+    if ret is not None:
+        id = ret[0]
+    else:
+        # TODO: add logs
+        id = None
     return id
 
 

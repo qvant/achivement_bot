@@ -52,4 +52,5 @@ class Achievement:
                 save_achievement_translation(self, active_locale)
 
     def __str__(self):
-        return "id: {0}, game_id: {1}, ext_id: {2}".format(self.id, self.game_id, self.ext_id)
+        return "id: {0}, game_id: {1}, ext_id: {2}, platform_id: {3}".format(
+            self.id, self.game_id, self.ext_id, self.platform_id)
