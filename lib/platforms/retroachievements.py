@@ -362,7 +362,7 @@ def init_platform(config: Config) -> Platform:
     set_key(open_key)
     set_user(user)
     # TODO: it's approximate limit, calculated by just one sample. Set exact
-    set_limit("https://retroachievements.org/", 10, 15, api_log)
+    set_limit("https://retroachievements.org/", 10, 12, api_log)
     return retro
 
 
