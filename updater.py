@@ -207,11 +207,11 @@ def process_games_queue(config: Config, db_log: Logger) -> bool:
         else:
             db_log.info("""No more in queue queue_games_update on step {0}""".format(step))
             break
-        if query_prepared:
-            cursor.execute("""DEALLOCATE upd_games""")
-            cursor.execute("""DEALLOCATE del_q""")
-            cursor.execute("""DEALLOCATE upd_achievement""")
-        connect.commit()
+    if query_prepared:
+        cursor.execute("""DEALLOCATE upd_games""")
+        cursor.execute("""DEALLOCATE del_q""")
+        cursor.execute("""DEALLOCATE upd_achievement""")
+    connect.commit()
     db_log.info("""Finish queue_games_update processing""")
     return queue_is_empty
 
