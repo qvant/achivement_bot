@@ -107,6 +107,7 @@ def process_player_achievements_queue(config: Config, db_log: Logger) -> bool:
             db_log.debug(""" start EXECUTE del_q""")
             psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
             db_log.debug(""" end EXECUTE del_q""")
+            connect.commit()
 
         else:
             db_log.info("""No more in queue queue_player_achievements_update on step {0}""".format(step))
@@ -154,6 +155,7 @@ def process_achievements_queue(config: Config, db_log: Logger) -> bool:
             psycopg2.extras.execute_batch(cursor, """EXECUTE update_player_games_perf  (%s, %s)""", games)
 
             psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
+            connect.commit()
         else:
             db_log.info("""No more in queue queue_achievements_update on step {0}""".format(step))
             break
@@ -204,6 +206,7 @@ def process_games_queue(config: Config, db_log: Logger) -> bool:
             psycopg2.extras.execute_batch(cursor, """EXECUTE upd_games (%s, %s)""", game_res)
             psycopg2.extras.execute_batch(cursor, """EXECUTE upd_achievement (%s)""", game_4_ach)
             psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
+            connect.commit()
         else:
             db_log.info("""No more in queue queue_games_update on step {0}""".format(step))
             break
