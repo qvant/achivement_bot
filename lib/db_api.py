@@ -2,8 +2,8 @@ import psycopg2
 
 from lib.achievement import Achievement
 from lib.config import Config
-from lib.query_holder import get_query, UPSERT_ACHIEVEMENT_ENGLISH, INSERT_ACHIEVEMENT, UPSERT_ACHIEVEMENT_TRANSLATION, \
-    GET_ACHIEVEMENT_TEXT, GET_ACHIEVEMENT_ID
+from lib.query_holder import get_query, UPSERT_ACHIEVEMENT_ENGLISH, INSERT_ACHIEVEMENT,\
+    UPSERT_ACHIEVEMENT_TRANSLATION, GET_ACHIEVEMENT_TEXT, GET_ACHIEVEMENT_ID
 
 global connect
 global config
@@ -15,8 +15,8 @@ def save_english_achievement(achievement: Achievement):
     cursor = get_cursor()
     cursor.execute(get_query(UPSERT_ACHIEVEMENT_ENGLISH),
                    (achievement.name, achievement.ext_id, achievement.platform_id, achievement.game_id,
-                    achievement.description, achievement.icon_url,achievement.locked_icon_url, achievement.is_hidden,
-                    achievement.is_removed)
+                    achievement.description, achievement.icon_url, achievement.locked_icon_url,
+                    achievement.is_hidden, achievement.is_removed)
                    )
     ret = cursor.fetchone()
     if ret is None:

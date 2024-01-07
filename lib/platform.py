@@ -4,7 +4,6 @@ from .console import Console
 from .config import Config
 from .log import get_logger
 from .achievement import Achievement
-import psycopg2
 from typing import Union, List
 
 from .platform_language import PlatformLanguage
