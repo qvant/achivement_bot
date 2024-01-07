@@ -31,7 +31,7 @@ left join achievements_hunt.map_games_to_features mf
   and mf.game_id = g.id
 left join achievements_hunt.features fr
   on mf.feature_id = fr.id
-  and mf.platform_id = = fr.platform_id
+  and mf.platform_id = fr.platform_id
 where g.platform_id = %s
   and g.id = %s
 group by g.id, g.platform_id, g.name, g.ext_id, g.console_id, g.icon_url,
