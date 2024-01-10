@@ -276,6 +276,7 @@ class Game:
                         break
             for i in existed_achievements.keys():
                 if i not in self.achievements:
+                    existed_achievements[i].enforce_save()
                     existed_achievements[i].set_is_removed(True)
                     existed_achievements[i].save(active_locale)
 

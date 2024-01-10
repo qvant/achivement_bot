@@ -27,6 +27,10 @@ class Achievement:
         else:
             self.name = ext_id
         self.is_removed = is_removed
+        self.need_forced_save = False
+
+    def enforce_save(self):
+        self.id = None
 
     def get_id(self):
         return self.id
@@ -40,7 +44,7 @@ class Achievement:
     def save(self, active_locale: str):
         from lib.db_api import save_english_achievement, save_l18n_achievement, save_achievement_translation, \
             get_achievement_text_for_locale
-        if self.id is None:
+        if self.id is None or self.need_forced_save:
             if active_locale == 'en':
                 self.id = save_english_achievement(self)
             else:
