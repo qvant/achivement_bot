@@ -25,8 +25,3 @@ def get_genre_id(genre_name: str, platform_id: int) -> int:
         from lib.db_api import get_genre_id as get_genre_id_db
         genres[platform_id][genre_name] = get_genre_id_db(genre_name, platform_id)
     return genres[platform_id][genre_name]
-
-
-
-
-
