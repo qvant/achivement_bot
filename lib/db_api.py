@@ -3,7 +3,8 @@ import psycopg2
 from lib.achievement import Achievement
 from lib.config import Config
 from lib.query_holder import get_query, UPSERT_ACHIEVEMENT_ENGLISH, INSERT_ACHIEVEMENT, \
-    UPSERT_ACHIEVEMENT_TRANSLATION, GET_ACHIEVEMENT_TEXT, GET_ACHIEVEMENT_ID
+    UPSERT_ACHIEVEMENT_TRANSLATION, GET_ACHIEVEMENT_TEXT, GET_ACHIEVEMENT_ID, GET_COMPANY_ID, INSERT_COMPANY, \
+    GET_GENRE_ID, INSERT_GENRE
 
 global connect
 global config
@@ -62,6 +63,26 @@ def get_achievement_text_for_locale(achievement: Achievement, active_locale: str
     achievement_name = ret[0]
     achievement_description = ret[1]
     return achievement_name, achievement_description
+
+
+def get_company_id(company_name: str, platform_id: int) -> int:
+    cursor = get_cursor()
+    cursor.execute(get_query(GET_COMPANY_ID), (platform_id, company_name,))
+    ret = cursor.fetchone()
+    if ret is None:
+        cursor.execute(get_query(INSERT_COMPANY), (platform_id, company_name,))
+        ret = cursor.fetchone()
+    return ret[0]
+
+
+def get_genre_id(genre_name: str, platform_id: int) -> int:
+    cursor = get_cursor()
+    cursor.execute(get_query(GET_GENRE_ID), (platform_id, genre_name,))
+    ret = cursor.fetchone()
+    if ret is None:
+        cursor.execute(get_query(INSERT_GENRE), (platform_id, genre_name,))
+        ret = cursor.fetchone()
+    return ret[0]
 
 
 def set_db_config(cfg: Config):

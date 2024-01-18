@@ -1,7 +1,7 @@
 from typing import Union, List, Dict
 from .achievement import Achievement
 from .console import Console
-from .query_holder import get_query, GET_COMPANY_ID, INSERT_COMPANY, GET_GENRE_ID, INSERT_GENRE, GET_FEATURE_ID, \
+from .query_holder import get_query, GET_FEATURE_ID, \
     INSERT_FEATURE, INSERT_GAME, GET_GAME_ID, GET_GAME_GENRES, DELETE_GAME_GENRES, \
     INSERT_GAME_GENRE, GET_GAME_FEATURES, \
     DELETE_GAME_FEATURES, UPDATE_GAME, INSERT_GAME_FEATURE, GET_ACHIEVEMENTS_FOR_GAME, \
@@ -44,9 +44,7 @@ class Game:
             self.developer = developer
         else:
             self.developer = ""
-        # TODO: this two lists better keep on platform level
-        self.companies = {}
-        self.genre_ids = {}
+        # TODO: this list better keep on platform level
         self.genres = []
         if stats is not None:
             self.stats = stats
@@ -66,13 +64,6 @@ class Game:
         if feature_ids is not None and features is not None and len(feature_ids) == len(features):
             for i in range(len(feature_ids)):
                 self.feature_ids[features[i]] = feature_ids[i]
-        if publisher_id is not None and publisher is not None:
-            self.companies[publisher] = int(publisher_id)
-        if developer_id is not None and developer is not None:
-            self.companies[developer] = int(developer_id)
-        if genre_ids is not None and genres is not None and len(genre_ids) == len(genres):
-            for i in range(len(genre_ids)):
-                self.genre_ids[genres[i]] = genre_ids[i]
         self._is_persist = self.id is not None
         self._achievements_saved = False
         self._stats_saved = len(self.stats) == 0
@@ -108,39 +99,23 @@ class Game:
             return int(self._stats_ext_to_id_map[stat_ext_id])
         return None
 
-    def _get_company_id(self, company_name: str, cursor) -> Union[None, int]:
+    def _get_company_id(self, company_name: str) -> Union[None, int]:
         if company_name is None:
             return None
-        if company_name not in self.companies:
-            cursor.execute(get_query(GET_COMPANY_ID), (self.platform_id, company_name,))
-            ret = cursor.fetchone()
-            if ret is not None:
-                self.companies[company_name] = ret[0]
-            else:
-                cursor.execute(get_query(INSERT_COMPANY), (self.platform_id, company_name,))
-                ret = cursor.fetchone()
-                self.companies[company_name] = ret[0]
-            return int(self.companies[company_name])
+        from lib.cache import get_company_id as get_company_id_cached
+        return get_company_id_cached(company_name, self.platform_id)
 
-    def get_publisher_id(self, company_name: str, cursor) -> Union[None, int]:
-        return self._get_company_id(company_name, cursor)
+    def get_publisher_id(self, company_name: str) -> Union[None, int]:
+        return self._get_company_id(company_name)
 
-    def get_developer_id(self, company_name: str, cursor) -> Union[None, int]:
-        return self._get_company_id(company_name, cursor)
+    def get_developer_id(self, company_name: str) -> Union[None, int]:
+        return self._get_company_id(company_name)
 
-    def get_genre_id(self, genre, cursor):
+    def get_genre_id(self, genre):
         if genre is None:
             return None
-        if genre not in self.genre_ids:
-            cursor.execute(get_query(GET_GENRE_ID), (self.platform_id, genre,))
-            ret = cursor.fetchone()
-            if ret is not None:
-                self.genre_ids[genre] = ret[0]
-            else:
-                cursor.execute(get_query(INSERT_GENRE), (self.platform_id, genre,))
-                ret = cursor.fetchone()
-                self.genre_ids[genre] = ret[0]
-        return int(self.genre_ids[genre])
+        from lib.cache import get_genre_id as get_genre_id_cached
+        return get_genre_id_cached(genre, self.platform_id)
 
     def get_feature_id(self, feature, cursor):
         if feature is None:
@@ -157,14 +132,14 @@ class Game:
         return int(self.feature_ids[feature])
 
     def save(self, cursor, active_locale: str):
-        developer_id = self.get_developer_id(self.developer, cursor)
-        publisher_id = self.get_publisher_id(self.publisher, cursor)
+        developer_id = self.get_developer_id(self.developer)
+        publisher_id = self.get_publisher_id(self.publisher)
         genres = []
         features = []
         # TODO: remove call on init
         if self.genres is not None:
             for i in self.genres:
-                genre_id = self.get_genre_id(i, cursor)
+                genre_id = self.get_genre_id(i)
                 if genre_id not in genres:
                     genres.append(genre_id)
         if self.features is not None:
