@@ -1,10 +1,14 @@
+from typing import Union, List
+
 import psycopg2
 
 from lib.achievement import Achievement
 from lib.config import Config
+from lib.game import Game
 from lib.query_holder import get_query, UPSERT_ACHIEVEMENT_ENGLISH, INSERT_ACHIEVEMENT, \
     UPSERT_ACHIEVEMENT_TRANSLATION, GET_ACHIEVEMENT_TEXT, GET_ACHIEVEMENT_ID, GET_COMPANY_ID, INSERT_COMPANY, \
-    GET_GENRE_ID, INSERT_GENRE
+    GET_GENRE_ID, INSERT_GENRE, INSERT_GAME, GET_GAME_ID, UPDATE_GAME, GET_GAME_GENRES, DELETE_GAME_GENRES, \
+    INSERT_GAME_GENRE, GET_GAME_FEATURES, DELETE_GAME_FEATURES, INSERT_GAME_FEATURE
 
 global connect
 global config
@@ -63,6 +67,66 @@ def get_achievement_text_for_locale(achievement: Achievement, active_locale: str
     achievement_name = ret[0]
     achievement_description = ret[1]
     return achievement_name, achievement_description
+
+
+def get_game_id(game: Game) -> Union[int, None]:
+    cursor = get_cursor()
+    cursor.execute(get_query(GET_GAME_ID), (game.platform_id, str(game.ext_id)))
+    ret = cursor.fetchone()
+    if ret is not None:
+        return ret[0]
+    return None
+
+
+def save_game(game: Game, developer_id: int, publisher_id: int) -> int:
+    cursor = get_cursor()
+    if game.id is None:
+        game.id = get_game_id(game)
+    if game.id is None:
+        cursor.execute(get_query(INSERT_GAME),
+                       (game.name, game.ext_id, game.platform_id, game.has_achievements, game.console_id(),
+                        game.icon_url, game.release_date, developer_id, publisher_id)
+                       )
+        ret = cursor.fetchone()
+        if ret is not None:
+            game.id = ret[0]
+        else:
+            game.id = get_game_id(game)
+    else:
+        cursor.execute(get_query(UPDATE_GAME), (game.name, game.has_achievements, game.console_id(),
+                                                game.icon_url, game.release_date, developer_id, publisher_id,
+                                                game.id, game.platform_id, game.name, game.has_achievements,
+                                                game.console_id(), game.icon_url, game.release_date,
+                                                developer_id, publisher_id)
+                       )
+
+
+def save_game_genres(platform_id: int, game_id: int, genres: List[int]):
+    cursor = get_cursor()
+    cursor.execute(get_query(GET_GAME_GENRES), (platform_id, game_id))
+    saved_genres = []
+    for i in cursor:
+        saved_genres.append(i)
+    if set(saved_genres) != set(genres) and len(genres) > 0:
+        # TODO: delete and insert only removed
+        cursor.execute(get_query(DELETE_GAME_GENRES), (platform_id, game_id))
+        for cur_g in genres:
+            # there not that many records, so no profit from bulk
+            cursor.execute(get_query(INSERT_GAME_GENRE), (platform_id, game_id, cur_g))
+
+
+def save_game_features(platform_id: int, game_id: int, features: List[int]):
+    cursor = get_cursor()
+    cursor.execute(get_query(GET_GAME_FEATURES), (platform_id, game_id))
+    saved_features = []
+    for i in cursor:
+        saved_features.append(i)
+    if set(saved_features) != set(features) and len(features) > 0:
+        # TODO: delete and insert only removed
+        cursor.execute(get_query(DELETE_GAME_FEATURES), (platform_id, game_id))
+        for cur_f in features:
+            # there not that many records, so no profit from bulk
+            cursor.execute(get_query(INSERT_GAME_FEATURE), (platform_id, game_id, cur_f))
 
 
 def get_company_id(company_name: str, platform_id: int) -> int:

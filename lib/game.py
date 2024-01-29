@@ -147,66 +147,11 @@ class Game:
                 feature_id = self.get_feature_id(i, cursor)
                 if feature_id not in features:
                     features.append(feature_id)
-        if self.id is None:
-            cursor.execute(get_query(INSERT_GAME),
-                           (self.name, self.ext_id, self.platform_id, self.has_achievements, self.console_id(),
-                            self.icon_url, self.release_date, developer_id, publisher_id,
-                            self.name, self.has_achievements, self.console_id(), self.icon_url, self.release_date,
-                            developer_id, publisher_id)
-                           )
-            ret = cursor.fetchone()
-            if ret is not None:
-                self.id = ret[0]
-            else:
-                cursor.execute(get_query(GET_GAME_ID), (self.platform_id, str(self.ext_id)))
-                ret = cursor.fetchone()
-                if ret is not None:
-                    self.id = ret[0]
-            cursor.execute(get_query(GET_GAME_GENRES), (self.platform_id, self.id))
-            saved_genres = []
-            for i in cursor:
-                saved_genres.append(i)
-            if set(saved_genres) != set(genres) and len(genres) > 0:
-                cursor.execute(get_query(DELETE_GAME_GENRES), (self.platform_id, self.id))
-                for cur_g in genres:
-                    # there not that many records, so no profit from bulk
-                    cursor.execute(get_query(INSERT_GAME_GENRE), (self.platform_id, self.id, cur_g))
-            cursor.execute(get_query(GET_GAME_FEATURES), (self.platform_id, self.id))
-            saved_features = []
-            for i in cursor:
-                saved_features.append(i)
-            if set(saved_features) != set(features) and len(features) > 0:
-                cursor.execute(get_query(DELETE_GAME_FEATURES), (self.platform_id, self.id))
-                for cur_f in features:
-                    # there not that many records, so no profit from bulk
-                    cursor.execute(get_query(INSERT_GAME_FEATURE), (self.platform_id, self.id, cur_f))
-        else:
-            if not self._is_persist:
-                cursor.execute(get_query(UPDATE_GAME), (self.name, self.has_achievements, self.console_id(),
-                                                        self.icon_url, self.release_date, developer_id, publisher_id,
-                                                        self.id, self.platform_id, self.name, self.has_achievements,
-                                                        self.console_id(), self.icon_url, self.release_date,
-                                                        developer_id, publisher_id)
-                               )
-                cursor.execute(get_query(GET_GAME_GENRES), (self.platform_id, self.id))
-                saved_genres = []
-                for i in cursor:
-                    saved_genres.append(i)
-                if set(saved_genres) != set(genres) and len(genres) > 0:
-                    cursor.execute(get_query(DELETE_GAME_GENRES), (self.platform_id, self.id))
-                    for cur_g in genres:
-                        # there not that many records, so no profit from bulk
-                        cursor.execute(get_query(INSERT_GAME_GENRE), (self.platform_id, self.id, cur_g))
-                # TODO: remove duplicate code
-                cursor.execute(get_query(GET_GAME_FEATURES), (self.platform_id, self.id))
-                saved_features = []
-                for i in cursor:
-                    saved_features.append(i)
-                if set(saved_features) != set(features) and len(features) > 0:
-                    cursor.execute(get_query(DELETE_GAME_FEATURES), (self.platform_id, self.id))
-                    for cur_f in features:
-                        # there not that many records, so no profit from bulk
-                        cursor.execute(get_query(INSERT_GAME_FEATURE), (self.platform_id, self.id, cur_f))
+        if self.id is None or not self._is_persist:
+            from lib.db_api import save_game, save_game_genres, save_game_features
+            save_game(self, developer_id, publisher_id)
+            save_game_genres(self.platform_id, self.id, genres)
+            save_game_features(self.platform_id, self.id, features)
         if len(self.achievements) > 0 and not self._achievements_saved:
             if active_locale == 'en':
                 cursor.execute(get_query(GET_ACHIEVEMENTS_FOR_GAME), (self.platform_id, self.id))
