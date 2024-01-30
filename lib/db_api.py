@@ -1,4 +1,4 @@
-from typing import Union, List
+from typing import Union, List, Dict
 
 import psycopg2
 
@@ -8,7 +8,8 @@ from lib.game import Game
 from lib.query_holder import get_query, UPSERT_ACHIEVEMENT_ENGLISH, INSERT_ACHIEVEMENT, \
     UPSERT_ACHIEVEMENT_TRANSLATION, GET_ACHIEVEMENT_TEXT, GET_ACHIEVEMENT_ID, GET_COMPANY_ID, INSERT_COMPANY, \
     GET_GENRE_ID, INSERT_GENRE, INSERT_GAME, GET_GAME_ID, UPDATE_GAME, GET_GAME_GENRES, DELETE_GAME_GENRES, \
-    INSERT_GAME_GENRE, GET_GAME_FEATURES, DELETE_GAME_FEATURES, INSERT_GAME_FEATURE
+    INSERT_GAME_GENRE, GET_GAME_FEATURES, DELETE_GAME_FEATURES, INSERT_GAME_FEATURE, GET_GAME_STATS, UPSERT_GAME_STATS, \
+    GET_GAME_STAT_ID
 
 global connect
 global config
@@ -127,6 +128,31 @@ def save_game_features(platform_id: int, game_id: int, features: List[int]):
         for cur_f in features:
             # there not that many records, so no profit from bulk
             cursor.execute(get_query(INSERT_GAME_FEATURE), (platform_id, game_id, cur_f))
+
+
+def get_game_stat_id(platform_id: int, game_id: int, ext_id: str) -> Union[int, None]:
+    cursor = get_cursor()
+    cursor.execute(get_query(GET_GAME_STAT_ID), (platform_id, game_id, ext_id))
+    ret = cursor.fetchone()
+    if ret is not None:
+        return ret[0]
+    return None
+
+
+def save_game_stats(platform_id: int, game_id: int, stats: Dict[str, str]):
+    cursor = get_cursor()
+    stats_to_save = {}
+    stats_exists = {}
+    cursor.execute(get_query(GET_GAME_STATS), (platform_id, game_id))
+    for stat_id, stat_ext_id, stat_name in cursor:
+        stats_exists[stat_ext_id] = stat_name
+    for ext_id in stats:
+        if ext_id not in stats_exists:
+            stats_to_save[ext_id] = stats[ext_id]
+        elif stats_exists[ext_id] != stats[ext_id]:
+            stats_to_save[ext_id] = stats[ext_id]
+    for ext_id in stats_to_save:
+        cursor.execute(get_query(UPSERT_GAME_STATS), (platform_id, game_id, ext_id, stats_to_save[ext_id]))
 
 
 def get_company_id(company_name: str, platform_id: int) -> int:

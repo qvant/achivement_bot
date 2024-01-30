@@ -4,7 +4,7 @@ from .achievement import Achievement
 from .console import Console
 from .query_holder import get_query, GET_FEATURE_ID, \
     INSERT_FEATURE, GET_ACHIEVEMENTS_FOR_GAME, \
-    GET_TRANSLATED_ACHIEVEMENTS_FOR_GAME, GET_GAME_STATS, UPSERT_GAME_STATS
+    GET_TRANSLATED_ACHIEVEMENTS_FOR_GAME
 
 
 class Game:
@@ -13,7 +13,7 @@ class Game:
                  icon_url: Union[str, None] = None, release_date: Union[str, None] = None,
                  genres: List[str] = None, publisher: str = None, developer: str = None, publisher_id: int = None,
                  developer_id: int = None, genre_ids: List[int] = None, features: List[str] = None,
-                 feature_ids: List[int] = None, stats: Dict = None):
+                 feature_ids: List[int] = None, stats: Dict[str, str] = None):
         self.name = name
         self.platform_id = platform_id
         self.id = id
@@ -49,7 +49,6 @@ class Game:
             self.stats = stats
         else:
             self.stats = {}
-        self._stats_ext_to_id_map = {}
         if genres is not None:
             for i in genres:
                 if i is not None:
@@ -92,11 +91,6 @@ class Game:
     def set_console(self, cons: Console):
         self.console = cons
         self._is_persist = False
-
-    def get_stat_id(self, stat_ext_id: str) -> Union[None, int]:
-        if stat_ext_id in self._stats_ext_to_id_map:
-            return int(self._stats_ext_to_id_map[stat_ext_id])
-        return None
 
     def _get_company_id(self, company_name: str) -> Union[None, int]:
         if company_name is None:
@@ -166,9 +160,9 @@ class Game:
                 if ext_id in self.achievements:
                     self.achievements[ext_id].id = id
                     if name != self.achievements[ext_id].name \
-                            or description != self.achievements[ext_id].description\
+                            or description != self.achievements[ext_id].description \
                             or icon_url != self.achievements[ext_id].icon_url \
-                            or locked_icon_url != self.achievements[ext_id].locked_icon_url\
+                            or locked_icon_url != self.achievements[ext_id].locked_icon_url \
                             or is_hidden != self.achievements[ext_id].is_hidden:
                         need_save = True
                         to_save.append(ext_id)
@@ -206,22 +200,8 @@ class Game:
                         self.achievements[i].id = None
                         self.achievements[i].save(active_locale)
         if not self._stats_saved:
-            stats_to_save = {}
-            stats_exists = {}
-            cursor.execute(get_query(GET_GAME_STATS), (self.platform_id, self.id))
-            for stat_id, stat_ext_id, stat_name in cursor:
-                stats_exists[stat_ext_id] = stat_name
-                self._stats_ext_to_id_map[stat_ext_id] = stat_id
-            for i in self.stats:
-                if i not in stats_exists:
-                    stats_to_save[i] = self.stats[i]
-                elif stats_exists[i] != self.stats[i]:
-                    stats_to_save[i] = self.stats[i]
-            for i in stats_to_save:
-                cursor.execute(get_query(UPSERT_GAME_STATS), (self.platform_id, self.id, i, stats_to_save[i]))
-                ret = cursor.fetchone()
-                if ret is not None:
-                    self._stats_ext_to_id_map[i] = ret[0]
+            from lib.db_api import save_game_stats
+            save_game_stats(platform_id=self.platform_id, game_id=self.id, stats=self.stats)
         self._is_persist = True
         self._achievements_saved = True
         self._stats_saved = True

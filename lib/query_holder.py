@@ -93,6 +93,7 @@ GET_ACHIEVEMENTS_BY_PLATFORM = "get_achievements_by_platform"
 GET_ACHIEVEMENTS_BY_PLATFORM_AND_GAME_ID = "get_achievements_by_platform_and_game_id"
 UPDATE_PLATFORM_LANGUAGES_SET_LAST_UPDATE = "update_platform_languages_set_last_update"
 GET_PLATFORM_LANGUAGES_BY_PLATFORM_ID = "get_platform_languages_by_platform_id"
+GET_GAME_STAT_ID = "get_game_stat_id"
 
 queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            MARK_UPDATE_DONE: r"db/queries/mark_update_done.sql",
@@ -187,6 +188,7 @@ queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            GET_ACHIEVEMENTS_BY_PLATFORM_AND_GAME_ID: r"db/queries/get_achievements_by_platform_and_game_id.sql",
            UPDATE_PLATFORM_LANGUAGES_SET_LAST_UPDATE: r"db/queries/update_platform_languages_set_last_update.sql",
            GET_PLATFORM_LANGUAGES_BY_PLATFORM_ID: r"db/queries/get_platform_languages_by_platform_id.sql",
+           GET_GAME_STAT_ID: r"db/queries/get_game_stat_id.sql",
            }
 query_texts = {}
 
