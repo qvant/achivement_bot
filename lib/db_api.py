@@ -9,7 +9,7 @@ from lib.query_holder import get_query, UPSERT_ACHIEVEMENT_ENGLISH, INSERT_ACHIE
     UPSERT_ACHIEVEMENT_TRANSLATION, GET_ACHIEVEMENT_TEXT, GET_ACHIEVEMENT_ID, GET_COMPANY_ID, INSERT_COMPANY, \
     GET_GENRE_ID, INSERT_GENRE, INSERT_GAME, GET_GAME_ID, UPDATE_GAME, GET_GAME_GENRES, DELETE_GAME_GENRES, \
     INSERT_GAME_GENRE, GET_GAME_FEATURES, DELETE_GAME_FEATURES, INSERT_GAME_FEATURE, GET_GAME_STATS, UPSERT_GAME_STATS, \
-    GET_GAME_STAT_ID
+    GET_GAME_STAT_ID, GET_TRANSLATED_ACHIEVEMENTS_FOR_GAME, GET_ACHIEVEMENTS_FOR_GAME
 
 global connect
 global config
@@ -137,6 +137,62 @@ def get_game_stat_id(platform_id: int, game_id: int, ext_id: str) -> Union[int, 
     if ret is not None:
         return ret[0]
     return None
+
+
+def save_achievements(platform_id: int, game_id: int, achievements: Dict[str, Achievement], active_locale: str):
+    cursor = get_cursor()
+    if active_locale == 'en':
+        cursor.execute(get_query(GET_ACHIEVEMENTS_FOR_GAME), (platform_id, game_id))
+    else:
+        cursor.execute(get_query(GET_TRANSLATED_ACHIEVEMENTS_FOR_GAME),
+                       (active_locale, platform_id, game_id))
+    need_save = False
+    to_save = []
+    rows_found = False
+    existed_achievements = {}
+    for id, ext_id, name, description, icon_url, locked_icon_url, is_hidden, is_removed in cursor:
+        rows_found = True
+        if ext_id in achievements:
+            achievements[ext_id].id = id
+            if name != achievements[ext_id].name \
+                    or description != achievements[ext_id].description \
+                    or icon_url != achievements[ext_id].icon_url \
+                    or locked_icon_url != achievements[ext_id].locked_icon_url \
+                    or is_hidden != achievements[ext_id].is_hidden:
+                need_save = True
+                to_save.append(ext_id)
+        else:
+            need_save = True
+            to_save.append(ext_id)
+            if not is_removed and ext_id not in existed_achievements:
+                existed_achievements[ext_id] = Achievement(id=id,
+                                                           game_id=game_id,
+                                                           name=name,
+                                                           ext_id=ext_id,
+                                                           platform_id=platform_id,
+                                                           description=description,
+                                                           icon_url=icon_url,
+                                                           locked_icon_url=locked_icon_url,
+                                                           is_hidden=is_hidden,
+                                                           is_removed=False)
+    if not rows_found:
+        need_save = True
+    if not need_save:
+        for i in achievements:
+            if achievements[i].id is None:
+                need_save = True
+                break
+    for i in existed_achievements.keys():
+        if i not in achievements:
+            existed_achievements[i].enforce_save()
+            existed_achievements[i].set_is_removed(True)
+            existed_achievements[i].save(active_locale)
+    if need_save:
+        for i in achievements:
+            if achievements[i].id is None or i in to_save:
+                achievements[i].set_game_id(game_id)
+                achievements[i].id = None
+                achievements[i].save(active_locale)
 
 
 def save_game_stats(platform_id: int, game_id: int, stats: Dict[str, str]):

@@ -3,8 +3,7 @@ from typing import Union, List, Dict
 from .achievement import Achievement
 from .console import Console
 from .query_holder import get_query, GET_FEATURE_ID, \
-    INSERT_FEATURE, GET_ACHIEVEMENTS_FOR_GAME, \
-    GET_TRANSLATED_ACHIEVEMENTS_FOR_GAME
+    INSERT_FEATURE
 
 
 class Game:
@@ -146,59 +145,9 @@ class Game:
             save_game_genres(self.platform_id, self.id, genres)
             save_game_features(self.platform_id, self.id, features)
         if len(self.achievements) > 0 and not self._achievements_saved:
-            if active_locale == 'en':
-                cursor.execute(get_query(GET_ACHIEVEMENTS_FOR_GAME), (self.platform_id, self.id))
-            else:
-                cursor.execute(get_query(GET_TRANSLATED_ACHIEVEMENTS_FOR_GAME),
-                               (active_locale, self.platform_id, self.id))
-            need_save = False
-            to_save = []
-            rows_found = False
-            existed_achievements = {}
-            for id, ext_id, name, description, icon_url, locked_icon_url, is_hidden, is_removed in cursor:
-                rows_found = True
-                if ext_id in self.achievements:
-                    self.achievements[ext_id].id = id
-                    if name != self.achievements[ext_id].name \
-                            or description != self.achievements[ext_id].description \
-                            or icon_url != self.achievements[ext_id].icon_url \
-                            or locked_icon_url != self.achievements[ext_id].locked_icon_url \
-                            or is_hidden != self.achievements[ext_id].is_hidden:
-                        need_save = True
-                        to_save.append(ext_id)
-                else:
-                    need_save = True
-                    to_save.append(ext_id)
-                    if not is_removed and ext_id not in existed_achievements:
-                        existed_achievements[ext_id] = Achievement(id=id,
-                                                                   game_id=self.id,
-                                                                   name=name,
-                                                                   ext_id=ext_id,
-                                                                   platform_id=self.platform_id,
-                                                                   description=description,
-                                                                   icon_url=icon_url,
-                                                                   locked_icon_url=locked_icon_url,
-                                                                   is_hidden=is_hidden,
-                                                                   is_removed=False)
-            if not rows_found:
-                need_save = True
-            if not need_save:
-                for i in self.achievements:
-                    if self.achievements[i].id is None:
-                        need_save = True
-                        break
-            for i in existed_achievements.keys():
-                if i not in self.achievements:
-                    existed_achievements[i].enforce_save()
-                    existed_achievements[i].set_is_removed(True)
-                    existed_achievements[i].save(active_locale)
-
-            if need_save:
-                for i in self.achievements:
-                    if self.achievements[i].id is None or i in to_save:
-                        self.achievements[i].set_game_id(self.id)
-                        self.achievements[i].id = None
-                        self.achievements[i].save(active_locale)
+            from lib.db_api import save_achievements
+            save_achievements(platform_id=self.platform_id, game_id=self.id, achievements=self.achievements,
+                              active_locale=active_locale)
         if not self._stats_saved:
             from lib.db_api import save_game_stats
             save_game_stats(platform_id=self.platform_id, game_id=self.id, stats=self.stats)
