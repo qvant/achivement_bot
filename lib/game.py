@@ -2,8 +2,6 @@ from typing import Union, List, Dict
 
 from .achievement import Achievement
 from .console import Console
-from .query_holder import get_query, GET_FEATURE_ID, \
-    INSERT_FEATURE
 
 
 class Game:
@@ -109,21 +107,13 @@ class Game:
         from lib.cache import get_genre_id as get_genre_id_cached
         return get_genre_id_cached(genre, self.platform_id)
 
-    def get_feature_id(self, feature, cursor):
+    def get_feature_id(self, feature):
         if feature is None:
             return None
-        if feature not in self.feature_ids:
-            cursor.execute(get_query(GET_FEATURE_ID), (self.platform_id, feature,))
-            ret = cursor.fetchone()
-            if ret is not None:
-                self.feature_ids[feature] = ret[0]
-            else:
-                cursor.execute(get_query(INSERT_FEATURE), (self.platform_id, feature,))
-                ret = cursor.fetchone()
-                self.feature_ids[feature] = ret[0]
-        return int(self.feature_ids[feature])
+        from lib.cache import get_feature_id as get_feature_id_cached
+        return get_feature_id_cached(feature_name=feature, platform_id=self.platform_id)
 
-    def save(self, cursor, active_locale: str):
+    def save(self, active_locale: str):
         developer_id = self.get_developer_id(self.developer)
         publisher_id = self.get_publisher_id(self.publisher)
         genres = []
@@ -136,7 +126,7 @@ class Game:
                     genres.append(genre_id)
         if self.features is not None:
             for i in self.features:
-                feature_id = self.get_feature_id(i, cursor)
+                feature_id = self.get_feature_id(i)
                 if feature_id not in features:
                     features.append(feature_id)
         if self.id is None or not self._is_persist:

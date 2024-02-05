@@ -139,7 +139,7 @@ class Platform:
                 self.games[i].set_console(self.get_console_by_ext(self.games[i].console_ext_id))
                 self.logger.info("New console {0} for game \"{1}\"".format(self.games[i].console_name,
                                                                            self.games[i].name))
-            self.games[i].save(cursor, self.active_locale)
+            self.games[i].save(active_locale=self.active_locale)
         conn.commit()
         commit()
         self.logger.info("Finish saving to db")

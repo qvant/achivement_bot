@@ -10,7 +10,7 @@ from lib.query_holder import get_query, UPSERT_ACHIEVEMENT_ENGLISH, INSERT_ACHIE
     GET_GENRE_ID, INSERT_GENRE, INSERT_GAME, GET_GAME_ID, UPDATE_GAME, GET_GAME_GENRES, DELETE_GAME_GENRES, \
     INSERT_GAME_GENRE, GET_GAME_FEATURES, DELETE_GAME_FEATURES, \
     INSERT_GAME_FEATURE, GET_GAME_STATS, UPSERT_GAME_STATS, \
-    GET_GAME_STAT_ID, GET_TRANSLATED_ACHIEVEMENTS_FOR_GAME, GET_ACHIEVEMENTS_FOR_GAME
+    GET_GAME_STAT_ID, GET_TRANSLATED_ACHIEVEMENTS_FOR_GAME, GET_ACHIEVEMENTS_FOR_GAME, GET_FEATURE_ID, INSERT_FEATURE
 
 global connect
 global config
@@ -228,6 +228,16 @@ def get_genre_id(genre_name: str, platform_id: int) -> int:
     ret = cursor.fetchone()
     if ret is None:
         cursor.execute(get_query(INSERT_GENRE), (platform_id, genre_name,))
+        ret = cursor.fetchone()
+    return ret[0]
+
+
+def get_feature_id(feature_name: str, platform_id: int) -> int:
+    cursor = get_cursor()
+    cursor.execute(get_query(GET_FEATURE_ID), (platform_id, feature_name,))
+    ret = cursor.fetchone()
+    if ret is None:
+        cursor.execute(get_query(INSERT_FEATURE), (platform_id, feature_name,))
         ret = cursor.fetchone()
     return ret[0]
 
