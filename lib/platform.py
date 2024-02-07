@@ -125,7 +125,7 @@ class Platform:
         for i in self._consoles_by_ext_id:
             if self._consoles_by_ext_id[i].id is None:
                 self.logger.info("Saving console {0}".format(self._consoles_by_ext_id[i].name))
-                self._consoles_by_ext_id[i].save(conn)
+                self._consoles_by_ext_id[i].save()
                 if self._consoles_by_ext_id[i].id is not None:
                     self._consoles_by_id[self._consoles_by_ext_id[i].id] = self._consoles_by_ext_id[i]
                     self.logger.info("Set map id for console {0}".format(self._consoles_by_ext_id[i].name))

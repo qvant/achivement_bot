@@ -4,13 +4,15 @@ import psycopg2
 
 from lib.achievement import Achievement
 from lib.config import Config
+from lib.console import Console
 from lib.game import Game
 from lib.query_holder import get_query, UPSERT_ACHIEVEMENT_ENGLISH, INSERT_ACHIEVEMENT, \
     UPSERT_ACHIEVEMENT_TRANSLATION, GET_ACHIEVEMENT_TEXT, GET_ACHIEVEMENT_ID, GET_COMPANY_ID, INSERT_COMPANY, \
     GET_GENRE_ID, INSERT_GENRE, INSERT_GAME, GET_GAME_ID, UPDATE_GAME, GET_GAME_GENRES, DELETE_GAME_GENRES, \
     INSERT_GAME_GENRE, GET_GAME_FEATURES, DELETE_GAME_FEATURES, \
     INSERT_GAME_FEATURE, GET_GAME_STATS, UPSERT_GAME_STATS, \
-    GET_GAME_STAT_ID, GET_TRANSLATED_ACHIEVEMENTS_FOR_GAME, GET_ACHIEVEMENTS_FOR_GAME, GET_FEATURE_ID, INSERT_FEATURE
+    GET_GAME_STAT_ID, GET_TRANSLATED_ACHIEVEMENTS_FOR_GAME, GET_ACHIEVEMENTS_FOR_GAME, GET_FEATURE_ID, INSERT_FEATURE, \
+    GET_CONSOLE_ID, INSERT_CONSOLE
 
 global connect
 global config
@@ -80,7 +82,7 @@ def get_game_id(game: Game) -> Union[int, None]:
     return None
 
 
-def save_game(game: Game, developer_id: int, publisher_id: int) -> int:
+def save_game(game: Game, developer_id: int, publisher_id: int):
     cursor = get_cursor()
     if game.id is None:
         game.id = get_game_id(game)
@@ -240,6 +242,22 @@ def get_feature_id(feature_name: str, platform_id: int) -> int:
         cursor.execute(get_query(INSERT_FEATURE), (platform_id, feature_name,))
         ret = cursor.fetchone()
     return ret[0]
+
+
+def get_console_id(platform_id: int, ext_id: str) -> Union[int, None]:
+    cursor = get_cursor()
+    cursor.execute(get_query(GET_CONSOLE_ID), (platform_id, ext_id))
+    ret = cursor.fetchone()
+    if ret is not None:
+        return ret[0]
+    return None
+
+
+def save_console(console: Console):
+    cursor = get_cursor()
+    cursor.execute(get_query(INSERT_CONSOLE), (console.platform_id, console.name, str(console.ext_id,)))
+    ret = cursor.fetchone()
+    console.id = ret[0]
 
 
 def set_db_config(cfg: Config):
