@@ -12,7 +12,7 @@ from lib.query_holder import get_query, UPSERT_ACHIEVEMENT_ENGLISH, INSERT_ACHIE
     INSERT_GAME_GENRE, GET_GAME_FEATURES, DELETE_GAME_FEATURES, \
     INSERT_GAME_FEATURE, GET_GAME_STATS, UPSERT_GAME_STATS, \
     GET_GAME_STAT_ID, GET_TRANSLATED_ACHIEVEMENTS_FOR_GAME, GET_ACHIEVEMENTS_FOR_GAME, GET_FEATURE_ID, INSERT_FEATURE, \
-    GET_CONSOLE_ID, INSERT_CONSOLE
+    GET_CONSOLE_ID, INSERT_CONSOLE, SET_USER_LOCALE
 
 global connect
 global config
@@ -258,6 +258,12 @@ def save_console(console: Console):
     cursor.execute(get_query(INSERT_CONSOLE), (console.platform_id, console.name, str(console.ext_id,)))
     ret = cursor.fetchone()
     console.id = ret[0]
+
+
+def save_user_locale(locale: str, telegram_id: int):
+    cursor = get_cursor()
+    cursor.execute(get_query(SET_USER_LOCALE), (locale, telegram_id))
+    commit()
 
 
 def set_db_config(cfg: Config):

@@ -413,9 +413,8 @@ def locale_choice(update: Update, context: CallbackContext):
     telegram_logger.info("Received command {0} from user {1} in locale_choice menu".
                          format(cur_item, update.effective_chat.id))
     user_locales[chat_id] = cur_item
-    cursor = db.cursor()
-    cursor.execute(get_query(SET_USER_LOCALE), (cur_item, chat_id))
-    db.commit()
+    from lib.db_api import save_user_locale
+    save_user_locale(cur_item, chat_id)
     reply_markup = InlineKeyboardMarkup(main_keyboard(chat_id))
     context.bot.send_message(chat_id=chat_id, text=_("Language chosen"),
                              reply_markup=reply_markup)
