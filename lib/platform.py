@@ -1,9 +1,9 @@
+from .db_api import commit
 from .game import Game
 from .console import Console
 from .config import Config
 from .log import get_logger
 from .achievement import Achievement
-import psycopg2
 from typing import Union, List
 
 from .platform_language import PlatformLanguage
@@ -11,6 +11,7 @@ from .query_holder import get_query, INSERT_PLATFORM, GET_CONSOLE_BY_ID, GET_CON
     GET_HARDCODED_GAMES_BY_PLATFORM, GET_GAMES_BY_PLATFORM, GET_GAME_BY_PLATFORM_AND_ID, GET_ACHIEVEMENTS_BY_PLATFORM, \
     GET_ACHIEVEMENTS_BY_PLATFORM_AND_GAME_ID, UPDATE_PLATFORM_LANGUAGES_SET_LAST_UPDATE, \
     GET_PLATFORM_LANGUAGES_BY_PLATFORM_ID
+from .db_api import get_connect as db_api_get_connect
 
 
 class Platform:
@@ -103,15 +104,7 @@ class Platform:
     # Temp!
     @classmethod
     def get_connect(cls):
-        if cls.conn is None:
-            cls.conn = psycopg2.connect(dbname=cls.config.db_name, user=cls.config.db_user,
-                                        password=cls.config.db_password, host=cls.config.db_host,
-                                        port=cls.config.db_port)
-        elif cls.conn.closed != 0:
-            cls.conn = psycopg2.connect(dbname=cls.config.db_name, user=cls.config.db_user,
-                                        password=cls.config.db_password, host=cls.config.db_host,
-                                        port=cls.config.db_port)
-        return cls.conn
+        return db_api_get_connect()
 
     @classmethod
     def reset_connect(cls):
@@ -132,7 +125,7 @@ class Platform:
         for i in self._consoles_by_ext_id:
             if self._consoles_by_ext_id[i].id is None:
                 self.logger.info("Saving console {0}".format(self._consoles_by_ext_id[i].name))
-                self._consoles_by_ext_id[i].save(conn)
+                self._consoles_by_ext_id[i].save()
                 if self._consoles_by_ext_id[i].id is not None:
                     self._consoles_by_id[self._consoles_by_ext_id[i].id] = self._consoles_by_ext_id[i]
                     self.logger.info("Set map id for console {0}".format(self._consoles_by_ext_id[i].name))
@@ -146,8 +139,9 @@ class Platform:
                 self.games[i].set_console(self.get_console_by_ext(self.games[i].console_ext_id))
                 self.logger.info("New console {0} for game \"{1}\"".format(self.games[i].console_name,
                                                                            self.games[i].name))
-            self.games[i].save(cursor, self.active_locale)
+            self.games[i].save(active_locale=self.active_locale)
         conn.commit()
+        commit()
         self.logger.info("Finish saving to db")
 
     def update_games(self, game_id: str, game_name: str, force: bool = False):

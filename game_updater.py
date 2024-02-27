@@ -15,6 +15,7 @@ from lib.queue import set_config as set_queue_config, set_logger as set_queue_lo
     GAME_UPDATER_QUEUE_NAME, enqueue_command
 from lib.stats import get_stats
 from lib.db import load, set_load_logger, get_next_update_date, mark_update_done, start_update
+from lib.db_api import set_db_config
 
 ID_PROCESS_GAME_UPDATER = 2
 
@@ -24,6 +25,7 @@ def main_game_updater(config: Config):
     renew_log = get_logger("renew_game_updater", config.log_level, True)
 
     set_load_logger(config)
+    set_db_config(config)
     set_queue_config(config)
     set_queue_log(queue_log)
 

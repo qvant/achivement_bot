@@ -5,7 +5,7 @@ from .config import Config, MODE_CORE, MODE_WORKER, MODE_UPDATER, MODE_BOT, MODE
 from .platform import Platform
 from .player import Player, GAMES_ALL, GAMES_PERFECT, GAMES_WITH_ACHIEVEMENTS
 from .log import get_logger
-from .query_holder import get_query, GET_PLAYERS_BY_TELEGRAM_ID, SET_USER_LOCALE, GET_PLAYER_INFO, GET_PLAYER_STATS, \
+from .query_holder import get_query, GET_PLAYERS_BY_TELEGRAM_ID, GET_PLAYER_INFO, GET_PLAYER_STATS, \
     GET_ACCOUNT_LAST_ACHIEVEMENTS, GET_ACCOUNT_RAREST_ACHIEVEMENTS, GET_PLAYER_CONSOLES, GET_PLAYER_LAST_UPDATE_DATE, \
     GET_USER_LOCALE, INSERT_USER, GET_LAST_GLOBAL_ACHIEVEMENTS, GET_LAST_GAME_PERFECTED_TIME_FOR_PLAYER
 from .queue import enqueue_command
@@ -413,9 +413,8 @@ def locale_choice(update: Update, context: CallbackContext):
     telegram_logger.info("Received command {0} from user {1} in locale_choice menu".
                          format(cur_item, update.effective_chat.id))
     user_locales[chat_id] = cur_item
-    cursor = db.cursor()
-    cursor.execute(get_query(SET_USER_LOCALE), (cur_item, chat_id))
-    db.commit()
+    from lib.db_api import save_user_locale
+    save_user_locale(cur_item, chat_id)
     reply_markup = InlineKeyboardMarkup(main_keyboard(chat_id))
     context.bot.send_message(chat_id=chat_id, text=_("Language chosen"),
                              reply_markup=reply_markup)

@@ -18,12 +18,14 @@ from lib.telegram import set_telegram_logger, telegram_init, set_connect, set_co
     locale_choice, admin_choice, shutdown_choice, stats_choice, set_locale, main_keyboard, achievement_detail, \
     consoles_navigation
 from lib.db import load, set_load_logger
+from lib.db_api import set_db_config
 from lib.message_types import MT_VALIDATION_OK, MT_VALIDATION_FAILED, MT_ACCOUNT_DELETED, MT_ACCOUNT_UPDATED
 
 
 def main_bot(config: Config):
     queue_log = get_logger("Rabbit_bot", config.log_level, True)
     set_load_logger(config)
+    set_db_config(config)
     set_telegram_logger(config)
     set_queue_log(queue_log)
     telegram_init()

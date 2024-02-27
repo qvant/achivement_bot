@@ -1,14 +1,17 @@
 import codecs
 import datetime
 import json
+from typing import Dict, Any
 
 global call_counters
 global call_counters_retain
 global api_calls_daily_limit
+global api_call_errors
 
-api_calls_daily_limit = {}
-call_counters = {}
-call_counters_retain = {}
+api_calls_daily_limit: Dict[str, int] = {}
+call_counters: Dict[str, Dict[str, int]] = {}
+api_call_errors: Dict[str, Dict[str, Dict[str, int]]] = {}
+call_counters_retain: Dict[str, int] = {}
 
 
 def save_api_key(password: str, path: str):
@@ -56,21 +59,42 @@ def inc_call_cnt(platform: str, method: str):
         platform_call_counters.pop(old_dt, 'None')
 
 
+def inc_error_cnt(platform: str, method: str, code: str):
+    global api_call_errors
+    if platform not in api_call_errors:
+        api_call_errors[platform] = {}
+    cur_dt = str(datetime.date.today())
+    if cur_dt not in api_call_errors[platform]:
+        api_call_errors[platform][cur_dt] = {}
+    if method not in api_call_errors[platform][cur_dt]:
+        api_call_errors[platform][cur_dt][method] = {}
+    if code not in api_call_errors[platform][cur_dt][method]:
+        api_call_errors[platform][cur_dt][method][code] = int(0)
+    api_call_errors[platform][cur_dt][method][code] += int(1)
+    while len(api_call_errors[platform]) > call_counters_retain[platform] >= 0:
+        keys = [key for key in api_call_errors[platform]]
+        keys.sort()
+        old_dt = keys[0]
+        api_call_errors[platform].pop(old_dt, 'None')
+
+
 def get_call_cnt(platform: str):
-    global call_counters
-    global api_calls_daily_limit
+    call_counter: Dict[str, Dict[str, Any]] = {}
     if platform in call_counters:
-        for i in call_counters[platform]:
+        call_counter = call_counters[platform].copy()
+        for i in call_counter:
             total = int(0)
-            for j in call_counters[platform][i]:
+            for j in call_counter[i]:
                 if j != "Total":
-                    total += int(call_counters[platform][i][j])
-            call_counters[platform][i]["Total"] = total
-            call_counters[platform][i]["Used calls %"] = 0
+                    total += int(call_counter[i][j])
+            call_counter[i]["Total"] = total
+            call_counter[i]["Used calls %"] = 0
             if total > 0:
                 if platform not in api_calls_daily_limit:
                     sef_daily_call_limit(platform, 100000)
-                call_counters[platform][i]["Used calls %"] = round(total / api_calls_daily_limit[platform] * 100, 2)
+                call_counter[i]["Used calls %"] = round(total / api_calls_daily_limit[platform] * 100, 2)
+    if platform in api_call_errors:
+        call_counter["Errors"] = api_call_errors[platform]
     else:
-        call_counters[platform] = {}
-    return call_counters[platform]
+        call_counter["Errors"] = {}
+    return call_counter

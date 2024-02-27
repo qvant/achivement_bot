@@ -14,4 +14,5 @@ select coalesce (tr.name, a.name) as name, pa.id, a.percent_owners, a.id,
                and ar.n_upper_border >= a.percent_owners
              where a.platform_id = %s
              and a.game_id = %s
+             and not a.is_removed
              order by a.percent_owners desc, a.name

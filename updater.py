@@ -20,6 +20,7 @@ from lib.queue import set_config as set_queue_config, set_logger as set_queue_lo
     enqueue_command
 from lib.stats import get_stats
 from lib.db import set_load_logger
+from lib.db_api import set_db_config
 
 
 def main_updater(config: Config):
@@ -106,6 +107,7 @@ def process_player_achievements_queue(config: Config, db_log: Logger) -> bool:
             db_log.debug(""" start EXECUTE del_q""")
             psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
             db_log.debug(""" end EXECUTE del_q""")
+            connect.commit()
 
         else:
             db_log.info("""No more in queue queue_player_achievements_update on step {0}""".format(step))
@@ -153,6 +155,7 @@ def process_achievements_queue(config: Config, db_log: Logger) -> bool:
             psycopg2.extras.execute_batch(cursor, """EXECUTE update_player_games_perf  (%s, %s)""", games)
 
             psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
+            connect.commit()
         else:
             db_log.info("""No more in queue queue_achievements_update on step {0}""".format(step))
             break
@@ -203,14 +206,15 @@ def process_games_queue(config: Config, db_log: Logger) -> bool:
             psycopg2.extras.execute_batch(cursor, """EXECUTE upd_games (%s, %s)""", game_res)
             psycopg2.extras.execute_batch(cursor, """EXECUTE upd_achievement (%s)""", game_4_ach)
             psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
+            connect.commit()
         else:
             db_log.info("""No more in queue queue_games_update on step {0}""".format(step))
             break
-        if query_prepared:
-            cursor.execute("""DEALLOCATE upd_games""")
-            cursor.execute("""DEALLOCATE del_q""")
-            cursor.execute("""DEALLOCATE upd_achievement""")
-        connect.commit()
+    if query_prepared:
+        cursor.execute("""DEALLOCATE upd_games""")
+        cursor.execute("""DEALLOCATE del_q""")
+        cursor.execute("""DEALLOCATE upd_achievement""")
+    connect.commit()
     db_log.info("""Finish queue_games_update processing""")
     return queue_is_empty
 
@@ -264,6 +268,7 @@ def init_updater(config: Config):
     queue_log = get_logger("Rabbit" + str(config.mode), config.log_level, True)
     db_log = get_logger("db_" + str(config.mode), config.log_level, True)
     set_load_logger(config)
+    set_db_config(config)
     set_queue_config(config)
     set_queue_log(queue_log)
     Platform.set_config(config)

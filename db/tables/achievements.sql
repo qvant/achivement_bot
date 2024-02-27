@@ -13,9 +13,13 @@ create table  achievements_hunt.achievements
 	icon_url        varchar(1024),
 	locked_icon_url varchar(1024).
 	is_hidden       boolean default false not null
+	is_removed      boolean default false not null
+	is_broken       boolean default false not null
 );
 create unique index u_achievements_ext_key on achievements_hunt.achievements(platform_id, game_id, ext_id);
 alter table  achievements_hunt.achievements ADD CONSTRAINT u_achievements_ext_key unique using index u_achievements_ext_key;
 alter table  achievements_hunt.achievements ADD CONSTRAINT fk_achievements_to_platforms foreign key (platform_id) references  achievements_hunt.platforms(id);
 alter table  achievements_hunt.achievements ADD CONSTRAINT fk_achievements_to_games foreign key (game_id) references  achievements_hunt.games(id);
 alter table  achievements_hunt.achievements owner to achievements_hunt_bot;
+comment on column achievements_hunt.achievements.is_removed is 'Achievement removed by developer';
+comment on column achievements_hunt.achievements.is_removed is 'Achievement can''t be obtained in legit way any more';

@@ -1,10 +1,12 @@
 import datetime
 import random
-from psycopg2 import Error as PgError
-from typing import Union, Dict
-from .platform import Platform
 from datetime import timezone
+from typing import Union, Dict
 
+from psycopg2 import Error as PgError
+
+from .cache import get_stats_id
+from .platform import Platform
 from .query_holder import UPDATE_PLAYER_EXT_ID, get_query, DELETE_PLAYER, UPDATE_PLAYER_TELEGRAM_ID, \
     UPDATE_PLAYER_STATUS, GET_PLAYER_STATUS, GET_USER_LAST_DELETE, UPDATE_USER_SET_LAST_DELETE_DATE, \
     CHECK_PLAYERS_FOR_TELEGRAM_ID, CHECK_PLAYERS_FOR_EXT_ID, CHECK_IS_PLAYER_BOUND_TO_TELEGRAM, GET_PLAYER_GAMES, \
@@ -241,7 +243,7 @@ class Player:
             if not (self.platform.is_game_known(str(self.games[i]))):
                 # TODO: check
                 new_game = self.platform.get_game(game_id=str(self.games[i]), name=str(self.games[i]))
-                new_game.save(cursor=cur, active_locale='en')
+                new_game.save(active_locale='en')
                 conn.commit()
                 self.platform.load_games(game_id=new_game.id)
             game = self.platform.get_game_by_ext_id(str(self.games[i]))
@@ -280,7 +282,7 @@ class Player:
                             achievement.id = ret[0]
                         else:
                             new_game = self.platform.get_game(game_id=game.ext_id, name=game.name)
-                            new_game.save(cursor=cur, active_locale='en')
+                            new_game.save(active_locale='en')
                             conn.commit()
                             self.platform.logger.warn("Get id for achievement {} and game {} ({}) on platform {} after "
                                                       "refresh".
@@ -339,12 +341,13 @@ class Player:
                     elif saved_stats[j] != self.stats[i][j]:
                         stats_to_save[j] = self.stats[i][j]
                 for j in stats_to_save:
-                    if game.get_stat_id(j) is None:
+                    stat_id = get_stats_id(platform_id=self.platform.id, game_id=game.id, ext_id=j)
+                    if stat_id is None:
                         new_game = self.platform.get_game(game_id=game.id, name=game.name)
-                        new_game.save(cursor=cur, active_locale='en')
+                        new_game.save(active_locale='en')
                         game = new_game
                     cur.execute(get_query(INSERT_PLAYER_GAME_STATS),
-                                (self.platform.id, game.id, game.get_stat_id(j), self.id, stats_to_save[j])
+                                (self.platform.id, game.id, stat_id, self.id, stats_to_save[j])
                                 )
 
         conn.commit()
@@ -426,8 +429,7 @@ class Player:
                 self.platform.add_game(new_game)
 
                 conn = self.platform.get_connect()
-                cur = conn.cursor()
-                new_game.save(cur, "en")
+                new_game.save(active_locale="en")
                 conn.commit()
                 self.platform.logger.info("Saved new game ext id: {}, name: {} for player: {}. ".
                                           format(self.games[i], names[i], self.name))

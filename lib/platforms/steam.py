@@ -11,7 +11,8 @@ from ..config import Config
 from ..game import Game
 from ..log import get_logger
 from ..platform import Platform
-from ..platform_utils import save_api_key, inc_call_cnt, get_call_cnt, sef_daily_call_limit, set_call_counters_retain
+from ..platform_utils import save_api_key, inc_call_cnt, get_call_cnt, sef_daily_call_limit, set_call_counters_retain, \
+    inc_error_cnt
 from ..rates import do_with_limit, set_limit, get_limit_counter, get_limit_interval_end
 from ..security import is_password_encrypted, encrypt_password, decrypt_password
 from ..config import MODE_CORE
@@ -73,6 +74,8 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
             r = session.get(real_url, timeout=30, headers=headers)
             api_log.info("Response from {} for {} is {}".
                          format(url, params if len(params) > 0 else "no parameters", r))
+            if r.status_code != 200:
+                inc_error_cnt(PLATFORM_NAME, method_name, str(r.status_code))
             if r.status_code == 200 or cnt >= max_api_call_tries:
                 api_log.debug("Full response {} for {} is {}".
                               format(url, params if len(params) > 0 else "no parameters", r.text))
