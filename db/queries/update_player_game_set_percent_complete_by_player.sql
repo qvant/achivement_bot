@@ -9,7 +9,7 @@ update achievements_hunt.player_games pg set percent_complete =
                                                                  where acc.platform_id = a.platform_id
                                                                    and acc.game_id = a.game_id
                                                                     and acc.id = a.achievement_id
-                                                                    and not acc.is_removed
+                                                                    and acc.is_removed
                                                                 )
                                                  ) * 100 /
                                                 greatest(1, (select count(1) from achievements_hunt.achievements ac
