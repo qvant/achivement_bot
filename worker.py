@@ -24,34 +24,9 @@ ID_PROCESS_WORKER = 1
 
 
 def main_worker(config: Config):
-    queue_log = get_logger("Rabbit_worker", config.log_level, True)
-    renew_log = get_logger("renew_worker", config.log_level, True)
-
-    set_load_logger(config)
-    set_db_config(config)
-    set_queue_config(config)
-    set_queue_log(queue_log)
-
-    Platform.set_config(config)
-    platforms = load(config)
-    set_skip_extra_info(True)
-
-    m_queue = get_mq_connect(config)
-    m_channel = m_queue.channel()
-
-    m_channel.queue_declare(queue=WORKER_QUEUE_NAME, durable=True)
-
-    m_channel.exchange_declare(exchange='achievement_hunt',
-                               exchange_type='direct',
-                               durable=True)
-    m_channel.queue_bind(exchange='achievement_hunt',
-                         queue=WORKER_QUEUE_NAME,
-                         routing_key=config.mode)
+    platforms, queue_log, renew_log = init_worker(config)
 
     is_running = True
-
-    cmd = {"cmd": "process_response", "text": "Worker started at {0}.".format(datetime.datetime.now())}
-    enqueue_command(cmd, MODE_BOT)
 
     dt_next_update = []
     for i in platforms:
@@ -127,45 +102,71 @@ def main_worker(config: Config):
             else:
                 raise
 
-        try:
+        is_running = process_external_messages(config, is_running, platforms, queue_log)
 
-            m_queue = get_mq_connect(config)
-            m_channel = m_queue.channel()
 
-            for method_frame, properties, body in m_channel.consume(WORKER_QUEUE_NAME, inactivity_timeout=1,
-                                                                    auto_ack=False):
-                if body is not None:
-                    queue_log.info("Received user message {0} with delivery_tag {1}".format(body,
-                                                                                            method_frame.delivery_tag))
-                    need_stop = process_queue_command(body, config, platforms, queue_log)
-                    if need_stop:
-                        is_running = False
-                    try:
-                        m_channel.basic_ack(method_frame.delivery_tag)
-                    except BaseException as exc:
-                        queue_log.critical("User message " + str(body) + " with delivery_tag " +
-                                           str(method_frame.delivery_tag) +
-                                           " acknowledged with error{0}, resending".format(str(exc)))
-                        # TODO: handle
-                        raise
+def process_external_messages(config, is_running, platforms, queue_log):
+    try:
 
-                    queue_log.info("User message " + str(body) + " with delivery_tag " +
-                                   str(method_frame.delivery_tag) + " acknowledged")
-                else:
-                    queue_log.info("No more messages in {0}".format(WORKER_QUEUE_NAME))
+        m_queue = get_mq_connect(config)
+        m_channel = m_queue.channel()
+
+        for method_frame, properties, body in m_channel.consume(WORKER_QUEUE_NAME, inactivity_timeout=1,
+                                                                auto_ack=False):
+            if body is not None:
+                queue_log.info("Received user message {0} with delivery_tag {1}".format(body,
+                                                                                        method_frame.delivery_tag))
+                need_stop = process_queue_command(body, config, platforms, queue_log)
+                if need_stop:
+                    is_running = False
+                try:
+                    m_channel.basic_ack(method_frame.delivery_tag)
+                except BaseException as exc:
+                    queue_log.critical("User message " + str(body) + " with delivery_tag " +
+                                       str(method_frame.delivery_tag) +
+                                       " acknowledged with error{0}, resending".format(str(exc)))
                     m_channel.cancel()
-                    break
-            time.sleep(4)
-        except pika.exceptions.AMQPError as exc:
-            queue_log.exception(exc)
-            m_queue = get_mq_connect(config)
-            m_channel = m_queue.channel()
-        except BaseException as err:
-            queue_log.exception(err)
-            if config.supress_errors:
-                pass
+                    # TODO: handle
+                    raise
+
+                queue_log.info("User message " + str(body) + " with delivery_tag " +
+                               str(method_frame.delivery_tag) + " acknowledged")
             else:
-                raise
+                queue_log.info("No more messages in {0}".format(WORKER_QUEUE_NAME))
+                m_channel.cancel()
+                break
+        time.sleep(4)
+    except BaseException as err:
+        queue_log.exception(err)
+        if config.supress_errors:
+            pass
+        else:
+            raise
+    return is_running
+
+
+def init_worker(config):
+    queue_log = get_logger("Rabbit_worker", config.log_level, True)
+    renew_log = get_logger("renew_worker", config.log_level, True)
+    set_load_logger(config)
+    set_db_config(config)
+    set_queue_config(config)
+    set_queue_log(queue_log)
+    Platform.set_config(config)
+    platforms = load(config)
+    set_skip_extra_info(True)
+    m_queue = get_mq_connect(config)
+    m_channel = m_queue.channel()
+    m_channel.queue_declare(queue=WORKER_QUEUE_NAME, durable=True)
+    m_channel.exchange_declare(exchange='achievement_hunt',
+                               exchange_type='direct',
+                               durable=True)
+    m_channel.queue_bind(exchange='achievement_hunt',
+                         queue=WORKER_QUEUE_NAME,
+                         routing_key=config.mode)
+    cmd = {"cmd": "process_response", "text": "Worker started at {0}.".format(datetime.datetime.now())}
+    enqueue_command(cmd, MODE_BOT)
+    return platforms, queue_log, renew_log
 
 
 def process_queue_command(body: bytes, config: Config, platforms: List[Platform],
@@ -178,6 +179,7 @@ def process_queue_command(body: bytes, config: Config, platforms: List[Platform]
         player_id = cmd.get("player_id")
         dt_sent = cmd.get("dt_sent")
         dt_sent = datetime.datetime.fromtimestamp(dt_sent)
+        # TODO: fix long waiting queue ack
         update_player_achievements_cmd_handler(config, dt_sent, platform_id, platforms, player_id,
                                                queue_log)
 
