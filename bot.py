@@ -54,7 +54,6 @@ def main_bot(config: Config):
     while is_running:
 
         try:
-
             for method_frame, properties, body in m_channel.consume(BOT_QUEUE_NAME, inactivity_timeout=1,
                                                                     auto_ack=False,
                                                                     arguments={"routing_key": config.mode}):
@@ -72,6 +71,9 @@ def main_bot(config: Config):
                     m_channel.cancel()
                     break
             time.sleep(4)
+        except KeyboardInterrupt:
+            is_running = False
+            queue_log.info("Stop, because keyboard command")
         except BaseException as err:
             queue_log.exception(err)
             if config.supress_errors:
