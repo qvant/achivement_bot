@@ -10,6 +10,7 @@ global startup
 
 TOP_OBJECT_LENGTH = 10
 
+
 def get_memory_usage() -> float:
     process = psutil.Process(os.getpid())
     return round(process.memory_full_info().rss / 1024 ** 2, 2)
