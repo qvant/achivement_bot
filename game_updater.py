@@ -154,7 +154,7 @@ def main_game_updater(config: Config):
                     queue_log.info("User message " + str(body) + " with delivery_tag " +
                                    str(method_frame.delivery_tag) + " acknowledged")
                 else:
-                    queue_log.info("No more messages in {0}".format(GAME_UPDATER_QUEUE_NAME))
+                    queue_log.debug("No more messages in {0}".format(GAME_UPDATER_QUEUE_NAME))
                     m_channel.cancel()
                     break
             time.sleep(4)
