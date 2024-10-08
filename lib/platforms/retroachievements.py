@@ -254,7 +254,7 @@ def get_player_games(player_id):
                             res[1].append(i.get("Title"))
                         else:
                             api_log.info(
-                                "Found game with ext_id {} for player {} "
+                                "Found game with ext_id {1} for player {0} "
                                 "in GetUserRecentlyPlayedGames second time".format(player_id, game_id))
         if games_fetched == 0 or games_fetched < pack_size:
             api_log.info("All {} games for player with ext_id {} received from retroachievements.org".

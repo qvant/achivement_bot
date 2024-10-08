@@ -114,7 +114,7 @@ class Platform:
     def save(self):
         conn = self.get_connect()
         cursor = conn.cursor()
-        self.logger.info("Start saving to db")
+        self.logger.debug("Start saving to db")
         if not self._is_persist:
             cursor.execute(get_query(INSERT_PLATFORM), (self.name, self.id))
             ret = cursor.fetchone()
@@ -142,7 +142,7 @@ class Platform:
             self.games[i].save(active_locale=self.active_locale)
         conn.commit()
         commit()
-        self.logger.info("Finish saving to db")
+        self.logger.debug("Finish saving to db")
 
     def update_games(self, game_id: str, game_name: str, force: bool = False):
         if str(game_id) not in self.games or force:
@@ -189,7 +189,7 @@ class Platform:
             if self.get_consoles is not None and console_id is not None:
                 console_id = int(console_id)
                 if self.get_console_by_id(console_id) is None:
-                    self.load_log.info(
+                    self.load_log.debug(
                         "Looking console with id {} into db"
                         .format(console_id))
                     self.load_consoles(console_id)
@@ -206,8 +206,9 @@ class Platform:
                                           features=features,
                                           feature_ids=feature_ids,
                                           )
-                self.load_log.info("Loaded game \"{0}\" (id: {1}, ext_id: {2}, console {5} (id: {3})) for platform: {4}"
-                                   .format(name, id, ext_id, console_id, self.name, console.name))
+                self.load_log.debug("Loaded game \"{0}\" (id: {1}, ext_id: {2}, "
+                                    "console {5} (id: {3})) for platform: {4}"
+                                    .format(name, id, ext_id, console_id, self.name, console.name))
             else:
                 games[str(ext_id)] = Game(name=name, platform_id=platform_id, id=id, ext_id=ext_id, achievements=None,
                                           console_ext_id=None, console=None,
@@ -221,8 +222,8 @@ class Platform:
                                           features=features,
                                           feature_ids=feature_ids,
                                           )
-                self.load_log.info("Loaded game \"{0}\" (id: {1}, ext_id: {2}) for platform {3}.".
-                                   format(name, id, ext_id, self.name))
+                self.load_log.debug("Loaded game \"{0}\" (id: {1}, ext_id: {2}) for platform {3}."
+                                    .format(name, id, ext_id, self.name))
         if load_achievements:
             if game_id is None:
                 cursor.execute(get_query(GET_ACHIEVEMENTS_BY_PLATFORM), (self.id,))

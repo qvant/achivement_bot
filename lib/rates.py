@@ -55,10 +55,16 @@ def do_with_limit(resource: str, func, args):
     global loggers
     if resource not in interval_end_times or interval_end_times[resource] < datetime.datetime.now():
         reset_limit(resource)
+    first_log_entry = True
     while interval_end_times[resource] >= datetime.datetime.now() and counters[resource] >= interval_limits[resource]:
         if loggers[resource] is not None:
-            loggers[resource].info("Wait to {}, because rate on {} is reached ".format(interval_end_times[resource],
-                                                                                       resource))
+            if first_log_entry:
+                first_log_entry = False
+                loggers[resource].info("Wait to {}, because rate on {} is reached "
+                                       .format(interval_end_times[resource], resource))
+            else:
+                loggers[resource].debug("Wait to {}, because rate on {} is reached "
+                                       .format(interval_end_times[resource], resource))
         if interval_end_times[resource] - datetime.datetime.now() > datetime.timedelta(seconds=5):
             time.sleep(5)
         else:
