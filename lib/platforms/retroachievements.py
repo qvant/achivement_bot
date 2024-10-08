@@ -319,7 +319,6 @@ def init_platform(config: Config) -> Platform:
     global api_call_pause_on_error
     global call_counters_retain
     call_counters = {}
-    api_log = get_logger("LOG_API_RETRO_" + str(config.mode), config.log_level, True)
     f = config.file_path[:config.file_path.rfind('/')] + "retroachievements.json"
     fp = codecs.open(f, 'r', "utf-8")
     retro_config = json.load(fp)
@@ -350,6 +349,7 @@ def init_platform(config: Config) -> Platform:
                      incremental_update_interval=incremental_update_interval, get_last_games=get_last_player_games,
                      incremental_skip_chance=incremental_skip_chance, get_consoles=get_consoles,
                      get_player_avatar=get_player_avatar)
+    api_log = retro.logger
     if is_password_encrypted(key_read):
         api_log.info("Retroachievements key encrypted, do nothing")
         open_key = decrypt_password(key_read, config.server_name, config.db_port)

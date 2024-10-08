@@ -146,8 +146,8 @@ def process_external_messages(config, is_running, platforms, queue_log):
 
 
 def init_worker(config):
-    queue_log = get_logger("Rabbit_worker", config.log_level, True)
-    renew_log = get_logger("renew_worker", config.log_level, True)
+    renew_log = get_logger("renew_worker", config.log_level)
+    queue_log = renew_log
     set_load_logger(config)
     set_db_config(config)
     set_queue_config(config)
