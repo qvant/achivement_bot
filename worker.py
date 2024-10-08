@@ -5,7 +5,6 @@ from datetime import timezone
 from logging import Logger
 from typing import List
 
-import pika
 
 from lib.config import Config, MODE_BOT, MODE_UPDATER
 from lib.log import get_logger

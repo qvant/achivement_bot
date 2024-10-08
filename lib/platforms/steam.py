@@ -9,7 +9,6 @@ from ..ApiException import ApiException
 from ..achievement import Achievement
 from ..config import Config
 from ..game import Game
-from ..log import get_logger
 from ..platform import Platform
 from ..platform_utils import save_api_key, inc_call_cnt, get_call_cnt, sef_daily_call_limit, set_call_counters_retain, \
     inc_error_cnt

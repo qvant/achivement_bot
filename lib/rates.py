@@ -64,7 +64,7 @@ def do_with_limit(resource: str, func, args):
                                        .format(interval_end_times[resource], resource))
             else:
                 loggers[resource].debug("Wait to {}, because rate on {} is reached "
-                                       .format(interval_end_times[resource], resource))
+                                        .format(interval_end_times[resource], resource))
         if interval_end_times[resource] - datetime.datetime.now() > datetime.timedelta(seconds=5):
             time.sleep(5)
         else:

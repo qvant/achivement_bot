@@ -21,9 +21,9 @@ def get_memory_usage_by_object() -> Dict:
     for obj in gc.get_objects():
         try:
             objects_by_memory[obj.__name__] = sys.getsizeof(obj)
-        except AttributeError as err:
+        except AttributeError:
             objects_by_memory[str(obj)[:100]] = sys.getsizeof(obj)
-        except ModuleNotFoundError as err:
+        except ModuleNotFoundError:
             objects_by_memory[str(obj)[:100]] = sys.getsizeof(obj)
     top_objects_by_memory = {}
     for k, v in sorted(objects_by_memory.items(), key=lambda item: item[1], reverse=True):

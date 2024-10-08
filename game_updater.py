@@ -66,9 +66,10 @@ def main_game_updater(config: Config):
             for i in range(len(platforms)):
                 if datetime.datetime.now().replace(tzinfo=timezone.utc) > \
                         dt_next_update[i].replace(tzinfo=timezone.utc):
-                    platforms[i].logger.info("Begin update games on platform {0} ({2}), next update {1}".format(platforms[i].name,
-                                                                                                      dt_next_update[i],
-                                                                                                      platforms[i].id))
+                    platforms[i].logger.info("Begin update games on platform {0} ({2}), next update {1}"
+                                             .format(platforms[i].name,
+                                                     dt_next_update[i],
+                                                     platforms[i].id))
                     platforms[i].set_next_language()
                     start_update(platforms[i], ID_PROCESS_GAME_UPDATER)
                     if platforms[i].get_consoles is not None:
@@ -144,7 +145,7 @@ def main_game_updater(config: Config):
                     try:
                         m_channel.basic_ack(method_frame.delivery_tag)
                     except BaseException as exc:
-                        queue_log.critical("User message " + str(body) + " with delivery_tag " +
+                        renew_log.critical("User message " + str(body) + " with delivery_tag " +
                                            str(method_frame.delivery_tag) +
                                            " acknowledged with error{0}, resending".format(str(exc)))
                         # TODO: handle
