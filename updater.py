@@ -39,7 +39,7 @@ def main_updater(config: Config):
             player_achievements_queue_are_empty = process_player_achievements_queue(config, db_log)
             queues_are_empty = \
                 games_queue_are_empty and achievements_queue_are_empty and player_achievements_queue_are_empty
-            db_log.info("""Pause db queue processing, check rabbitMQ for new messages...""")
+            db_log.debug("""Pause db queue processing, check rabbitMQ for new messages...""")
         except BaseException as err:
             db_log.exception(err)
             if config.supress_errors:
@@ -58,13 +58,13 @@ def main_updater(config: Config):
 
 def process_player_achievements_queue(config: Config, db_log: Logger) -> bool:
     # Process player achievements queue, renew percent of achievers and update player perfect games status
-    db_log.info("""Check queue_player_achievements_update""")
+    db_log.debug("""Check queue_player_achievements_update""")
     connect = Platform.get_connect()
     cursor = connect.cursor()
     queue_is_empty = True
     query_prepared = False
     for step in range(config.db_update_cycles):
-        db_log.info("""Check queue_achievements_update, step {0}""".format(step))
+        db_log.debug("""Check queue_achievements_update, step {0}""".format(step))
         cursor.execute(get_query(LOCK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE), (config.db_update_size,))
         achievements = {}
         recs = []
@@ -110,7 +110,7 @@ def process_player_achievements_queue(config: Config, db_log: Logger) -> bool:
             connect.commit()
 
         else:
-            db_log.info("""No more in queue queue_player_achievements_update on step {0}""".format(step))
+            db_log.debug("""No more in queue queue_player_achievements_update on step {0}""".format(step))
             break
     if query_prepared:
         cursor.execute("""DEALLOCATE update_player_games""")
@@ -118,20 +118,20 @@ def process_player_achievements_queue(config: Config, db_log: Logger) -> bool:
         cursor.execute("""DEALLOCATE del_q""")
         cursor.execute("""DEALLOCATE upd_achievement_percent""")
     connect.commit()
-    db_log.info("""Finish queue_player_achievements_update processing""")
+    db_log.debug("""Finish queue_player_achievements_update processing""")
     return queue_is_empty
 
 
 def process_achievements_queue(config: Config, db_log: Logger) -> bool:
     # Process new achievements queue - reset perfect games and recalc % complete for all players
-    db_log.info("""Check queue_achievements_update""")
+    db_log.debug("""Check queue_achievements_update""")
     queue_is_empty = True
     query_prepared = False
     connect = Platform.get_connect()
     cursor = connect.cursor()
     for step in range(config.db_update_cycles):
         cursor.execute(get_query(LOCK_QUEUE_ACHIEVEMENTS_UPDATE), (config.db_update_size,))
-        db_log.info("""Check queue_achievements_update, step {0}""".format(step))
+        db_log.debug("""Check queue_achievements_update, step {0}""".format(step))
         recs = []
         games = []
         games_ids = []
@@ -157,26 +157,26 @@ def process_achievements_queue(config: Config, db_log: Logger) -> bool:
             psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
             connect.commit()
         else:
-            db_log.info("""No more in queue queue_achievements_update on step {0}""".format(step))
+            db_log.debug("""No more in queue queue_achievements_update on step {0}""".format(step))
             break
     if query_prepared:
         cursor.execute("""DEALLOCATE  update_player_games""")
         cursor.execute("""DEALLOCATE  update_player_games_perf""")
         cursor.execute("""DEALLOCATE  del_q""")
     connect.commit()
-    db_log.info("""Finish queue_achievements_update processing""")
+    db_log.debug("""Finish queue_achievements_update processing""")
     return queue_is_empty
 
 
 def process_games_queue(config: Config, db_log: Logger) -> bool:
     queue_is_empty = True
-    db_log.info("""Check queue_games_update""")
+    db_log.debug("""Check queue_games_update""")
     connect = Platform.get_connect()
     cursor = connect.cursor()
     query_prepared = False
     # Process new games queue - recalc owner numbers and percent of achievers
     for step in range(config.db_update_cycles):
-        db_log.info("""Check queue_games_update, step {0}""".format(step))
+        db_log.debug("""Check queue_games_update, step {0}""".format(step))
         cursor.execute(get_query(LOCK_QUEUE_GAMES_UPDATE), (config.db_update_size,))
         games = {}
         recs = []
@@ -188,9 +188,9 @@ def process_games_queue(config: Config, db_log: Logger) -> bool:
             else:
                 games[game_id] -= 1
             recs.append((id_rec,))
-        db_log.info("""Process queue_games_update, found {0} records for {1} games""".
-                    format(len(recs), len(games)))
         if len(games) > 0:
+            db_log.info("""Process queue_games_update, found {0} records for {1} games""".
+                        format(len(recs), len(games)))
             queue_is_empty = False
             # TODO: constants
             if not query_prepared:
@@ -208,14 +208,14 @@ def process_games_queue(config: Config, db_log: Logger) -> bool:
             psycopg2.extras.execute_batch(cursor, """EXECUTE del_q (%s)""", recs)
             connect.commit()
         else:
-            db_log.info("""No more in queue queue_games_update on step {0}""".format(step))
+            db_log.debug("""No more in queue queue_games_update on step {0}""".format(step))
             break
     if query_prepared:
         cursor.execute("""DEALLOCATE upd_games""")
         cursor.execute("""DEALLOCATE del_q""")
         cursor.execute("""DEALLOCATE upd_achievement""")
     connect.commit()
-    db_log.info("""Finish queue_games_update processing""")
+    db_log.debug("""Finish queue_games_update processing""")
     return queue_is_empty
 
 
