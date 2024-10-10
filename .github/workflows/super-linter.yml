@@ -1,4 +1,6 @@
 name: Lint Code Base
+permissions:
+  contents: write
 on:
   push:
     #branches-ignore:

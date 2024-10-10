@@ -3,6 +3,8 @@
 
 name: Lint with flake8
 
+permissions:
+  contents: write
 on:
   push:
     branches: [ master ]
