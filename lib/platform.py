@@ -136,10 +136,10 @@ class Platform:
             if self.games[i].console_ext_id is not None and self.games[i].console is None:
                 # TODO load console from database
                 self.logger.debug("Set console {0} for game \"{1}\"".format(self.games[i].console_ext_id,
-                                                                           self.games[i].name))
+                                                                            self.games[i].name))
                 self.games[i].set_console(self.get_console_by_ext(self.games[i].console_ext_id))
                 self.logger.debug("New console {0} for game \"{1}\"".format(self.games[i].console_name,
-                                                                           self.games[i].name))
+                                                                            self.games[i].name))
             self.games[i].save(active_locale=self.active_locale)
         conn.commit()
         commit()
