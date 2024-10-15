@@ -29,3 +29,5 @@ jobs:
           # To report GitHub Actions status checks
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_BASH_EXEC: false
+          PYTHON_FLAKE8_CONFIG_FILE: .config/.flake8
+          YAML_CONFIG_FILE: .config/.yaml-lint.yml
