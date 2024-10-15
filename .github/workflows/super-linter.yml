@@ -31,8 +31,9 @@ jobs:
           VALIDATE_BASH_EXEC: false
           # Temp disable
           VALIDATE_JSCPD: false
+          VALIDATE_MARKDOWN_PRETTIER: false
           VALIDATE_PYTHON_BLACK: false
-          VALIDATE_PYTHON_PYLINT: false
+          # VALIDATE_PYTHON_PYLINT: false
           VALIDATE_PYTHON_ISORT: false
           VALIDATE_PYTHON_MYPY: false
           VALIDATE_PYTHON_PYINK: false
