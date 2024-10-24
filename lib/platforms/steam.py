@@ -9,7 +9,6 @@ from ..ApiException import ApiException
 from ..achievement import Achievement
 from ..config import Config
 from ..game import Game
-from ..log import get_logger
 from ..platform import Platform
 from ..platform_utils import save_api_key, inc_call_cnt, get_call_cnt, sef_daily_call_limit, set_call_counters_retain, \
     inc_error_cnt
@@ -113,7 +112,6 @@ def init_platform(config: Config) -> Platform:
     global session
     session = requests.Session()
     hardcoded_games = {}
-    api_log = get_logger("LOG_API_steam_" + str(config.mode), config.log_level, True)
     f = config.file_path[:config.file_path.rfind('/')] + "steam.json"
     fp = codecs.open(f, 'r', "utf-8")
     steam_config = json.load(fp)
@@ -145,6 +143,7 @@ def init_platform(config: Config) -> Platform:
                      incremental_skip_chance=incremental_skip_chance, get_consoles=None,
                      get_player_stats=get_player_stats_for_game, set_hardcoded=set_hardcoded,
                      get_player_avatar=get_player_avatar)
+    api_log = steam.logger
     if is_password_encrypted(key_read):
         api_log.info("Steam key encrypted, do nothing")
         open_key = decrypt_password(key_read, config.server_name, config.db_port)

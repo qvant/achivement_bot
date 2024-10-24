@@ -1,0 +1,1 @@
+select 1 from achievements_hunt.queue_player_achievements_update limit 1

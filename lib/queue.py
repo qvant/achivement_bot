@@ -15,7 +15,7 @@ global queue_logger
 global config
 
 
-def get_mq_connect(mq_config: Config):
+def get_mq_connect(mq_config: Config) -> pika.BlockingConnection:
     if mq_config.queue_password is None:
         return pika.BlockingConnection(pika.ConnectionParameters(host=mq_config.queue_host, port=mq_config.queue_port))
     else:
@@ -34,7 +34,7 @@ def set_logger(logger: Logger):
     queue_logger = logger
 
 
-def enqueue_command(obj: Dict, send_to: None):
+def enqueue_command(obj: Dict, send_to: str):
     global queue_logger
     global config
 
@@ -49,6 +49,6 @@ def enqueue_command(obj: Dict, send_to: None):
                                                                              content_type="application/json",
                                                                              content_encoding="UTF-8"))
         queue.close()
-        queue_logger.info("Sent command {0} in queue {1} for {2}".format(msg_body, queue, send_to))
+        queue_logger.info("Sent command {} for {}".format(msg_body, send_to))
     except pika.exceptions.AMQPError as exc:
-        queue_logger.critical("Error {1} when Sent command {0}  for {2}".format(msg_body, exc, send_to))
+        queue_logger.critical("Error {1} when Sent command {0} for {2}".format(msg_body, exc, send_to))
