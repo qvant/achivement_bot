@@ -70,7 +70,7 @@ def process_player_achievements_queue(config: Config, db_log: Logger) -> bool:
             cursor.execute(get_query(CHECK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE_IS_EMPTY))
             exists = cursor.fetchone()
             if exists is None:
-                db_log.debug("""Queue queue_achievements_update is empty""".format(step))
+                db_log.debug("""Queue queue_achievements_update is empty""")
                 break
         cursor.execute(get_query(LOCK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE), (config.db_update_size,))
         achievements = {}
@@ -142,7 +142,7 @@ def process_achievements_queue(config: Config, db_log: Logger) -> bool:
             cursor.execute(get_query(CHECK_QUEUE_ACHIEVEMENTS_IS_EMPTY))
             exists = cursor.fetchone()
             if exists is None:
-                db_log.debug("""Queue queue_achievements_update is empty""".format(step))
+                db_log.debug("""Queue queue_achievements_update is empty""")
                 break
         cursor.execute(get_query(LOCK_QUEUE_ACHIEVEMENTS_UPDATE), (config.db_update_size,))
         recs = []
@@ -194,7 +194,7 @@ def process_games_queue(config: Config, db_log: Logger) -> bool:
             cursor.execute(get_query(CHECK_QUEUE_GAMES_IS_EMPTY))
             exists = cursor.fetchone()
             if exists is None:
-                db_log.debug("""Queue queue_games_update is empty""".format(step))
+                db_log.debug("""Queue queue_games_update is empty""")
                 break
         cursor.execute(get_query(LOCK_QUEUE_GAMES_UPDATE), (config.db_update_size,))
         games = {}
