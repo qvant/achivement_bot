@@ -15,7 +15,8 @@ from lib.query_holder import get_query, LOCK_QUEUE_GAMES_UPDATE, get_query_for_p
     UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE, UPDATE_PLAYER_GAMES_SET_PERFECT, DELETE_QUEUE_ACHIEVEMENTS_UPDATE, \
     LOCK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE, UPDATE_ACHIEVEMENT_SET_NUM_OWNERS, \
     UPDATE_ACHIEVEMENTS_SET_PERCENT_OWNERS_BY_ID, UPDATE_PLAYER_GAME_SET_PERCENT_COMPLETE_BY_PLAYER, \
-    DELETE_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE
+    DELETE_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE, CHECK_QUEUE_GAMES_IS_EMPTY, CHECK_QUEUE_ACHIEVEMENTS_IS_EMPTY, \
+    CHECK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE_IS_EMPTY
 from lib.queue import set_config as set_queue_config, set_logger as set_queue_log, get_mq_connect, UPDATER_QUEUE_NAME, \
     enqueue_command
 from lib.stats import get_stats
@@ -65,6 +66,12 @@ def process_player_achievements_queue(config: Config, db_log: Logger) -> bool:
     query_prepared = False
     for step in range(config.db_update_cycles):
         db_log.debug("""Check queue_achievements_update, step {0}""".format(step))
+        if step == 0:
+            cursor.execute(get_query(CHECK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE_IS_EMPTY))
+            exists = cursor.fetchone()
+            if exists is None:
+                db_log.debug("""Queue queue_achievements_update is empty""".format(step))
+                break
         cursor.execute(get_query(LOCK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE), (config.db_update_size,))
         achievements = {}
         recs = []
@@ -130,8 +137,14 @@ def process_achievements_queue(config: Config, db_log: Logger) -> bool:
     connect = Platform.get_connect()
     cursor = connect.cursor()
     for step in range(config.db_update_cycles):
-        cursor.execute(get_query(LOCK_QUEUE_ACHIEVEMENTS_UPDATE), (config.db_update_size,))
         db_log.debug("""Check queue_achievements_update, step {0}""".format(step))
+        if step == 0:
+            cursor.execute(get_query(CHECK_QUEUE_ACHIEVEMENTS_IS_EMPTY))
+            exists = cursor.fetchone()
+            if exists is None:
+                db_log.debug("""Queue queue_achievements_update is empty""".format(step))
+                break
+        cursor.execute(get_query(LOCK_QUEUE_ACHIEVEMENTS_UPDATE), (config.db_update_size,))
         recs = []
         games = []
         games_ids = []
@@ -177,6 +190,12 @@ def process_games_queue(config: Config, db_log: Logger) -> bool:
     # Process new games queue - recalc owner numbers and percent of achievers
     for step in range(config.db_update_cycles):
         db_log.debug("""Check queue_games_update, step {0}""".format(step))
+        if step == 0:
+            cursor.execute(get_query(CHECK_QUEUE_GAMES_IS_EMPTY))
+            exists = cursor.fetchone()
+            if exists is None:
+                db_log.debug("""Queue queue_games_update is empty""".format(step))
+                break
         cursor.execute(get_query(LOCK_QUEUE_GAMES_UPDATE), (config.db_update_size,))
         games = {}
         recs = []

@@ -71,6 +71,9 @@ INSERT_PLAYER_ACHIEVEMENT = "insert_player_achievement"
 GET_PLAYER_GAME_STATS_FOR_GAME = "get_player_game_stats_for_game"
 INSERT_PLAYER_GAME_STATS = "insert_player_game_stats"
 LOCK_QUEUE_GAMES_UPDATE = "lock_queue_games_update"
+CHECK_QUEUE_GAMES_IS_EMPTY = "check_queue_games_is_empty"
+CHECK_QUEUE_ACHIEVEMENTS_IS_EMPTY = "check_queue_achievements_is_empty"
+CHECK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE_IS_EMPTY = "check_queue_player_achievements_update_is_empty"
 UPDATE_GAME_SET_NUM_OWNERS = "update_game_set_num_owners"
 DELETE_QUEUE_GAMES_UPDATE = "delete_queue_games_update"
 UPDATE_ACHIEVEMENT_SET_PERCENT_OWNERS = "update_achievement_set_percent_owners"
@@ -165,6 +168,9 @@ queries = {GET_NEXT_UPDATE_DATE: r"db/queries/get_next_update_date.sql",
            GET_PLAYER_GAME_STATS_FOR_GAME: r"db/queries/get_player_game_stats_for_game.sql",
            INSERT_PLAYER_GAME_STATS: r"db/queries/insert_player_game_stats.sql",
            LOCK_QUEUE_GAMES_UPDATE: r"db/queries/lock_queue_games_update.sql",
+           CHECK_QUEUE_GAMES_IS_EMPTY: r"db/queries/check_queue_games_is_empty.sql",
+           CHECK_QUEUE_ACHIEVEMENTS_IS_EMPTY: r"db/queries/check_queue_achievements_is_empty.sql",
+           CHECK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE_IS_EMPTY: r"db/queries/check_queue_player_achievements_update_is_empty.sql",
            UPDATE_GAME_SET_NUM_OWNERS: r"db/queries/update_game_set_num_owners.sql",
            DELETE_QUEUE_GAMES_UPDATE: r"db/queries/delete_queue_games_update.sql",
            UPDATE_ACHIEVEMENT_SET_PERCENT_OWNERS: r"db/queries/update_achievement_set_percent_owners.sql",
