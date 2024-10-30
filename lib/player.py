@@ -239,6 +239,7 @@ class Player:
         saved_games = []
         for j in ret:
             saved_games.append(j[0])
+        new_achievements_total = 0
         for i in range(len(self.games)):
             if not (self.platform.is_game_known(str(self.games[i]))):
                 # TODO: check
@@ -262,8 +263,8 @@ class Player:
                 saved_cnt = 0
                 for j in ret:
                     saved_achievements.append(j[0])
-                self.platform.logger.info(
-                    "Found in db achievements for player {} and game \"{}\" ({}): {}".format(
+                self.platform.logger.debug(
+                    "Already owned achievements for player {} in game \"{}\" ({}): {}".format(
                         self.ext_id, game.name, game.ext_id, len(saved_achievements)))
                 for j in range(len(self.achievements[self.games[i]])):
                     achievement = game.get_achievement_by_ext_id(self.achievements[self.games[i]][j])
@@ -303,7 +304,7 @@ class Player:
                                 (self.platform.id, game.id, achievement.id, self.id, achievement_date))
                     saved_cnt += 1
                     self.platform.logger.info(
-                        "Saved into db achievement \"{5}\" ({2}) for player {3} ({0}) and game \"{4}\" ({1}).".
+                        "Saved new unlocked achievement \"{5}\" ({2}) for player {3} ({0}) and game \"{4}\" ({1}).".
                         format(self.ext_id,
                                game.ext_id,
                                achievement.id,
@@ -311,13 +312,16 @@ class Player:
                                game.name,
                                achievement.name
                                ))
-                self.platform.logger.info(
-                    "Achievements for player {} and game \"{}\" ({}) was saved: {}".format(
-                        self.ext_id,
-                        game.name,
-                        game.ext_id,
-                        saved_cnt))
-        self.platform.logger.info("Saved achievements for player {0}".format(self.ext_id))
+                if saved_cnt > 0:
+                    self.platform.logger.info(
+                        "New unlocked achievements for player {} and game \"{}\" ({}) was saved: {}".format(
+                            self.ext_id,
+                            game.name,
+                            game.ext_id,
+                            saved_cnt))
+                    new_achievements_total += saved_cnt
+        self.platform.logger.info("Finish saving achievements for player {}, new achievements was unlocked {}."
+                                  .format(self.ext_id, new_achievements_total))
 
         # TODO: split into procedures
         if len(self.stats) > 0:
