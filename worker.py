@@ -46,19 +46,21 @@ def main_worker(config: Config):
             for i in range(len(platforms)):
                 if datetime.datetime.now().replace(tzinfo=timezone.utc) > \
                         dt_next_update[i].replace(tzinfo=timezone.utc):
-                    renew_log.info("Begin update players on platform {0}, next update {1}".format(platforms[i].name,
-                                                                                                  dt_next_update[i]))
+                    renew_log.info("Begin update players on platform {}, next update {}"
+                                   .format(platforms[i].name,
+                                           dt_next_update[i]))
                     platforms[i].set_next_language()
                     start_update(platforms[i], ID_PROCESS_WORKER)
                     if len(platform_players[i]) == 0:
-                        renew_log.info("Update loading players for platform {0}".format(platforms[i].name))
+                        renew_log.info("Started updating players for platform {}".format(platforms[i].name))
                         player_buf = load_players(platforms[i], config)
                         for cur_player in player_buf:
                             platform_players[i].append(cur_player)
                         cur_players[i] = 0
                     else:
                         renew_log.info(
-                            "Update platform {0} resumed from position {1}".format(platforms[i].name, cur_players[i]))
+                            "Update players on platform {} resumed from position {}"
+                            .format(platforms[i].name, cur_players[i]))
                     players_processed = 0
                     for j in range(cur_players[i], len(platform_players[i])):
                         cur_players[i] = j
@@ -75,7 +77,8 @@ def main_worker(config: Config):
                         players_processed += 1
                         if players_processed >= platforms[i].players_pack_size:
                             renew_log.info(
-                                "Update platform {0} paused in position {1}".format(platforms[i].name, cur_players[i]))
+                                "Update players for platform {} paused in position {}"
+                                .format(platforms[i].name, cur_players[i]))
                             break
                     platforms[i].save()
                     if cur_players[i] + 1 >= len(platform_players[i]):

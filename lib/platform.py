@@ -66,7 +66,11 @@ class Platform:
         for i in consoles:
             if i.id is not None:
                 self._consoles_by_id[i.id] = i
-            self._consoles_by_ext_id[str(i.ext_id)] = i
+            if str(i.ext_id) in self._consoles_by_ext_id:
+                self._consoles_by_ext_id[str(i.ext_id)].name = i.name
+                self._consoles_by_ext_id[str(i.ext_id)].platform_id = i.platform_id
+            else:
+                self._consoles_by_ext_id[str(i.ext_id)] = i
 
     def get_console_by_id(self, id: int) -> Union[Console, None]:
         return self._consoles_by_id.get(id)
@@ -182,6 +186,8 @@ class Platform:
         else:
             cursor.execute(get_query(GET_GAME_BY_PLATFORM_AND_ID), (self.id, game_id))
         games = {}
+        if game_id is None and self.get_consoles is not None and not self._consoles_by_ext_id:
+            self.load_consoles()
         # TODO: Shadows built-in name 'id
         for id, platform_id, name, ext_id, console_id, icon_url, release_date, developer_id, developer_name, \
                 publisher_id, publisher_name, genre_ids, genres, feature_ids, features in cursor:

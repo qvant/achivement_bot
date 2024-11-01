@@ -264,8 +264,8 @@ class Player:
                 for j in ret:
                     saved_achievements.append(j[0])
                 self.platform.logger.debug(
-                    "Already owned achievements for player {} in game \"{}\" ({}): {}".format(
-                        self.ext_id, game.name, game.ext_id, len(saved_achievements)))
+                    "Already owned achievements for player {} ({}) in game \"{}\" ({}): {}".format(
+                        self.name, self.ext_id, game.name, game.ext_id, len(saved_achievements)))
                 for j in range(len(self.achievements[self.games[i]])):
                     achievement = game.get_achievement_by_ext_id(self.achievements[self.games[i]][j])
                     achievement_date = self.achievement_dates[self.games[i]][j]
@@ -314,14 +314,15 @@ class Player:
                                ))
                 if saved_cnt > 0:
                     self.platform.logger.info(
-                        "New unlocked achievements for player {} and game \"{}\" ({}) was saved: {}".format(
+                        "New unlocked achievements for player {} ({}) and game \"{}\" ({}) was saved: {}".format(
+                            self.name,
                             self.ext_id,
                             game.name,
                             game.ext_id,
                             saved_cnt))
                     new_achievements_total += saved_cnt
-        self.platform.logger.info("Finish saving achievements for player {}, new achievements was unlocked {}."
-                                  .format(self.ext_id, new_achievements_total))
+        self.platform.logger.info("Finish saving achievements for player {} ({}), new achievements was unlocked {}."
+                                  .format(self.name, self.ext_id, new_achievements_total))
 
         # TODO: split into procedures
         if len(self.stats) > 0:
@@ -447,15 +448,15 @@ class Player:
                         self.dt_updated_inc = None
                         self.dt_updated_full = None
                         self.platform.logger.info(
-                            "Skip checking achievements for player {} {}, because profile is private.".format(
-                                self.ext_id, self.name))
+                            "Skip checking achievements for player {} ({}), because profile is private.".format(
+                                self.name, self.ext_id))
                         break
                 if self.platform.get_player_stats is not None and \
                         len(self.platform.get_game_by_ext_id(str(self.games[i])).stats) > 0:
                     self.stats[self.games[i]] = self.platform.get_player_stats(self.ext_id, self.games[i])
             else:
                 self.platform.logger.info(
-                    "Skip checking achievements for game with id {1} and name {2} for player {0} {3}, "
+                    "Skip checking achievements for game \"{2}\" ({1}) and player {3} ({0}), "
                     "because not available. Progress {4}/{5}".format(
                         self.ext_id, self.games[i], names[i], self.name, i + 1, games_num))
         self.dt_updated = datetime.datetime.now()
