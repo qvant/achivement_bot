@@ -69,6 +69,7 @@ class Platform:
             if str(i.ext_id) in self._consoles_by_ext_id:
                 self._consoles_by_ext_id[str(i.ext_id)].name = i.name
                 self._consoles_by_ext_id[str(i.ext_id)].platform_id = i.platform_id
+                # TODO: save changed data in db
             else:
                 self._consoles_by_ext_id[str(i.ext_id)] = i
 
