@@ -79,9 +79,16 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
                 api_log.debug("Full response {} for {} is {}".
                               format(url, params if len(params) > 0 else "no parameters", r.text))
                 break
-            api_log.error("Full response from {} for {} is {}, Limit used: {}, ends {}".
+            if r.status_code == 400 and r.json() is not None:
+                player_stats = r.json().get("playerstats")
+                if player_stats is not None and not player_stats.get("success"):
+                    if player_stats.get("error") == "Requested app has no stats":
+                        api_log.info("Can't get achievements info for {}, probably because it's not on account anymore"
+                                     .format(params))
+                        break
+            api_log.error("Full response from {} for {} is {}, Limit used: {}, ends {}, response code {}".
                           format(url, params if len(params) > 0 else "no parameters", r.text,
-                                 get_limit_counter(url), get_limit_interval_end(url)),
+                                 get_limit_counter(url), get_limit_interval_end(url), r.status_code),
                           exc_info=True,
                           )
             if r.status_code == 400:

@@ -255,8 +255,6 @@ class Player:
                 if len(self.achievements[self.games[i]]) == 0:
                     continue
 
-                self.platform.logger.info("Get saved achievements for player {} ({}) and game \"{}\" ({})".
-                                          format(self.name, self.ext_id, game.name, game.ext_id))
                 cur.execute(get_query(GET_PLAYER_ACHIEVEMENT_IDS), (self.id, self.platform.id, game.id))
                 ret = cur.fetchall()
                 saved_achievements = []

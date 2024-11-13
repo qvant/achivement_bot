@@ -71,8 +71,8 @@ def _call_api(url: str, method_name: str, params: Dict) -> requests.Response:
             r = do_with_limit("https://retroachievements.org/",
                               requests.get,
                               dict(url=real_url, timeout=30))
-            api_log.debug("Response from {} for {} is {}".
-                          format(url, params if len(params) > 0 else "no parameters", r))
+            api_log.debug("Response from {} for {} is {}, response code {}".
+                          format(url, params if len(params) > 0 else "no parameters", r, r.status_code))
             if r.status_code != 200:
                 inc_error_cnt(PLATFORM_NAME, method_name, str(r.status_code))
             if r.status_code == 200 or cnt >= max_api_call_tries:
