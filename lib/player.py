@@ -404,12 +404,13 @@ class Player:
                 else:
                     self.games, names, = self.platform.get_games(self.ext_id)
                     self.dt_updated_full = cur_time
-                    self.platform.logger.info("Start full update (because random) for player {}. "
+                    self.platform.logger.info("Start full update (because random chance {}) for player {}. "
                                               "Last inc update {}, last full update {}".
-                                              format(self.name, self.dt_updated_inc, self.dt_updated_full))
+                                              format(self.platform.incremental_skip_chance,
+                                                     self.name, self.dt_updated_inc, self.dt_updated_full))
             else:
                 self.games, names, = self.platform.get_games(self.ext_id)
-                self.platform.logger.info("Start full update (because inc not possible) for player {}. "
+                self.platform.logger.info("Start full update (because incremental not possible) for player {}. "
                                           "Last inc update {}, last full update {}".
                                           format(self.name, self.dt_updated_inc, self.dt_updated_full))
                 self.dt_updated_full = cur_time
