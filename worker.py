@@ -5,7 +5,6 @@ from datetime import timezone
 from logging import Logger
 from typing import List
 
-import pika
 
 from lib.config import Config, MODE_BOT, MODE_UPDATER
 from lib.log import get_logger
@@ -24,34 +23,9 @@ ID_PROCESS_WORKER = 1
 
 
 def main_worker(config: Config):
-    queue_log = get_logger("Rabbit_worker", config.log_level, True)
-    renew_log = get_logger("renew_worker", config.log_level, True)
-
-    set_load_logger(config)
-    set_db_config(config)
-    set_queue_config(config)
-    set_queue_log(queue_log)
-
-    Platform.set_config(config)
-    platforms = load(config)
-    set_skip_extra_info(True)
-
-    m_queue = get_mq_connect(config)
-    m_channel = m_queue.channel()
-
-    m_channel.queue_declare(queue=WORKER_QUEUE_NAME, durable=True)
-
-    m_channel.exchange_declare(exchange='achievement_hunt',
-                               exchange_type='direct',
-                               durable=True)
-    m_channel.queue_bind(exchange='achievement_hunt',
-                         queue=WORKER_QUEUE_NAME,
-                         routing_key=config.mode)
+    platforms, queue_log, renew_log = init_worker(config)
 
     is_running = True
-
-    cmd = {"cmd": "process_response", "text": "Worker started at {0}.".format(datetime.datetime.now())}
-    enqueue_command(cmd, MODE_BOT)
 
     dt_next_update = []
     for i in platforms:
@@ -72,19 +46,21 @@ def main_worker(config: Config):
             for i in range(len(platforms)):
                 if datetime.datetime.now().replace(tzinfo=timezone.utc) > \
                         dt_next_update[i].replace(tzinfo=timezone.utc):
-                    renew_log.info("Begin update players on platform {0}, next update {1}".format(platforms[i].name,
-                                                                                                  dt_next_update[i]))
+                    renew_log.info("Begin update players on platform {}, next update {}"
+                                   .format(platforms[i].name,
+                                           dt_next_update[i]))
                     platforms[i].set_next_language()
                     start_update(platforms[i], ID_PROCESS_WORKER)
                     if len(platform_players[i]) == 0:
-                        renew_log.info("Update loading players for platform {0}".format(platforms[i].name))
+                        renew_log.info("Started updating players for platform {}".format(platforms[i].name))
                         player_buf = load_players(platforms[i], config)
                         for cur_player in player_buf:
                             platform_players[i].append(cur_player)
                         cur_players[i] = 0
                     else:
                         renew_log.info(
-                            "Update platform {0} resumed from position {1}".format(platforms[i].name, cur_players[i]))
+                            "Update players on platform {} resumed from position {}"
+                            .format(platforms[i].name, cur_players[i]))
                     players_processed = 0
                     for j in range(cur_players[i], len(platform_players[i])):
                         cur_players[i] = j
@@ -101,7 +77,8 @@ def main_worker(config: Config):
                         players_processed += 1
                         if players_processed >= platforms[i].players_pack_size:
                             renew_log.info(
-                                "Update platform {0} paused in position {1}".format(platforms[i].name, cur_players[i]))
+                                "Update players for platform {} paused in position {}"
+                                .format(platforms[i].name, cur_players[i]))
                             break
                     platforms[i].save()
                     if cur_players[i] + 1 >= len(platform_players[i]):
@@ -127,45 +104,71 @@ def main_worker(config: Config):
             else:
                 raise
 
-        try:
+        is_running = process_external_messages(config, is_running, platforms, queue_log)
 
-            m_queue = get_mq_connect(config)
-            m_channel = m_queue.channel()
 
-            for method_frame, properties, body in m_channel.consume(WORKER_QUEUE_NAME, inactivity_timeout=1,
-                                                                    auto_ack=False):
-                if body is not None:
-                    queue_log.info("Received user message {0} with delivery_tag {1}".format(body,
-                                                                                            method_frame.delivery_tag))
-                    need_stop = process_queue_command(body, config, platforms, queue_log)
-                    if need_stop:
-                        is_running = False
-                    try:
-                        m_channel.basic_ack(method_frame.delivery_tag)
-                    except BaseException as exc:
-                        queue_log.critical("User message " + str(body) + " with delivery_tag " +
-                                           str(method_frame.delivery_tag) +
-                                           " acknowledged with error{0}, resending".format(str(exc)))
-                        # TODO: handle
-                        raise
+def process_external_messages(config, is_running, platforms, queue_log):
+    try:
 
-                    queue_log.info("User message " + str(body) + " with delivery_tag " +
-                                   str(method_frame.delivery_tag) + " acknowledged")
-                else:
-                    queue_log.info("No more messages in {0}".format(WORKER_QUEUE_NAME))
+        m_queue = get_mq_connect(config)
+        m_channel = m_queue.channel()
+
+        for method_frame, properties, body in m_channel.consume(WORKER_QUEUE_NAME, inactivity_timeout=1,
+                                                                auto_ack=False):
+            if body is not None:
+                queue_log.info("Received user message {0} with delivery_tag {1}".format(body,
+                                                                                        method_frame.delivery_tag))
+                need_stop = process_queue_command(body, config, platforms, queue_log)
+                if need_stop:
+                    is_running = False
+                try:
+                    m_channel.basic_ack(method_frame.delivery_tag)
+                except BaseException as exc:
+                    queue_log.critical("User message " + str(body) + " with delivery_tag " +
+                                       str(method_frame.delivery_tag) +
+                                       " acknowledged with error{0}, resending".format(str(exc)))
                     m_channel.cancel()
-                    break
-            time.sleep(4)
-        except pika.exceptions.AMQPError as exc:
-            queue_log.exception(exc)
-            m_queue = get_mq_connect(config)
-            m_channel = m_queue.channel()
-        except BaseException as err:
-            queue_log.exception(err)
-            if config.supress_errors:
-                pass
+                    # TODO: handle
+                    raise
+
+                queue_log.info("User message " + str(body) + " with delivery_tag " +
+                               str(method_frame.delivery_tag) + " acknowledged")
             else:
-                raise
+                queue_log.debug("No more messages in {0}".format(WORKER_QUEUE_NAME))
+                m_channel.cancel()
+                break
+        time.sleep(4)
+    except BaseException as err:
+        queue_log.exception(err)
+        if config.supress_errors:
+            pass
+        else:
+            raise
+    return is_running
+
+
+def init_worker(config):
+    renew_log = get_logger("renew_worker", config.log_level)
+    queue_log = renew_log
+    set_load_logger(config)
+    set_db_config(config)
+    set_queue_config(config)
+    set_queue_log(queue_log)
+    Platform.set_config(config)
+    platforms = load(config)
+    set_skip_extra_info(True)
+    m_queue = get_mq_connect(config)
+    m_channel = m_queue.channel()
+    m_channel.queue_declare(queue=WORKER_QUEUE_NAME, durable=True)
+    m_channel.exchange_declare(exchange='achievement_hunt',
+                               exchange_type='direct',
+                               durable=True)
+    m_channel.queue_bind(exchange='achievement_hunt',
+                         queue=WORKER_QUEUE_NAME,
+                         routing_key=config.mode)
+    cmd = {"cmd": "process_response", "text": "Worker started at {0}.".format(datetime.datetime.now())}
+    enqueue_command(cmd, MODE_BOT)
+    return platforms, queue_log, renew_log
 
 
 def process_queue_command(body: bytes, config: Config, platforms: List[Platform],
@@ -178,6 +181,7 @@ def process_queue_command(body: bytes, config: Config, platforms: List[Platform]
         player_id = cmd.get("player_id")
         dt_sent = cmd.get("dt_sent")
         dt_sent = datetime.datetime.fromtimestamp(dt_sent)
+        # TODO: fix long waiting queue ack
         update_player_achievements_cmd_handler(config, dt_sent, platform_id, platforms, player_id,
                                                queue_log)
 

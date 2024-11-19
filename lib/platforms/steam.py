@@ -9,7 +9,6 @@ from ..ApiException import ApiException
 from ..achievement import Achievement
 from ..config import Config
 from ..game import Game
-from ..log import get_logger
 from ..platform import Platform
 from ..platform_utils import save_api_key, inc_call_cnt, get_call_cnt, sef_daily_call_limit, set_call_counters_retain, \
     inc_error_cnt
@@ -68,21 +67,28 @@ def _call_steam_api(url: str, method_name: str, params: Dict, require_auth: bool
     while True:
         if require_auth:
             inc_call_cnt(PLATFORM_NAME, method_name)
-        api_log.info("Request to {} for {}".
-                     format(url, params if len(params) > 0 else "no parameters"))
+        api_log.debug("Request to {} for {}".
+                      format(url, params if len(params) > 0 else "no parameters"))
         try:
             r = session.get(real_url, timeout=30, headers=headers)
-            api_log.info("Response from {} for {} is {}".
-                         format(url, params if len(params) > 0 else "no parameters", r))
+            api_log.debug("Response from {} for {} is {}".
+                          format(url, params if len(params) > 0 else "no parameters", r))
             if r.status_code != 200:
                 inc_error_cnt(PLATFORM_NAME, method_name, str(r.status_code))
             if r.status_code == 200 or cnt >= max_api_call_tries:
                 api_log.debug("Full response {} for {} is {}".
                               format(url, params if len(params) > 0 else "no parameters", r.text))
                 break
-            api_log.error("Full response from {} for {} is {}, Limit used: {}, ends {}".
+            if r.status_code == 400 and r.json() is not None:
+                player_stats = r.json().get("playerstats")
+                if player_stats is not None and not player_stats.get("success"):
+                    if player_stats.get("error") == "Requested app has no stats":
+                        api_log.info("Can't get achievements info for {}, probably because it's not on account anymore"
+                                     .format(params))
+                        break
+            api_log.error("Full response from {} for {} is {}, Limit used: {}, ends {}, response code {}".
                           format(url, params if len(params) > 0 else "no parameters", r.text,
-                                 get_limit_counter(url), get_limit_interval_end(url)),
+                                 get_limit_counter(url), get_limit_interval_end(url), r.status_code),
                           exc_info=True,
                           )
             if r.status_code == 400:
@@ -113,7 +119,6 @@ def init_platform(config: Config) -> Platform:
     global session
     session = requests.Session()
     hardcoded_games = {}
-    api_log = get_logger("LOG_API_steam_" + str(config.mode), config.log_level, True)
     f = config.file_path[:config.file_path.rfind('/')] + "steam.json"
     fp = codecs.open(f, 'r', "utf-8")
     steam_config = json.load(fp)
@@ -145,6 +150,7 @@ def init_platform(config: Config) -> Platform:
                      incremental_skip_chance=incremental_skip_chance, get_consoles=None,
                      get_player_stats=get_player_stats_for_game, set_hardcoded=set_hardcoded,
                      get_player_avatar=get_player_avatar)
+    api_log = steam.logger
     if is_password_encrypted(key_read):
         api_log.info("Steam key encrypted, do nothing")
         open_key = decrypt_password(key_read, config.server_name, config.db_port)

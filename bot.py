@@ -54,7 +54,6 @@ def main_bot(config: Config):
     while is_running:
 
         try:
-
             for method_frame, properties, body in m_channel.consume(BOT_QUEUE_NAME, inactivity_timeout=1,
                                                                     auto_ack=False,
                                                                     arguments={"routing_key": config.mode}):
@@ -68,10 +67,13 @@ def main_bot(config: Config):
                     queue_log.info("User message " + str(body) + " with delivery_tag " +
                                    str(method_frame.delivery_tag) + " acknowledged")
                 else:
-                    queue_log.info("No more messages in {0}".format(BOT_QUEUE_NAME))
+                    queue_log.debug("No more messages in {0}".format(BOT_QUEUE_NAME))
                     m_channel.cancel()
                     break
             time.sleep(4)
+        except KeyboardInterrupt:
+            is_running = False
+            queue_log.info("Stop, because keyboard command")
         except BaseException as err:
             queue_log.exception(err)
             if config.supress_errors:

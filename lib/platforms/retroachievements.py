@@ -10,7 +10,6 @@ from ..achievement import Achievement
 from ..config import Config
 from ..console import Console
 from ..game import Game
-from ..log import get_logger
 from ..platform import Platform
 from ..platform_utils import save_api_key, inc_call_cnt, get_call_cnt, set_call_counters_retain, sef_daily_call_limit, \
     inc_error_cnt
@@ -66,14 +65,14 @@ def _call_api(url: str, method_name: str, params: Dict) -> requests.Response:
         real_url += "&{}={}".format(i, params[i])
     while True:
         inc_call_cnt(PLATFORM_NAME, method_name)
-        api_log.info("Request to {} for {}".
-                     format(url, params if len(params) > 0 else "no parameters"))
+        api_log.debug("Request to {} for {}".
+                      format(url, params if len(params) > 0 else "no parameters"))
         try:
             r = do_with_limit("https://retroachievements.org/",
                               requests.get,
                               dict(url=real_url, timeout=30))
-            api_log.info("Response from {} for {} is {}".
-                         format(url, params if len(params) > 0 else "no parameters", r))
+            api_log.debug("Response from {} for {} is {}, response code {}".
+                          format(url, params if len(params) > 0 else "no parameters", r, r.status_code))
             if r.status_code != 200:
                 inc_error_cnt(PLATFORM_NAME, method_name, str(r.status_code))
             if r.status_code == 200 or cnt >= max_api_call_tries:
@@ -253,8 +252,8 @@ def get_player_games(player_id):
                             res[0].append(game_id)
                             res[1].append(i.get("Title"))
                         else:
-                            api_log.info(
-                                "Found game with ext_id {} for player {} "
+                            api_log.debug(
+                                "Found game with ext_id {1} for player {0} "
                                 "in GetUserRecentlyPlayedGames second time".format(player_id, game_id))
         if games_fetched == 0 or games_fetched < pack_size:
             api_log.info("All {} games for player with ext_id {} received from retroachievements.org".
@@ -319,7 +318,6 @@ def init_platform(config: Config) -> Platform:
     global api_call_pause_on_error
     global call_counters_retain
     call_counters = {}
-    api_log = get_logger("LOG_API_RETRO_" + str(config.mode), config.log_level, True)
     f = config.file_path[:config.file_path.rfind('/')] + "retroachievements.json"
     fp = codecs.open(f, 'r', "utf-8")
     retro_config = json.load(fp)
@@ -350,6 +348,7 @@ def init_platform(config: Config) -> Platform:
                      incremental_update_interval=incremental_update_interval, get_last_games=get_last_player_games,
                      incremental_skip_chance=incremental_skip_chance, get_consoles=get_consoles,
                      get_player_avatar=get_player_avatar)
+    api_log = retro.logger
     if is_password_encrypted(key_read):
         api_log.info("Retroachievements key encrypted, do nothing")
         open_key = decrypt_password(key_read, config.server_name, config.db_port)

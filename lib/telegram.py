@@ -1220,7 +1220,7 @@ def activity_feed(update: Update, context: CallbackContext):
 
         cursor.execute(get_query(GET_LAST_GLOBAL_ACHIEVEMENTS), (locale,))
         buf = cursor.fetchall()
-        db.commit()
+        connect.commit()
         telegram_logger.info("activity_feed: data fetched")
         if len(buf) > 0:
             activity_list = chr(10) + _("Last activity:") + chr(10)
@@ -1242,6 +1242,9 @@ def activity_feed(update: Update, context: CallbackContext):
 
     telegram_logger.info("activity_feed: message prepared")
     try:
+        if len(activity_list) == 0:
+            activity_list = chr(10) + _("Last activity:") + chr(10)
+            activity_list += _("Empty, please, repeat request")
         context.bot.send_message(chat_id=update.effective_chat.id, text=activity_list,
                                  reply_markup=reply_markup)
         telegram_logger.info("activity_feed: message sent")

@@ -1,5 +1,5 @@
 select
-    round(avg(case when g.has_achievements
+    round(avg(case when g.has_achievements and pg.percent_complete > 0
     then pg.percent_complete else null end)::numeric, 2),
     count(case when pg.is_perfect then 1 end),
     count(1),
