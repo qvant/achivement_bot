@@ -268,6 +268,12 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
     params = {
         "appids": game_id,
     }
+    icon_url = None
+    release_date = None
+    developer = None
+    publisher = None
+    genres = []
+    features = []
     if not skip_extra_info:
         r = do_with_limit("https://store.steampowered.com/api/appdetails/",
                           _call_steam_api,
@@ -276,35 +282,33 @@ def get_game(game_id: str, name: str, language: str = "English") -> Game:
                                params=params,
                                require_auth=False)
                           )
-    icon_url = None
-    release_date = None
-    developer = None
-    publisher = None
-    genres = []
-    features = []
-    if skip_extra_info or r.status_code == 200:
-        obj = r.json()
-        if obj is not None:
-            obj = obj.get(game_id)
+        if r.status_code == 200:
+            try:
+                obj = r.json()
+            except BaseException as err:
+                api_log.error(err)
+                obj = None
             if obj is not None:
-                obj = obj.get("data")
+                obj = obj.get(game_id)
                 if obj is not None:
-                    icon_url = obj.get("header_image")
-                    developers = obj.get("developers")
-                    if developers is not None and len(developers) > 0:
-                        developer = developers[0]
-                    publishers = obj.get("publishers")
-                    if publishers is not None and len(publishers) > 0:
-                        publisher = publishers[0]
-                    if "genres" in obj:
-                        for cur_gen in obj.get("genres"):
-                            genres.append(cur_gen.get("description"))
-                    obj_release = obj.get("release_date")
-                    if obj_release is not None:
-                        release_date = obj_release.get("date")
-                    if "categories" in obj:
-                        for cur_feature in obj.get("categories"):
-                            features.append(cur_feature.get("description"))
+                    obj = obj.get("data")
+                    if obj is not None:
+                        icon_url = obj.get("header_image")
+                        developers = obj.get("developers")
+                        if developers is not None and len(developers) > 0:
+                            developer = developers[0]
+                        publishers = obj.get("publishers")
+                        if publishers is not None and len(publishers) > 0:
+                            publisher = publishers[0]
+                        if "genres" in obj:
+                            for cur_gen in obj.get("genres"):
+                                genres.append(cur_gen.get("description"))
+                        obj_release = obj.get("release_date")
+                        if obj_release is not None:
+                            release_date = obj_release.get("date")
+                        if "categories" in obj:
+                            for cur_feature in obj.get("categories"):
+                                features.append(cur_feature.get("description"))
     return Game(name=game_name, platform_id=PLATFORM_STEAM, ext_id=game_id, id=None, achievements=achievements,
                 console_ext_id=None, console=None, icon_url=icon_url, release_date=release_date, publisher=publisher,
                 developer=developer, genres=genres, features=features, stats=stats)

@@ -109,7 +109,7 @@ def process_queue_command(body: bytes, config: Config, queue_log: Logger, update
         msg = format_stats_message(cmd)
         for i in config.admin_list:
             reply_markup = InlineKeyboardMarkup(main_keyboard(i))
-            updater.dispatcher.bot.send_message(chat_id=i, text=msg, reply_markup=reply_markup)
+            updater.dispatcher.bot.send_message(chat_id=i, text=msg[:4000], reply_markup=reply_markup)
     return need_to_stop
 
 
