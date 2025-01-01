@@ -70,6 +70,7 @@ def process_player_achievements_queue(config: Config, db_log: Logger) -> bool:
             cursor.execute(get_query(CHECK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE_IS_EMPTY))
             exists = cursor.fetchone()
             if exists is None:
+                connect.commit()
                 db_log.debug("""Queue queue_achievements_update is empty""")
                 break
         cursor.execute(get_query(LOCK_QUEUE_PLAYER_ACHIEVEMENTS_UPDATE), (config.db_update_size,))
