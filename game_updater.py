@@ -21,35 +21,131 @@ ID_PROCESS_GAME_UPDATER = 2
 
 
 def main_game_updater(config: Config):
-    renew_log = get_logger("renew_game_updater", config.log_level)
-
-    set_load_logger(config)
-    set_db_config(config)
-    set_queue_config(config)
-    set_queue_log(renew_log)
-
-    Platform.set_config(config)
-    platforms = load(config)
-    set_skip_extra_info(False)
-    set_game_updater_limits()
-
-    m_queue = get_mq_connect(config)
-    m_channel = m_queue.channel()
-
-    m_channel.queue_declare(queue=GAME_UPDATER_QUEUE_NAME, durable=True)
-
-    m_channel.exchange_declare(exchange='achievement_hunt',
-                               exchange_type='direct',
-                               durable=True)
-    m_channel.queue_bind(exchange='achievement_hunt',
-                         queue=GAME_UPDATER_QUEUE_NAME,
-                         routing_key=config.mode)
+    platforms, queue_log, renew_log = init_game_updater(config)
 
     is_running = True
 
-    cmd = {"cmd": "process_response", "text": "Game updater started at {0}.".format(datetime.datetime.now())}
-    enqueue_command(cmd, MODE_BOT)
+    dt_next_update, platform_games_indexes = init_update_data(platforms)
 
+    while is_running:
+
+        try:
+            get_games_info(dt_next_update, platform_games_indexes, platforms)
+            is_running = process_external_messages(config, is_running, platforms, queue_log, renew_log)
+        except BaseException as err:
+            renew_log.exception(err)
+            if config.supress_errors:
+                time.sleep(5)
+            else:
+                raise
+
+
+def get_games_info(dt_next_update, platform_games_indexes, platforms):
+    for i in range(len(platforms)):
+        if datetime.datetime.now().replace(tzinfo=timezone.utc) > \
+                dt_next_update[i].replace(tzinfo=timezone.utc):
+            platforms[i].logger.info("Begin update games on platform {0} ({2}), next update {1}"
+                                     .format(platforms[i].name,
+                                             dt_next_update[i],
+                                             platforms[i].id))
+            platforms[i].set_next_language()
+            start_update(platforms[i], ID_PROCESS_GAME_UPDATER)
+            if platforms[i].get_consoles is not None:
+                try:
+                    platforms[i].set_consoles(platforms[i].get_consoles())
+                    platforms[i].save()
+                except BaseException as exc:
+                    platforms[i].logger.exception(exc)
+                    dt_next_update[i] = datetime.datetime.now() + datetime.timedelta(
+                        seconds=platforms[i].config.update_interval)
+                    mark_update_done(platforms[i], ID_PROCESS_GAME_UPDATER, dt_next_update[i])
+                    platforms[i].logger.info(
+                        "Update platform {} ({}) skipped, because consoles not available".format(
+                            platforms[i].name,
+                            platforms[i].id
+                        ))
+                    continue
+            if platform_games_indexes[i] == 0:
+                platforms[i].load_games()
+            games_num = len(platforms[i].games)
+            games_ext_ids = list(platforms[i].games.keys())
+            games_processed = 0
+            for j in range(platform_games_indexes[i], len(games_ext_ids)):
+                game = platforms[i].games[games_ext_ids[j]]
+                platforms[i].logger.info(
+                    "Update game \"{}\" (ext_id: {}). Progress {}/{}".
+                    format(game.name, game.ext_id, j, games_num))
+                platforms[i].update_games(game.ext_id, game.name, True)
+                platforms[i].logger.info(
+                    "Get achievements for game \"{}\" (ext_id: {}). Progress {}/{}".format(
+                        game.name, game.ext_id, j + 1, games_num))
+                games_processed += 1
+                if games_processed >= platforms[i].games_pack_size:
+                    break
+            platforms[i].save()
+            if platform_games_indexes[i] >= games_num:
+                dt_next_update[i] = datetime.datetime.now() + datetime.timedelta(
+                    seconds=platforms[i].config.update_interval)
+                platforms[i].mark_language_done()
+                platforms[i].reset_games()
+                platforms[i].logger.info("Update platform {0} finished, next_update {1}"
+                                         .format(platforms[i].name, dt_next_update[i]))
+                mark_update_done(platforms[i], ID_PROCESS_GAME_UPDATER, dt_next_update[i])
+                platform_games_indexes[i] = 0
+            else:
+                platform_games_indexes[i] += games_processed
+                platforms[i].logger.info("Update platform {0} perform batch, progress {1}/{2}"
+                                         .format(platforms[i].name,
+                                                 platform_games_indexes[i], games_num))
+        else:
+            platforms[i].logger.debug("Skip update platform {0}, next update {1}".format(
+                platforms[i].name, dt_next_update[i]))
+
+
+def process_external_messages(config, is_running, platforms, queue_log, renew_log):
+    try:
+
+        m_queue = get_mq_connect(config)
+        m_channel = m_queue.channel()
+
+        for method_frame, properties, body in m_channel.consume(GAME_UPDATER_QUEUE_NAME, inactivity_timeout=1,
+                                                                auto_ack=False):
+            if body is not None:
+                queue_log.info("Received user message {0} with delivery_tag {1}".format(body,
+                                                                                        method_frame.delivery_tag))
+                need_stop = process_queue_command(body, platforms)
+                if need_stop:
+                    is_running = False
+                try:
+                    m_channel.basic_ack(method_frame.delivery_tag)
+                except BaseException as exc:
+                    queue_log.critical("User message " + str(body) + " with delivery_tag " +
+                                       str(method_frame.delivery_tag) +
+                                       " acknowledged with error{0}, resending".format(str(exc)))
+                    # TODO: handle
+                    raise
+
+                queue_log.info("User message " + str(body) + " with delivery_tag " +
+                               str(method_frame.delivery_tag) + " acknowledged")
+            else:
+                queue_log.debug("No more messages in {0}".format(GAME_UPDATER_QUEUE_NAME))
+                m_channel.cancel()
+                break
+        time.sleep(4)
+    except pika.exceptions.AMQPError as exc:
+        queue_log.exception(exc)
+        m_queue = get_mq_connect(config)
+        m_channel = m_queue.channel()
+    except BaseException as err:
+        renew_log.exception(err)
+        if config.supress_errors:
+            pass
+        else:
+            raise
+    return is_running
+
+
+def init_update_data(platforms):
     dt_next_update = []
     platform_games_indexes = []
     for j in platforms:
@@ -58,116 +154,32 @@ def main_game_updater(config: Config):
         j.load_languages()
         j.set_next_language()
         platform_games_indexes.append(0)
+    return dt_next_update, platform_games_indexes
 
-    while is_running:
 
-        try:
-
-            for i in range(len(platforms)):
-                if datetime.datetime.now().replace(tzinfo=timezone.utc) > \
-                        dt_next_update[i].replace(tzinfo=timezone.utc):
-                    platforms[i].logger.info("Begin update games on platform {0} ({2}), next update {1}"
-                                             .format(platforms[i].name,
-                                                     dt_next_update[i],
-                                                     platforms[i].id))
-                    platforms[i].set_next_language()
-                    start_update(platforms[i], ID_PROCESS_GAME_UPDATER)
-                    if platforms[i].get_consoles is not None:
-                        try:
-                            platforms[i].set_consoles(platforms[i].get_consoles())
-                            platforms[i].save()
-                        except BaseException as exc:
-                            platforms[i].logger.exception(exc)
-                            dt_next_update[i] = datetime.datetime.now() + datetime.timedelta(
-                                seconds=platforms[i].config.update_interval)
-                            mark_update_done(platforms[i], ID_PROCESS_GAME_UPDATER, dt_next_update[i])
-                            platforms[i].logger.info(
-                                "Update platform {} ({}) skipped, because consoles not available".format(
-                                    platforms[i].name,
-                                    platforms[i].id
-                                ))
-                            continue
-                    if platform_games_indexes[i] == 0:
-                        platforms[i].load_games()
-                    games_num = len(platforms[i].games)
-                    games_ext_ids = list(platforms[i].games.keys())
-                    games_processed = 0
-                    for j in range(platform_games_indexes[i], len(games_ext_ids)):
-                        game = platforms[i].games[games_ext_ids[j]]
-                        platforms[i].logger.info(
-                            "Update game \"{}\" (ext_id: {}). Progress {}/{}".
-                            format(game.name, game.ext_id, j, games_num))
-                        platforms[i].update_games(game.ext_id, game.name, True)
-                        platforms[i].logger.info(
-                            "Get achievements for game \"{}\" (ext_id: {}). Progress {}/{}".format(
-                               game.name, game.ext_id, j + 1, games_num))
-                        games_processed += 1
-                        if games_processed >= platforms[i].games_pack_size:
-                            break
-                    platforms[i].save()
-                    if platform_games_indexes[i] >= games_num:
-                        dt_next_update[i] = datetime.datetime.now() + datetime.timedelta(
-                            seconds=platforms[i].config.update_interval)
-                        platforms[i].mark_language_done()
-                        platforms[i].reset_games()
-                        platforms[i].logger.info("Update platform {0} finished, next_update {1}"
-                                                 .format(platforms[i].name, dt_next_update[i]))
-                        mark_update_done(platforms[i], ID_PROCESS_GAME_UPDATER, dt_next_update[i])
-                        platform_games_indexes[i] = 0
-                    else:
-                        platform_games_indexes[i] += games_processed
-                        platforms[i].logger.info("Update platform {0} perform batch, progress {1}/{2}"
-                                                 .format(platforms[i].name,
-                                                         platform_games_indexes[i], games_num))
-                else:
-                    platforms[i].logger.debug("Skip update platform {0}, next update {1}".format(
-                       platforms[i].name, dt_next_update[i]))
-        except BaseException as err:
-            renew_log.exception(err)
-            if config.supress_errors:
-                time.sleep(5)
-            else:
-                raise
-
-        try:
-
-            m_queue = get_mq_connect(config)
-            m_channel = m_queue.channel()
-
-            for method_frame, properties, body in m_channel.consume(GAME_UPDATER_QUEUE_NAME, inactivity_timeout=1,
-                                                                    auto_ack=False):
-                if body is not None:
-                    renew_log.info("Received user message {0} with delivery_tag {1}".format(body,
-                                                                                            method_frame.delivery_tag))
-                    need_stop = process_queue_command(body, platforms)
-                    if need_stop:
-                        is_running = False
-                    try:
-                        m_channel.basic_ack(method_frame.delivery_tag)
-                    except BaseException as exc:
-                        renew_log.critical("User message " + str(body) + " with delivery_tag " +
-                                           str(method_frame.delivery_tag) +
-                                           " acknowledged with error{0}, resending".format(str(exc)))
-                        # TODO: handle
-                        raise
-
-                    renew_log.info("User message " + str(body) + " with delivery_tag " +
-                                   str(method_frame.delivery_tag) + " acknowledged")
-                else:
-                    renew_log.debug("No more messages in {0}".format(GAME_UPDATER_QUEUE_NAME))
-                    m_channel.cancel()
-                    break
-            time.sleep(4)
-        except pika.exceptions.AMQPError as exc:
-            renew_log.exception(exc)
-            m_queue = get_mq_connect(config)
-            m_channel = m_queue.channel()
-        except BaseException as err:
-            renew_log.exception(err)
-            if config.supress_errors:
-                pass
-            else:
-                raise
+def init_game_updater(config):
+    renew_log = get_logger(logger_name="renew_game_updater", level=config.log_level, is_system=True)
+    queue_log = get_logger(logger_name="rabbit_game_updater", level=config.log_level, is_system=True)
+    set_load_logger(config)
+    set_db_config(config)
+    set_queue_config(config)
+    set_queue_log(queue_log)
+    Platform.set_config(config)
+    platforms = load(config)
+    set_skip_extra_info(False)
+    set_game_updater_limits()
+    m_queue = get_mq_connect(config)
+    m_channel = m_queue.channel()
+    m_channel.queue_declare(queue=GAME_UPDATER_QUEUE_NAME, durable=True)
+    m_channel.exchange_declare(exchange='achievement_hunt',
+                               exchange_type='direct',
+                               durable=True)
+    m_channel.queue_bind(exchange='achievement_hunt',
+                         queue=GAME_UPDATER_QUEUE_NAME,
+                         routing_key=config.mode)
+    cmd = {"cmd": "process_response", "text": "Game updater started at {0}.".format(datetime.datetime.now())}
+    enqueue_command(cmd, MODE_BOT)
+    return platforms, queue_log, renew_log
 
 
 def process_queue_command(body: bytes, platforms: List[Platform]) -> bool:
