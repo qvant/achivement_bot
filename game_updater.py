@@ -2,7 +2,8 @@ import datetime
 import json
 import time
 from datetime import timezone
-from typing import List
+from logging import Logger
+from typing import List, Tuple, Dict
 
 import pika
 
@@ -25,12 +26,12 @@ def main_game_updater(config: Config):
 
     is_running = True
 
-    dt_next_update, platform_games_indexes = init_update_data(platforms)
+    dt_next_update, platform_last_games_proceeded_indexes = init_update_data(platforms)
 
     while is_running:
 
         try:
-            get_games_info(dt_next_update, platform_games_indexes, platforms)
+            get_games_info(dt_next_update, platform_last_games_proceeded_indexes, platforms)
             is_running = process_external_messages(config, is_running, platforms, queue_log, renew_log)
         except BaseException as err:
             renew_log.exception(err)
@@ -40,7 +41,9 @@ def main_game_updater(config: Config):
                 raise
 
 
-def get_games_info(dt_next_update, platform_games_indexes, platforms):
+def get_games_info(dt_next_update: List[datetime.datetime],
+                   platform_last_games_proceeded_indexes: Dict[int, int],
+                   platforms: List[Platform]):
     for i in range(len(platforms)):
         if datetime.datetime.now().replace(tzinfo=timezone.utc) > \
                 dt_next_update[i].replace(tzinfo=timezone.utc):
@@ -65,12 +68,12 @@ def get_games_info(dt_next_update, platform_games_indexes, platforms):
                             platforms[i].id
                         ))
                     continue
-            if platform_games_indexes[i] == 0:
+            if platform_last_games_proceeded_indexes[platforms[i].id] == 0:
                 platforms[i].load_games()
             games_num = len(platforms[i].games)
             games_ext_ids = list(platforms[i].games.keys())
             games_processed = 0
-            for j in range(platform_games_indexes[i], len(games_ext_ids)):
+            for j in range(platform_last_games_proceeded_indexes[platforms[i].id], len(games_ext_ids)):
                 game = platforms[i].games[games_ext_ids[j]]
                 platforms[i].logger.info(
                     "Update game \"{}\" (ext_id: {}). Progress {}/{}".
@@ -83,23 +86,27 @@ def get_games_info(dt_next_update, platform_games_indexes, platforms):
                 if games_processed >= platforms[i].games_pack_size:
                     break
             platforms[i].save()
-            if platform_games_indexes[i] >= games_num:
-                dt_next_update[i] = datetime.datetime.now() + datetime.timedelta(
-                    seconds=platforms[i].config.update_interval)
-                platforms[i].mark_language_done()
-                platforms[i].reset_games()
-                platforms[i].logger.info("Update platform {0} finished, next_update {1}"
-                                         .format(platforms[i].name, dt_next_update[i]))
-                mark_update_done(platforms[i], ID_PROCESS_GAME_UPDATER, dt_next_update[i])
-                platform_games_indexes[i] = 0
+            if platform_last_games_proceeded_indexes[platforms[i].id] >= games_num:
+                dt_next_update[i] = finish_platform_update(platforms[i], platform_last_games_proceeded_indexes)
             else:
-                platform_games_indexes[i] += games_processed
+                platform_last_games_proceeded_indexes[platforms[i].id] += games_processed
                 platforms[i].logger.info("Update platform {0} perform batch, progress {1}/{2}"
                                          .format(platforms[i].name,
-                                                 platform_games_indexes[i], games_num))
+                                                 platform_last_games_proceeded_indexes[platforms[i].id], games_num))
         else:
             platforms[i].logger.debug("Skip update platform {0}, next update {1}".format(
                 platforms[i].name, dt_next_update[i]))
+
+
+def finish_platform_update(platform: Platform, platform_last_games_proceeded_indexes: Dict[int, int]) -> datetime:
+    dt_next_update = datetime.datetime.now() + datetime.timedelta(seconds=platform.config.update_interval)
+    platform.mark_language_done()
+    platform.reset_games()
+    platform.logger.info("Update platform {0} finished, next_update {1}"
+                         .format(platform.name, dt_next_update))
+    mark_update_done(platform, ID_PROCESS_GAME_UPDATER, dt_next_update)
+    platform_last_games_proceeded_indexes[platform.id] = 0
+    return dt_next_update
 
 
 def process_external_messages(config, is_running, platforms, queue_log, renew_log):
@@ -145,19 +152,19 @@ def process_external_messages(config, is_running, platforms, queue_log, renew_lo
     return is_running
 
 
-def init_update_data(platforms):
+def init_update_data(platforms: List[Platform]) -> Tuple[List[datetime.datetime], Dict[int, int]]:
     dt_next_update = []
-    platform_games_indexes = []
+    platform_last_games_proceeded_indexes = {}
     for j in platforms:
         dt_next_update.append(get_next_update_date(j, ID_PROCESS_GAME_UPDATER))
         j.reset_games()
         j.load_languages()
         j.set_next_language()
-        platform_games_indexes.append(0)
-    return dt_next_update, platform_games_indexes
+        platform_last_games_proceeded_indexes[j.id] = 0
+    return dt_next_update, platform_last_games_proceeded_indexes
 
 
-def init_game_updater(config):
+def init_game_updater(config: Config) -> Tuple[List[Platform], Logger, Logger]:
     renew_log = get_logger(logger_name="renew_game_updater", level=config.log_level, is_system=True)
     queue_log = get_logger(logger_name="rabbit_game_updater", level=config.log_level, is_system=True)
     set_load_logger(config)
