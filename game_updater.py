@@ -53,49 +53,61 @@ def get_games_info(dt_next_update: List[datetime.datetime],
                                              platforms[i].id))
             platforms[i].set_next_language()
             start_update(platforms[i], ID_PROCESS_GAME_UPDATER)
-            if platforms[i].get_consoles is not None:
-                try:
-                    platforms[i].set_consoles(platforms[i].get_consoles())
-                    platforms[i].save()
-                except BaseException as exc:
-                    platforms[i].logger.exception(exc)
-                    dt_next_update[i] = datetime.datetime.now() + datetime.timedelta(
-                        seconds=platforms[i].config.update_interval)
-                    mark_update_done(platforms[i], ID_PROCESS_GAME_UPDATER, dt_next_update[i])
-                    platforms[i].logger.info(
-                        "Update platform {} ({}) skipped, because consoles not available".format(
-                            platforms[i].name,
-                            platforms[i].id
-                        ))
-                    continue
+            if not process_consoles_list(platforms[i]):
+                dt_next_update[i] = datetime.datetime.now() + datetime.timedelta(
+                    seconds=platforms[i].config.update_interval)
+                mark_update_done(platforms[i], ID_PROCESS_GAME_UPDATER, dt_next_update[i])
+                continue
             if platform_last_games_proceeded_indexes[platforms[i].id] == 0:
                 platforms[i].load_games()
-            games_num = len(platforms[i].games)
-            games_ext_ids = list(platforms[i].games.keys())
-            games_processed = 0
-            for j in range(platform_last_games_proceeded_indexes[platforms[i].id], len(games_ext_ids)):
-                game = platforms[i].games[games_ext_ids[j]]
-                platforms[i].logger.info(
-                    "Update game \"{}\" (ext_id: {}). Progress {}/{}".
-                    format(game.name, game.ext_id, j, games_num))
-                platforms[i].update_games(game.ext_id, game.name, True)
-                platforms[i].logger.info(
-                    "Get achievements for game \"{}\" (ext_id: {}). Progress {}/{}".format(
-                        game.name, game.ext_id, j + 1, games_num))
-                games_processed += 1
-                if games_processed >= platforms[i].games_pack_size:
-                    break
+            games_processed = process_games_chunk(platform_last_games_proceeded_indexes, platforms[i])
             platforms[i].save()
-            if platform_last_games_proceeded_indexes[platforms[i].id] >= games_num:
+            if platform_last_games_proceeded_indexes[platforms[i].id] >= len(platforms[i].games):
                 dt_next_update[i] = finish_platform_update(platforms[i], platform_last_games_proceeded_indexes)
             else:
                 platform_last_games_proceeded_indexes[platforms[i].id] += games_processed
                 platforms[i].logger.info("Update platform {0} perform batch, progress {1}/{2}"
                                          .format(platforms[i].name,
-                                                 platform_last_games_proceeded_indexes[platforms[i].id], games_num))
+                                                 platform_last_games_proceeded_indexes[platforms[i].id],
+                                                 len(platforms[i].games)))
         else:
             platforms[i].logger.debug("Skip update platform {0}, next update {1}".format(
                 platforms[i].name, dt_next_update[i]))
+
+
+def process_consoles_list(platform: Platform) -> bool:
+    if platform.get_consoles is None:
+        return True
+    try:
+        platform.set_consoles(platform.get_consoles())
+        platform.save()
+        return True
+    except BaseException as exc:
+        platform.logger.exception(exc)
+        platform.logger.info(
+            "Update platform {} ({}) skipped, because consoles not available".format(
+                platform.name,
+                platform.id
+            ))
+        return False
+
+def process_games_chunk(platform_last_games_proceeded_indexes: Dict[int, int], platform: Platform) -> int:
+    games_num = len(platform.games)
+    games_ext_ids = list(platform.games.keys())
+    games_processed = 0
+    for j in range(platform_last_games_proceeded_indexes[platform.id], len(games_ext_ids)):
+        game = platform.games[games_ext_ids[j]]
+        platform.logger.info(
+            "Update game \"{}\" (ext_id: {}). Progress {}/{}".
+            format(game.name, game.ext_id, j, games_num))
+        platform.update_games(game.ext_id, game.name, True)
+        platform.logger.info(
+            "Get achievements for game \"{}\" (ext_id: {}). Progress {}/{}".format(
+                game.name, game.ext_id, j + 1, games_num))
+        games_processed += 1
+        if games_processed >= platform.games_pack_size:
+            break
+    return games_processed
 
 
 def finish_platform_update(platform: Platform, platform_last_games_proceeded_indexes: Dict[int, int]) -> datetime:
