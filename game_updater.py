@@ -91,6 +91,7 @@ def process_consoles_list(platform: Platform) -> bool:
             ))
         return False
 
+
 def process_games_chunk(platform_last_games_proceeded_indexes: Dict[int, int], platform: Platform) -> int:
     games_num = len(platform.games)
     games_ext_ids = list(platform.games.keys())
