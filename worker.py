@@ -27,15 +27,11 @@ def main_worker(config: Config):
 
     is_running = True
 
-    dt_next_update = []
-    for i in platforms:
-        dt_next_update.append(get_next_update_date(i, ID_PROCESS_WORKER))
-        i.load_languages()
-        i.set_next_language()
+    dt_next_update = init_update_data(platforms)
 
     cur_players = []
     platform_players = []
-    for i in platforms:
+    for _ in platforms:
         cur_players.append(0)
         platform_players.append([])
 
@@ -105,6 +101,15 @@ def main_worker(config: Config):
                 raise
 
         is_running = process_external_messages(config, is_running, platforms, queue_log)
+
+
+def init_update_data(platforms):
+    dt_next_update = []
+    for i in platforms:
+        dt_next_update.append(get_next_update_date(i, ID_PROCESS_WORKER))
+        i.load_languages()
+        i.set_next_language()
+    return dt_next_update
 
 
 def process_external_messages(config, is_running, platforms, queue_log):
