@@ -12,7 +12,7 @@ from .query_holder import UPDATE_PLAYER_EXT_ID, get_query, DELETE_PLAYER, UPDATE
     CHECK_PLAYERS_FOR_TELEGRAM_ID, CHECK_PLAYERS_FOR_EXT_ID, CHECK_IS_PLAYER_BOUND_TO_TELEGRAM, GET_PLAYER_GAMES, \
     GET_PLAYER_GAMES_WITH_ACHIEVEMENTS, GET_PLAYER_PERFECT_GAMES, GET_PLAYER_ACHIEVEMENTS_STATS_FOR_GAME, \
     GET_PLAYER_GAME_STATS, INSERT_USER, INSERT_PLAYER, LOCK_PLAYER, UPDATE_PLAYER_FULL, GET_PLAYER_GAME_IDS, \
-    INSERT_PLAYER_GAME, GET_PLAYER_ACHIEVEMENT_IDS, GET_ACHIEVEMENT_ID, INSERT_PLAYER_ACHIEVEMENT, \
+    INSERT_PLAYER_GAME, GET_PLAYER_ACHIEVEMENT_IDS, INSERT_PLAYER_ACHIEVEMENT, \
     GET_PLAYER_GAME_STATS_FOR_GAME, INSERT_PLAYER_GAME_STATS
 
 STATUS_NEW = 1
@@ -265,39 +265,28 @@ class Player:
                     "Already owned achievements for player {} ({}) in game \"{}\" ({}): {}".format(
                         self.name, self.ext_id, game.name, game.ext_id, len(saved_achievements)))
                 for j in range(len(self.achievements[self.games[i]])):
-                    achievement = game.get_achievement_by_ext_id(self.achievements[self.games[i]][j])
+                    achievement_ext_id = self.achievements[self.games[i]][j]
+                    achievement = game.get_achievement_by_ext_id(achievement_ext_id)
                     achievement_date = self.achievement_dates[self.games[i]][j]
-                    if achievement.id in saved_achievements:
+                    if achievement is not None and achievement.id in saved_achievements:
                         continue
-                    if achievement.id is None:
-                        # TODO: normally shouldn't be, but is happens
-                        self.platform.logger.warn("Empty id for achievement {} and game {} ({}) on platform {}".
-                                                  format(self.achievements[self.games[i]][j], game.id, game.name,
-                                                         self.platform.name))
-                        cur.execute(get_query(GET_ACHIEVEMENT_ID),
-                                    (self.platform.id, str(self.achievements[self.games[i]][j]), game.id))
-                        ret = cur.fetchone()
-                        if ret is not None:
-                            achievement.id = ret[0]
-                        else:
-                            new_game = self.platform.get_game(game_id=game.ext_id, name=game.name)
-                            new_game.save(active_locale='en')
-                            conn.commit()
-                            self.platform.logger.warn("Get id for achievement {} and game {} ({}) on platform {} after "
-                                                      "refresh".
-                                                      format(self.achievements[self.games[i]][j], game.id, game.name,
-                                                             self.platform.name))
-                            cur.execute(get_query(GET_ACHIEVEMENT_ID),
-                                        (self.platform.id, str(self.achievements[self.games[i]][j]), game.id))
-                            ret = cur.fetchone()
-                            if ret is not None:
-                                achievement.id = ret[0]
-                            else:
-                                self.platform.logger.error("Empty id for achievement {} and game {} ({})"
-                                                           " on platform {} after refresh".
-                                                           format(self.achievements[self.games[i]][j], game.id,
-                                                                  game.name,
-                                                                  self.platform.name))
+                    if achievement is None:
+                        # If the player unlocked achievement earlier than we refresh dictionary
+                        new_game = self.platform.get_game(game_id=game.ext_id, name=game.name)
+                        new_game.save(active_locale='en')
+                        self.platform.load_games(game_id=game.id, load_achievements=True)
+                        conn.commit()
+                        self.platform.logger.info("Refreshed game game {} ({}) on platform {}, because achievement {} "
+                                                  "isn't present".
+                                                  format(game.id, game.name, self.platform.name, achievement_ext_id))
+                        achievement = new_game.get_achievement_by_ext_id(achievement_ext_id)
+                        if achievement is None:
+                            self.platform.logger.error("Empty id for achievement {} and game {} ({})"
+                                                       " on platform {} after refresh".
+                                                       format(self.achievements[self.games[i]][j], game.id,
+                                                              game.name,
+                                                              self.platform.name))
+                            raise ValueError("Incorrect achievement ext_id " + achievement_ext_id)
                     cur.execute(get_query(INSERT_PLAYER_ACHIEVEMENT),
                                 (self.platform.id, game.id, achievement.id, self.id, achievement_date))
                     saved_cnt += 1

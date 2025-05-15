@@ -78,8 +78,8 @@ class Game:
     def has_achievements(self):
         return len(self.achievements) > 0
 
-    def get_achievement_by_ext_id(self, ext_id: str) -> Achievement:
-        return self.achievements[ext_id]
+    def get_achievement_by_ext_id(self, ext_id: str) -> Union[Achievement, None]:
+        return self.achievements.get(ext_id, None)
 
     def add_achievement(self, achievement: Achievement):
         self.achievements[achievement.ext_id] = achievement

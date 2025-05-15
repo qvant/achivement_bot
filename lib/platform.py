@@ -4,7 +4,7 @@ from .console import Console
 from .config import Config
 from .log import get_logger
 from .achievement import Achievement
-from typing import Union, List
+from typing import Union, List, Callable
 
 from .platform_language import PlatformLanguage
 from .query_holder import get_query, INSERT_PLATFORM, GET_CONSOLE_BY_ID, GET_CONSOLES_FOR_PLATFORM, \
@@ -18,7 +18,7 @@ class Platform:
     config = None
     conn = None
 
-    def __init__(self, name: str, get_games, get_game, get_achievements, games: [Game], id: int,
+    def __init__(self, name: str, get_games, get_game: Callable[[str, str, str], Game], get_achievements, games: [Game], id: int,
                  validate_player, get_player_id, get_stats, incremental_update_enabled: bool,
                  incremental_update_interval: int, get_last_games, incremental_skip_chance: int,
                  get_consoles, get_player_stats=None, set_hardcoded=None, get_player_avatar=None):
@@ -172,7 +172,7 @@ class Platform:
             consoles.append(Console(id=id, name=name, ext_id=ext_id, platform_id=self.id))
         self.set_consoles(consoles)
 
-    def load_games(self, load_achievements=True, game_id=None, load_hardcoded: bool = False):
+    def load_games(self, load_achievements: bool = True, game_id: int = None, load_hardcoded: bool = False):
         conn = self.get_connect()
         cursor = conn.cursor()
         if game_id is None:
